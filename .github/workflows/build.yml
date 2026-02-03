@@ -1,0 +1,91 @@
+name: Build SafeWatch AI
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-all:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Java JDK (For Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Assets (Vite)
+        run: npm run build
+
+      # --- ANDROID BUILD STEPS ---
+      - name: Setup Android Platform
+        run: |
+          # If android folder doesn't exist, add it
+          if [ ! -d "android" ]; then
+            echo "Android folder not found. Adding platform..."
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: Build Android APK (Debug)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SafeWatch-Android-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      # --- WINDOWS BUILD STEPS (Cross-Compile on Linux) ---
+      # Note: Building Windows on Linux works for NSIS but requires wine implicitly or proper electron-builder config.
+      # However, for stability, we often split jobs. But here we try to keep it simple.
+      # If this fails, we will split into a 'windows-latest' job.
+      
+  build-windows:
+    name: Build Windows Desktop
+    needs: build-all # Wait for web build verification (optional, can run parallel)
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Electron App (Windows .exe)
+        run: npm run electron:build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows Setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: SafeWatch-Windows-Setup
+          path: release/*.exe
