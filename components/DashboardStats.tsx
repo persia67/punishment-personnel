@@ -15,7 +15,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ violations = [], reward
 
   if (mode === 'REWARD') {
     const totalRewards = rewards.length;
-    const exemplaryCount = rewards.filter(r => r.rewardType === 'Exemplary').length;
+    const exemplaryCount = rewards.filter(r => (r.rewardType as string) === 'Exemplary' || r.score >= 20).length;
     const uniqueRewarded = new Set(rewards.map(r => r.personnelId)).size;
 
     const cards = [

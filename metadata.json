@@ -1,5 +1,6 @@
 {
-  "name": "Copy of  HSE SafeWatch & Reward AI",
+  "name": " HSE SafeWatch & Reward AI",
   "description": "Smart Safety Monitoring, Violation Tracking, and AI-Powered Incentive & Reward System for HSE Excellence.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }
