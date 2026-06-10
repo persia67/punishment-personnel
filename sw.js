@@ -1,5 +1,5 @@
-const CACHE_NAME = 'safewatch-v3';
-const DYNAMIC_CACHE = 'safewatch-dynamic-v3';
+const CACHE_NAME = 'safewatch-v4';
+const DYNAMIC_CACHE = 'safewatch-dynamic-v4';
 
 // Assets to pre-cache immediately
 const ASSETS_TO_CACHE = [

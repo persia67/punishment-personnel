@@ -201,7 +201,16 @@ const App: React.FC = () => {
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">
            <div className="flex items-center gap-2 md:gap-3">
-             <div className={`p-2 rounded-xl shadow-lg ${themeStyles.bg} text-white transition-transform active:scale-95`}><Shield className="w-5 h-5 md:w-6 md:h-6" /></div>
+             {settings.companyLogo ? (
+               <img 
+                 src={settings.companyLogo} 
+                 alt="SafeWatch AI Logo" 
+                 className="w-10 h-10 rounded-xl object-cover shadow-md hover:scale-105 transition-transform" 
+                 referrerPolicy="no-referrer"
+               />
+             ) : (
+               <div className={`p-2 rounded-xl shadow-lg ${themeStyles.bg} text-white transition-transform active:scale-95`}><Shield className="w-5 h-5 md:w-6 md:h-6" /></div>
+             )}
              <div>
                 <h1 className="text-sm md:text-lg font-black text-gray-800 leading-tight">{settings.companyName}</h1>
                 <p className="text-[10px] md:text-xs text-gray-500 uppercase tracking-wider">{userDept === 'ALL' ? 'General Management' : `${userDept} Department`}</p>

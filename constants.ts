@@ -396,8 +396,8 @@ export const DEFAULT_USERS: User[] = [
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'fa',
   themeColor: 'blue',
-  companyLogo: null,
-  companyName: 'سامانه جامع پایش',
+  companyLogo: '/src/assets/images/app_icon_1781090095655.png',
+  companyName: 'سامانه جامع پایش HSE SafeWatch',
   customApiKey: ''
 };
 

@@ -13,7 +13,9 @@ const getApiKey = (): string => {
   } catch (e) {
     console.error("Error reading settings", e);
   }
-  return process.env.API_KEY || '';
+  // Safe guard access to process.env in browser environment
+  const envKey = typeof process !== 'undefined' && process?.env ? process.env.API_KEY : '';
+  return envKey || '';
 };
 
 export const generateSafetyReport = async (violations: Violation[]): Promise<string> => {
