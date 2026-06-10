@@ -1,5 +1,5 @@
-const CACHE_NAME = 'safewatch-v2';
-const DYNAMIC_CACHE = 'safewatch-dynamic-v2';
+const CACHE_NAME = 'safewatch-v3';
+const DYNAMIC_CACHE = 'safewatch-dynamic-v3';
 
 // Assets to pre-cache immediately
 const ASSETS_TO_CACHE = [
@@ -36,38 +36,55 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim();
 });
 
-// Fetch Event (Stale-While-Revalidate Strategy for most resources)
+// Fetch Event
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests or requests to different origins if needed
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return; 
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Check if we received a valid response
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-            // For external resources (cors), type might be 'cors' or 'opaque'
-             if (networkResponse.type === 'opaque') {
-                 // Cache opaque responses (CDNs)
-             } else {
-                 return networkResponse;
-             }
-        }
+  // Network-First for index.html or root root to always fetch latest updates when online
+  const isHtml = event.request.url.endsWith('/') || event.request.url.includes('index.html');
 
-        // Clone and cache the new response
-        const responseToCache = networkResponse.clone();
-        caches.open(DYNAMIC_CACHE).then((cache) => {
-          cache.put(event.request, responseToCache);
+  if (isHtml) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    // Stale-While-Revalidate for other static assets (images, fonts, scripts)
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        const fetchPromise = fetch(event.request).then((networkResponse) => {
+          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+              if (networkResponse.type === 'opaque') {
+                  // Cache opaque responses (CDNs)
+              } else {
+                  return networkResponse;
+              }
+          }
+
+          const responseToCache = networkResponse.clone();
+          caches.open(DYNAMIC_CACHE).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+
+          return networkResponse;
+        }).catch((err) => {
+          console.log('[SW] Fetch failed, returning offline fallback if available', err);
         });
 
-        return networkResponse;
-      }).catch((err) => {
-        console.log('[SW] Fetch failed, returning offline fallback if available', err);
-      });
-
-      // Return cached response immediately if available, otherwise wait for network
-      return cachedResponse || fetchPromise;
-    })
-  );
+        return cachedResponse || fetchPromise;
+      })
+    );
+  }
 });
