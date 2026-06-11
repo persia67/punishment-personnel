@@ -257,70 +257,170 @@ const App: React.FC = () => {
              </div>
         </div>
 
-        {/* Data Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th className="px-4 py-4 text-xs font-bold text-gray-500 text-right whitespace-nowrap">{t.personnel}</th>
-                        {canViewAll && <th className="px-4 py-4 text-xs font-bold text-gray-500 text-center whitespace-nowrap">{t.sourceDept}</th>}
-                        <th className="px-4 py-4 text-xs font-bold text-gray-500 text-center w-24 whitespace-nowrap">{systemMode === 'VIOLATION' ? t.violationCode : t.rewardCode}</th>
-                        <th className="px-4 py-4 text-xs font-bold text-gray-500 text-center whitespace-nowrap">{t.scoreLabel}</th>
-                        <th className="px-4 py-4 text-xs font-bold text-gray-500 text-center uppercase whitespace-nowrap">{t.actions}</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                    {itemsToDisplay.map((item) => (
-                        <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                            <td className="px-4 py-4 whitespace-nowrap cursor-pointer" onClick={() => setSelectedPersonnelId(item.personnelId)}>
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-transform group-hover:scale-110 ${themeStyles.lightBg} ${themeStyles.lightText}`}>
-                                        {item.employeeName.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-bold text-gray-900 flex items-center gap-1">
-                                            {item.employeeName}
-                                            <UserIcon className="w-3 h-3 text-gray-400" />
-                                        </div>
-                                        <div className="text-xs text-gray-500 font-mono">{item.personnelId} | {item.department}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            {canViewAll && (
-                                <td className="px-4 py-4 text-center whitespace-nowrap">
-                                    <span className={`px-2 py-1 rounded text-[10px] font-bold ${item.departmentSource === 'SECURITY' ? 'bg-slate-200 text-slate-800' : item.departmentSource === 'HSE' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
-                                        {(t as any)[`dept_${item.departmentSource}`] || item.departmentSource}
-                                    </span>
-                                </td>
-                            )}
-                            <td className="px-4 py-4 text-center whitespace-nowrap">
-                                <div className="flex flex-col items-center">
-                                    <span className="px-2 py-1 bg-gray-100 rounded text-xs font-mono font-bold text-gray-700">
-                                        {systemMode === 'VIOLATION' ? (item as Violation).violationCode : (item as Reward).rewardCode}
-                                    </span>
-                                    <span className="text-[10px] text-gray-400 mt-1 max-w-[120px] truncate block">
-                                        {getDisplayLabel(systemMode === 'VIOLATION' ? (item as Violation).violationCode : (item as Reward).rewardCode, systemMode)}
-                                    </span>
-                                </div>
-                            </td>
-                            <td className="px-4 py-4 text-center whitespace-nowrap">
-                                <span className={`font-bold font-mono text-sm ${systemMode === 'VIOLATION' ? 'text-red-600' : 'text-emerald-600'}`} dir="ltr">
-                                    {systemMode === 'VIOLATION' ? (item as Violation).score : `+${(item as Reward).score}`}
-                                </span>
-                            </td>
-                            <td className="px-4 py-4 text-center whitespace-nowrap">
-                                <button onClick={() => setSelectedPersonnelId(item.personnelId)} className="text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">
-                                    {t.viewProfile}
-                                </button>
-                                {!item.isApproved && canApprove && (
-                                    <button onClick={() => handleApprove(item.id, systemMode)} className="ml-2 text-emerald-600 bg-emerald-50 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors"><Check className="w-4 h-4" /></button>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+        {/* Data Table / Cards Container */}
+        <div className="space-y-4">
+          {/* Desktop Version (hidden on mobile) */}
+          <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                      <tr>
+                          <th className="px-5 py-4 text-xs font-bold text-gray-500 text-right whitespace-nowrap">{t.personnel}</th>
+                          {canViewAll && <th className="px-4 py-4 text-xs font-bold text-gray-500 text-center whitespace-nowrap">{t.sourceDept}</th>}
+                          <th className="px-4 py-4 text-xs font-bold text-gray-500 text-center w-24 whitespace-nowrap">{systemMode === 'VIOLATION' ? t.violationCode : t.rewardCode}</th>
+                          <th className="px-4 py-4 text-xs font-bold text-gray-500 text-center whitespace-nowrap">{t.scoreLabel}</th>
+                          <th className="px-5 py-4 text-xs font-bold text-gray-500 text-center uppercase whitespace-nowrap">{t.actions}</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                      {itemsToDisplay.map((item) => (
+                          <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                              <td className="px-5 py-4 whitespace-nowrap cursor-pointer" onClick={() => setSelectedPersonnelId(item.personnelId)}>
+                                  <div className="flex items-center gap-3">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-transform group-hover:scale-110 ${themeStyles.lightBg} ${themeStyles.lightText}`}>
+                                          {item.employeeName.charAt(0)}
+                                      </div>
+                                      <div>
+                                          <div className="text-sm font-bold text-gray-900 flex items-center gap-1">
+                                              {item.employeeName}
+                                              <UserIcon className="w-3 h-3 text-gray-400" />
+                                          </div>
+                                          <div className="text-xs text-gray-500 font-mono">{item.personnelId} | {item.department}</div>
+                                      </div>
+                                  </div>
+                              </td>
+                              {canViewAll && (
+                                  <td className="px-4 py-4 text-center whitespace-nowrap">
+                                      <span className={`px-2 py-1 rounded text-[10px] font-bold ${item.departmentSource === 'SECURITY' ? 'bg-slate-200 text-slate-800' : item.departmentSource === 'HSE' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                                          {(t as any)[`dept_${item.departmentSource}`] || item.departmentSource}
+                                      </span>
+                                  </td>
+                              )}
+                              <td className="px-4 py-4 text-center whitespace-nowrap">
+                                  <div className="flex flex-col items-center">
+                                      <span className="px-2 py-1 bg-gray-100 rounded text-xs font-mono font-bold text-gray-700">
+                                          {systemMode === 'VIOLATION' ? (item as Violation).violationCode : (item as Reward).rewardCode}
+                                      </span>
+                                      <span className="text-[10px] text-gray-400 mt-1 max-w-[120px] truncate block">
+                                          {getDisplayLabel(systemMode === 'VIOLATION' ? (item as Violation).violationCode : (item as Reward).rewardCode, systemMode)}
+                                      </span>
+                                  </div>
+                              </td>
+                              <td className="px-4 py-4 text-center whitespace-nowrap">
+                                  <span className={`font-bold font-mono text-sm ${systemMode === 'VIOLATION' ? 'text-red-600' : 'text-emerald-600'}`} dir="ltr">
+                                      {systemMode === 'VIOLATION' ? (item as Violation).score : `+${(item as Reward).score}`}
+                                  </span>
+                              </td>
+                              <td className="px-5 py-4 text-center whitespace-nowrap">
+                                  <div className="flex items-center justify-center gap-2">
+                                      <button onClick={() => setSelectedPersonnelId(item.personnelId)} className="text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">
+                                          {t.viewProfile}
+                                      </button>
+                                      {!item.isApproved && canApprove && (
+                                          <button onClick={() => handleApprove(item.id, systemMode)} className="text-emerald-600 bg-emerald-50 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors" title={settings.language === 'fa' ? 'تایید نهایی' : 'Approve'}><Check className="w-4 h-4" /></button>
+                                      )}
+                                  </div>
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+              {itemsToDisplay.length === 0 && (
+                <div className="text-center py-12 text-gray-400 bg-white">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <UserIcon className="w-8 h-8 text-gray-300" />
+                    <span className="text-sm font-medium">
+                      {settings.language === 'fa' ? 'هیچ موردی برای نمایش یافت نشد.' : 'No cases found to display.'}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Cards View (shown on screens smaller than md breakpoint) */}
+          <div className="md:hidden space-y-3.5">
+              {itemsToDisplay.map((item) => {
+                  const code = systemMode === 'VIOLATION' ? (item as Violation).violationCode : (item as Reward).rewardCode;
+                  const score = systemMode === 'VIOLATION' ? (item as Violation).score : (item as Reward).score;
+                  return (
+                      <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-150 shadow-sm flex flex-col gap-3.5 hover:shadow-md transition-shadow">
+                          {/* Personnel Profile Header & Score / Department Source Badge */}
+                          <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSelectedPersonnelId(item.personnelId)}>
+                                  <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${themeStyles.lightBg} ${themeStyles.lightText}`}>
+                                      {item.employeeName.charAt(0)}
+                                  </div>
+                                  <div className="space-y-0.5">
+                                      <div className="text-sm font-bold text-gray-900 flex items-center gap-1">
+                                          {item.employeeName}
+                                          <UserIcon className="w-3.5 h-3.5 text-gray-400" />
+                                      </div>
+                                      <div className="text-[11px] text-gray-500 font-mono">
+                                          {item.personnelId} | {item.department}
+                                      </div>
+                                  </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-1 font-mono">
+                                  <span className={`font-black text-base leading-none ${systemMode === 'VIOLATION' ? 'text-red-650' : 'text-emerald-650'}`} dir="ltr">
+                                      {systemMode === 'VIOLATION' ? score : `+${score}`}
+                                  </span>
+                                  {canViewAll && (
+                                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase ${item.departmentSource === 'SECURITY' ? 'bg-slate-200 text-slate-800' : item.departmentSource === 'HSE' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                                          {(t as any)[`dept_${item.departmentSource}`] || item.departmentSource}
+                                      </span>
+                                  )}
+                              </div>
+                          </div>
+
+                          {/* Code and Action Description Details */}
+                          <div className="bg-gray-50/70 border border-gray-100 rounded-xl p-3 flex items-center justify-between gap-3">
+                              <div className="flex flex-col min-w-0">
+                                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                      {systemMode === 'VIOLATION' ? t.violationCode : t.rewardCode}
+                                  </span>
+                                  <span className="text-xs font-bold text-gray-700 truncate mt-0.5 leading-tight">
+                                      {getDisplayLabel(code, systemMode)}
+                                  </span>
+                              </div>
+                              <span className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-700 shrink-0 shadow-xs">
+                                  {code}
+                              </span>
+                          </div>
+
+                          {/* Action Button Segment */}
+                          <div className="flex gap-2">
+                              <button 
+                                  onClick={() => setSelectedPersonnelId(item.personnelId)} 
+                                  className="flex-grow text-center text-indigo-600 bg-indigo-50 active:bg-indigo-100/80 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-indigo-100/40"
+                              >
+                                  <UserIcon className="w-4 h-4" />
+                                  {t.viewProfile}
+                              </button>
+                              {!item.isApproved && canApprove && (
+                                  <button 
+                                      onClick={() => handleApprove(item.id, systemMode)} 
+                                      className="px-4 py-2.5 text-emerald-600 bg-emerald-50 active:bg-emerald-100/80 rounded-xl border border-emerald-100/40 hover:bg-emerald-100 transition-all flex items-center justify-center gap-1.5 shrink-0"
+                                      title={settings.language === 'fa' ? 'تایید نهایی' : 'Approve'}
+                                  >
+                                      <Check className="w-4 h-4" />
+                                      <span className="text-xs font-bold">{settings.language === 'fa' ? 'تایید' : 'Approve'}</span>
+                                  </button>
+                              )}
+                          </div>
+                      </div>
+                  );
+              })}
+              {itemsToDisplay.length === 0 && (
+                <div className="text-center py-10 bg-white rounded-2xl border border-gray-200 text-gray-400">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <UserIcon className="w-7 h-7 text-gray-300" />
+                    <span className="text-xs font-medium">
+                      {settings.language === 'fa' ? 'هیچ موردی برای نمایش یافت نشد.' : 'No cases found to display.'}
+                    </span>
+                  </div>
+                </div>
+              )}
           </div>
         </div>
       </main>
