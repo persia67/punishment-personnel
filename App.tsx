@@ -32,6 +32,7 @@ const App: React.FC = () => {
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{isOpen: boolean; id: string | null; type: 'VIOLATION' | 'REWARD'}>({ isOpen: false, id: null, type: 'VIOLATION' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [approvalStatusFilter, setApprovalStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
   
   // Dynamic Code State
   const [violationCodes, setViolationCodes] = useState<CodeItem[]>(INITIAL_VIOLATION_CODES);
@@ -92,6 +93,9 @@ const App: React.FC = () => {
         
         const rc = localStorage.getItem('sg_rewardCodes');
         if(rc) setRewardCodes(JSON.parse(rc));
+
+        const s = localStorage.getItem('sg_settings');
+        if(s) setSettings(JSON.parse(s));
     };
     
     window.addEventListener('storage', handleStorageChange);
@@ -104,6 +108,7 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('sg_users', JSON.stringify(users)); }, [users]);
   useEffect(() => { localStorage.setItem('sg_violationCodes', JSON.stringify(violationCodes)); }, [violationCodes]);
   useEffect(() => { localStorage.setItem('sg_rewardCodes', JSON.stringify(rewardCodes)); }, [rewardCodes]);
+  useEffect(() => { localStorage.setItem('sg_settings', JSON.stringify(settings)); }, [settings]);
 
   const handleLogin = (u: string, p: string) => {
     const foundUser = users.find(user => user.username === u && user.password === p);
@@ -156,17 +161,30 @@ const App: React.FC = () => {
       if (!matchesSearch) return false;
 
       // 3. Status/Tab Filter
-      if (activeTab === 'ARCHIVE') return item.isArchived;
-      if (activeTab === 'APPROVALS') return !item.isApproved && !item.isArchived;
-      return item.isApproved && !item.isArchived;
+      if (activeTab === 'ARCHIVE') {
+        if (!item.isArchived) return false;
+      } else {
+        if (item.isArchived) return false;
+      }
+
+      if (approvalStatusFilter === 'PENDING') return !item.isApproved;
+      if (approvalStatusFilter === 'APPROVED') return !!item.isApproved;
+      return true;
     });
   };
 
   const itemsToDisplay = systemMode === 'VIOLATION' ? filterData(violations) : filterData(rewards);
 
   const getThemeColor = () => {
-    if (systemMode === 'REWARD') return { bg: 'bg-emerald-600', text: 'text-emerald-600', lightBg: 'bg-emerald-50', lightText: 'text-emerald-700' };
-    return { bg: 'bg-red-600', text: 'text-red-600', lightBg: 'bg-red-50', lightText: 'text-red-700' };
+    const theme = settings.themeColor || 'blue';
+    const mapper: Record<string, { bg: string; text: string; lightBg: string; lightText: string; ring: string }> = {
+      blue: { bg: 'bg-blue-600', text: 'text-blue-600', lightBg: 'bg-blue-50', lightText: 'text-blue-700', ring: 'ring-blue-500' },
+      red: { bg: 'bg-red-600', text: 'text-red-600', lightBg: 'bg-red-50', lightText: 'text-red-700', ring: 'ring-red-500' },
+      green: { bg: 'bg-emerald-600', text: 'text-emerald-600', lightBg: 'bg-emerald-50', lightText: 'text-emerald-700', ring: 'ring-emerald-500' },
+      violet: { bg: 'bg-violet-600', text: 'text-violet-600', lightBg: 'bg-violet-50', lightText: 'text-violet-700', ring: 'ring-violet-500' },
+      slate: { bg: 'bg-slate-700', text: 'text-slate-700', lightBg: 'bg-slate-100', lightText: 'text-slate-800', ring: 'ring-slate-500' },
+    };
+    return mapper[theme] || mapper.blue;
   };
   const themeStyles = getThemeColor();
 
@@ -239,15 +257,29 @@ const App: React.FC = () => {
 
         {/* Action Bar */}
         <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-4">
-             <div className="relative w-full md:w-auto flex-1 max-w-md">
-                <Search className={`absolute ${settings.language === 'fa' ? 'right-3' : 'left-3'} top-3 h-4 w-4 text-gray-400`} />
-                <input 
-                    type="text" 
-                    placeholder={t.search} 
-                    className={`w-full py-2.5 ${settings.language === 'fa' ? 'pr-9 pl-4' : 'pl-9 pr-4'} text-base md:text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 ring-indigo-500 bg-white shadow-sm`} 
-                    value={searchTerm} 
-                    onChange={(e) => setSearchTerm(e.target.value)} 
-                />
+             <div className="flex flex-col sm:flex-row gap-3 flex-1 max-w-2xl">
+                 <div className="relative flex-grow">
+                    <Search className={`absolute ${settings.language === 'fa' ? 'right-3' : 'left-3'} top-3.5 h-4 w-4 text-gray-400`} />
+                    <input 
+                        type="text" 
+                        placeholder={t.search} 
+                        className={`w-full py-2.5 ${settings.language === 'fa' ? 'pr-9 pl-4' : 'pl-9 pr-4'} text-base md:text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} bg-white shadow-sm`} 
+                        value={searchTerm} 
+                        onChange={(e) => setSearchTerm(e.target.value)} 
+                    />
+                 </div>
+                 {/* Status Dropdown Filter */}
+                 <div className="relative shrink-0">
+                    <select
+                      value={approvalStatusFilter}
+                      onChange={(e) => setApprovalStatusFilter(e.target.value as any)}
+                      className={`w-full sm:w-44 py-2.5 px-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} text-[13px] md:text-sm font-semibold shadow-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors`}
+                    >
+                      <option value="ALL">{settings.language === 'fa' ? 'همه وضعیت‌ها' : 'All Statuses'}</option>
+                      <option value="PENDING">{settings.language === 'fa' ? 'در انتظار تایید' : 'Pending Approval'}</option>
+                      <option value="APPROVED">{settings.language === 'fa' ? 'تایید شده' : 'Approved'}</option>
+                    </select>
+                 </div>
              </div>
              <div className="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
                  <button onClick={() => setIsLegendOpen(true)} className="bg-white border border-gray-200 px-4 py-2.5 rounded-xl text-gray-600 text-sm font-medium hover:bg-gray-50 flex gap-2 items-center whitespace-nowrap shadow-sm"><BookOpen className="w-4 h-4" /> <span className="hidden sm:inline">{t.codeLegend}</span></button>

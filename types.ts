@@ -124,6 +124,12 @@ export interface AppSettings {
   companyLogo: string | null;
   companyName: string;
   customApiKey?: string;
+  aiProvider?: 'GEMINI' | 'OLLAMA' | 'LOCAL_HF' | 'SIMULATOR';
+  ollamaUrl?: string;
+  ollamaModel?: string;
+  localHfUrl?: string;
+  localHfModel?: string;
+  autoOfflineFailover?: boolean;
 }
 
 export interface CodeItem {

@@ -398,7 +398,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   themeColor: 'blue',
   companyLogo: '/src/assets/images/app_icon_1781090095655.png',
   companyName: 'سامانه جامع پایش HSE SafeWatch',
-  customApiKey: ''
+  customApiKey: '',
+  aiProvider: 'GEMINI',
+  ollamaUrl: 'http://localhost:11434',
+  ollamaModel: 'llama3',
+  localHfUrl: 'http://localhost:8000',
+  localHfModel: 'Qwen/Qwen2.5-Copilot-3B',
+  autoOfflineFailover: true
 };
 
 // Initial Mock Data with Departments
