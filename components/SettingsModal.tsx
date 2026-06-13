@@ -339,7 +339,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* Language */}
                     <div className="bg-white border border-gray-100 p-4 md:p-5 rounded-2xl shadow-sm">
                         <div className="flex items-center gap-2 mb-3 md:mb-4 text-gray-700 font-medium text-sm md:text-base">
-                            <Globe className="w-4 h-4 md:w-5 md:h-5" />
+                            <Globe className="w-4 h-4 md:w-5 md:h-5 text-indigo-500" />
                             {settings.language === 'fa' ? 'زبان برنامه' : 'App Language'}
                         </div>
                         <div className="grid grid-cols-2 gap-3">
@@ -357,6 +357,83 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             >
                                 <span className="text-sm font-semibold">English (En)</span>
                             </button>
+                        </div>
+                    </div>
+
+                    {/* Organizational Branding */}
+                    <div className="bg-white border border-gray-100 p-4 md:p-5 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-2 mb-3 md:mb-4 text-gray-700 font-medium text-sm md:text-base">
+                            <Building2 className="w-4 h-4 md:w-5 md:h-5 text-indigo-550" />
+                            {settings.language === 'fa' ? 'طراحی و هویت سازمانی' : 'Corporate Identity & Branding'}
+                        </div>
+                        
+                        <div className="space-y-4">
+                            {/* Company Name */}
+                            <div>
+                                <label className="block text-xs md:text-sm font-semibold text-gray-650 mb-2">
+                                    {settings.language === 'fa' ? 'نام سازمان / برند شما' : 'Organization / App Name'}
+                                </label>
+                                <input 
+                                    type="text" 
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-555 outline-none transition-all text-sm font-semibold"
+                                    value={settings.companyName}
+                                    onChange={(e) => onUpdateSettings({...settings, companyName: e.target.value})}
+                                    placeholder={settings.language === 'fa' ? 'مثلا: سامانه جامع HSE شرکت فولاد' : 'e.g. Steel Corp HSE Platform'}
+                                />
+                            </div>
+
+                            {/* Company Logo Preview and Upload */}
+                            <div>
+                                <label className="block text-xs md:text-sm font-semibold text-gray-650 mb-2">
+                                    {settings.language === 'fa' ? 'لوگو یا نشان تجاری سازمان (تصویر واضح)' : 'Organization Brand Logo (Clear Image)'}
+                                </label>
+                                
+                                <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                    <div className="w-16 h-16 bg-white border border-gray-250 rounded-lg overflow-hidden flex items-center justify-center shrink-0 shadow-xs">
+                                        {settings.companyLogo ? (
+                                            <img 
+                                                src={settings.companyLogo} 
+                                                alt="Preview" 
+                                                className="w-full h-full object-contain"
+                                                referrerPolicy="no-referrer"
+                                            />
+                                        ) : (
+                                            <Building2 className="w-8 h-8 text-gray-300" />
+                                        )}
+                                    </div>
+                                    
+                                    <div className="flex-1 space-y-2">
+                                        <div className="flex flex-wrap gap-2">
+                                            <label className="cursor-pointer bg-white border border-gray-200 hover:bg-gray-100 px-3 py-2 rounded-lg text-xs font-bold text-gray-700 transition-colors flex items-center gap-1 active:scale-95">
+                                                <Upload className="w-3.5 h-3.5" />
+                                                <span>{settings.language === 'fa' ? 'بارگذاری لوگو جدید' : 'Upload New Logo'}</span>
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    className="hidden" 
+                                                    onChange={handleLogoUpload} 
+                                                />
+                                            </label>
+
+                                            {settings.companyLogo && settings.companyLogo !== './app_icon_1781090095655.png' && (
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => onUpdateSettings({ ...settings, companyLogo: './app_icon_1781090095655.png' })}
+                                                    className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 active:scale-95"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                    <span>{settings.language === 'fa' ? 'بازنشانی به پیش‌فرض' : 'Reset to Default'}</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] md:text-xs text-gray-400">
+                                            {settings.language === 'fa' 
+                                                ? 'برای بهترین نمایش، از تصویر مربع یا دایره با وضوح بالا استفاده کنید.' 
+                                                : 'For best results, upload a high-resolution square or circular image.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

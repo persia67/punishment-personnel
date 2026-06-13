@@ -52,7 +52,13 @@ const App: React.FC = () => {
     const savedUsers = localStorage.getItem('sg_users');
     if (savedUsers) setUsers(JSON.parse(savedUsers));
     const savedSettings = localStorage.getItem('sg_settings');
-    if (savedSettings) setSettings(JSON.parse(savedSettings));
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      if (parsed.companyLogo && parsed.companyLogo.includes('app_icon_1781090095655.png')) {
+        parsed.companyLogo = './app_icon_1781090095655.png';
+      }
+      setSettings(parsed);
+    }
     const savedEmployees = localStorage.getItem('sg_employees');
     if (savedEmployees) setEmployees(JSON.parse(savedEmployees));
     const savedLastSync = localStorage.getItem('sg_lastSync');
@@ -95,7 +101,13 @@ const App: React.FC = () => {
         if(rc) setRewardCodes(JSON.parse(rc));
 
         const s = localStorage.getItem('sg_settings');
-        if(s) setSettings(JSON.parse(s));
+        if(s) {
+            const parsed = JSON.parse(s);
+            if (parsed.companyLogo && parsed.companyLogo.includes('app_icon_1781090095655.png')) {
+                parsed.companyLogo = './app_icon_1781090095655.png';
+            }
+            setSettings(parsed);
+        }
     };
     
     window.addEventListener('storage', handleStorageChange);
@@ -223,7 +235,7 @@ const App: React.FC = () => {
                <img 
                  src={settings.companyLogo} 
                  alt="SafeWatch AI Logo" 
-                 className="w-10 h-10 rounded-xl object-cover shadow-md hover:scale-105 transition-transform" 
+                 className="w-12 h-12 md:w-16 md:h-16 rounded-xl object-contain shadow-md hover:scale-105 transition-transform bg-gray-100/50 border border-gray-200/60 p-0.5" 
                  referrerPolicy="no-referrer"
                />
              ) : (
