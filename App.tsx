@@ -264,6 +264,141 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8 flex-grow w-full">
+        {/* Dual Quick-Action & Mode Command Center */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
+          {/* Card 1: Safety Violations Portal */}
+          <div 
+            onClick={() => setSystemMode('VIOLATION')}
+            className={`relative rounded-2xl p-5 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden border-2 ${
+              systemMode === 'VIOLATION' 
+                ? 'border-red-500 bg-gradient-to-br from-red-50/70 via-red-50/30 to-white shadow-md ring-4 ring-red-500/10' 
+                : 'border-gray-200 bg-white hover:border-red-200 hover:shadow shadow-sm opacity-85 hover:opacity-100'
+            }`}
+          >
+            {/* Ambient subtle light inside active card */}
+            {systemMode === 'VIOLATION' && (
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+            )}
+            
+            <div className="flex justify-between items-start mb-3 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-xl transition-all duration-300 ${
+                  systemMode === 'VIOLATION' ? 'bg-red-600 text-white shadow-md shadow-red-500/20' : 'bg-red-50 text-red-600'
+                }`}>
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base md:text-lg text-gray-900 leading-tight">
+                    {settings.language === 'fa' ? 'سامانه ثبت و گزارش تخلفات ایمنی' : 'Safety Violations Center'}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                    {violations.filter(v => !v.isArchived).length}{' '}
+                    {settings.language === 'fa' ? 'مورد فعال در سامانه' : 'Active Cases logged'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Indicator Badge */}
+              <div className="shrink-0 flex items-center">
+                {systemMode === 'VIOLATION' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-605 bg-red-600 text-white shadow-sm border border-red-700 animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white block"></span>
+                    {settings.language === 'fa' ? 'در حال پایش' : 'Active View'}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200">
+                    {settings.language === 'fa' ? 'کلیک جهت پایش' : 'View List'}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs md:text-sm text-gray-600 mb-4 leading-relaxed relative z-10">
+              {settings.language === 'fa' 
+                ? 'ثبت، پیگیری و گزارش‌گیری انواع عدم انطباق‌ها و جرایم ایمنی پرسنل بر اساس کدهای آئین‌نامه انضباطی سازمان.' 
+                : 'Log, track, and generate regulatory reports for employee safety violations & non-compliances.'}
+            </p>
+
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsModalOpen(true);
+              }}
+              className="w-full relative z-10 bg-red-600 hover:bg-red-700 text-white font-black py-3.5 px-5 rounded-xl shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm border-b-4 border-red-800 hover:border-red-900 shadow-red-500/10"
+            >
+              <Plus className="w-5 h-5 animate-pulse" />
+              <span>{settings.language === 'fa' ? 'ثبت گزارش تخلف جدید (اخطار منفی)' : 'Log New Violation'}</span>
+            </button>
+          </div>
+
+          {/* Card 2: HSE Positive Rewards Portal */}
+          <div 
+            onClick={() => setSystemMode('REWARD')}
+            className={`relative rounded-2xl p-5 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden border-2 ${
+              systemMode === 'REWARD' 
+                ? 'border-emerald-500 bg-gradient-to-br from-emerald-50/70 via-emerald-50/30 to-white shadow-md ring-4 ring-emerald-500/10' 
+                : 'border-gray-200 bg-white hover:border-emerald-200 hover:shadow shadow-sm opacity-85 hover:opacity-100'
+            }`}
+          >
+            {/* Ambient subtle light inside active card */}
+            {systemMode === 'REWARD' && (
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+            )}
+            
+            <div className="flex justify-between items-start mb-3 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-xl transition-all duration-300 ${
+                  systemMode === 'REWARD' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'bg-emerald-50 text-emerald-600'
+                }`}>
+                  <Medal className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base md:text-lg text-gray-900 leading-tight">
+                    {settings.language === 'fa' ? 'سامانه تشویقی و امتیازهای مثبت پرسنل' : 'Personnel Rewards & Points'}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                    {rewards.filter(r => !r.isArchived).length}{' '}
+                    {settings.language === 'fa' ? 'مورد فعال در سامانه' : 'Active Cases logged'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Indicator Badge */}
+              <div className="shrink-0 flex items-center">
+                {systemMode === 'REWARD' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-sm border border-emerald-700 animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white block"></span>
+                    {settings.language === 'fa' ? 'در حال پایش' : 'Active View'}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200">
+                    {settings.language === 'fa' ? 'کلیک جهت پایش' : 'View List'}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs md:text-sm text-gray-600 mb-4 leading-relaxed relative z-10">
+              {settings.language === 'fa' 
+                ? 'ثبت و تخصیص امتیازات رفتار ایمن پرسنل جهت ایجاد انگیزه و انتخاب هوشمند پرسنل برتر ماه.' 
+                : 'Award positive behaviors, track performance scores, and seamlessly select workers of the month via AI.'}
+            </p>
+
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsRewardModalOpen(true);
+              }}
+              className="w-full relative z-10 bg-emerald-600 hover:bg-emerald-750 text-white font-black py-3.5 px-5 rounded-xl shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm border-b-4 border-emerald-800 hover:border-emerald-900 shadow-emerald-500/10"
+            >
+              <Plus className="w-5 h-5 animate-pulse" />
+              <span>{settings.language === 'fa' ? 'ثبت امتیاز مثبت / تشویق جدید' : 'Log New Reward'}</span>
+            </button>
+          </div>
+        </div>
+
         {/* Only show Stats if Plant Manager or HR */}
         {canViewAll && <DashboardStats violations={violations} rewards={rewards} mode={systemMode} language={settings.language} />}
 
