@@ -51,6 +51,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
   });
 
   const [selectedCode, setSelectedCode] = useState<number | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   // Update formData when sourceDept changes
   useEffect(() => {
@@ -118,7 +119,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
     };
 
     onSubmit(newViolation);
-    onClose();
+    setIsSuccess(true);
   };
 
   const handlePenaltyChange = (option: string) => {
@@ -129,6 +130,35 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
       setFormData({ ...formData, penaltyActions: [...current, option] });
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="fixed inset-0 bg-white md:bg-black/50 md:backdrop-blur-sm flex items-center justify-center z-50 md:p-4">
+        <div className="bg-white md:rounded-2xl shadow-none md:shadow-2xl w-full md:max-w-md p-6 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-4 animate-bounce">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
+            {lang === 'fa' ? 'ثبت اولیه با موفقیت انجام شد' : 'Preliminary Logged'}
+          </h3>
+          <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+            {lang === 'fa' 
+              ? 'گزارش تخلف ثبت اولیه گردید و برای بررسی و تایید در پرونده، به میز کار مسئول مربوطه ارسال شد.' 
+              : 'The violation report was logged as preliminary and routed to the corresponding manager\'s workspace for final approval and insertion to file.'}
+          </p>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="w-full py-3 px-4 text-white font-semibold rounded-xl bg-red-600 hover:bg-red-700 shadow-md transition-all"
+          >
+            {lang === 'fa' ? 'متوجه شدم' : 'Got it'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-white md:bg-black/50 md:backdrop-blur-sm flex items-center justify-center z-50 md:p-4 animate-in fade-in duration-200">

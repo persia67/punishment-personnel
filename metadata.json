@@ -2,5 +2,5 @@
   "name": " HSE SafeWatch & Reward AI",
   "description": "Smart Safety Monitoring, Violation Tracking, and AI-Powered Incentive & Reward System for HSE Excellence.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

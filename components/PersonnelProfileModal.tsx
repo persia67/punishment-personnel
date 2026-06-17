@@ -25,11 +25,14 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
   // Assuming basic info comes from the first record found (in a real app, fetch from User DB)
   const basicInfo = userViolations[0] || userRewards[0] || { employeeName: 'N/A', department: 'N/A', personnelId };
 
-  // Calculate Score (Base 100)
+  // Calculate Score (Base 100) - Only for approved items as requested
   const startScore = 100;
-  const violationScore = userViolations.reduce((acc, v) => acc + (v.score || 0), 0); // scores are negative
-  const rewardScore = userRewards.reduce((acc, r) => acc + (r.score || 0), 0);
+  const violationScore = userViolations.filter(v => v.isApproved).reduce((acc, v) => acc + (v.score || 0), 0); // scores are negative
+  const rewardScore = userRewards.filter(r => r.isApproved).reduce((acc, r) => acc + (r.score || 0), 0);
   const totalScore = startScore + violationScore + rewardScore;
+
+  const pendingViolationsCount = userViolations.filter(v => !v.isApproved).length;
+  const pendingRewardsCount = userRewards.filter(r => !r.isApproved).length;
 
   // Determine Status based on Score
   let status = { text: t.status_Good, color: 'text-blue-600', bg: 'bg-blue-100', icon: <Activity /> };
@@ -52,8 +55,8 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
   const renderSection = (title: string, icon: React.ReactNode, data: {v: Violation[], r: Reward[]}, colorClass: string) => {
     if (data.v.length === 0 && data.r.length === 0) return null;
     return (
-      <div className={`mb-4 rounded-xl border border-gray-200 overflow-hidden`}>
-        <div className={`px-4 py-2 ${colorClass} flex justify-between items-center`}>
+      <div className={`mb-4 rounded-xl border border-gray-200 overflow-hidden shadow-sm`}>
+        <div className={`px-4 py-2.5 ${colorClass} flex justify-between items-center`}>
             <div className="flex items-center gap-2 font-bold text-sm md:text-base">
                 {icon} {title}
             </div>
@@ -61,22 +64,44 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
                 {data.v.length} {t.violations} / {data.r.length} {t.rewards}
             </span>
         </div>
-        <div className="p-3 space-y-2 bg-white">
+        <div className="p-3 space-y-2.5 bg-white">
             {data.v.map(v => (
-                <div key={v.id} className="flex justify-between items-center text-xs md:text-sm p-2 bg-red-50 rounded border-r-2 border-red-400">
-                    <span>{v.violationType}</span>
-                    <div className="flex items-center gap-2">
-                         <span className="text-red-600 font-bold ltr">{v.score}</span>
-                         <span className="text-gray-500 text-[10px]">{v.date}</span>
+                <div key={v.id} className={`flex justify-between items-center text-xs md:text-sm p-3 rounded-xl transition-all ${
+                  v.isApproved 
+                    ? 'bg-red-50/80 border-r-4 border-red-500 text-gray-900 shadow-xs' 
+                    : 'bg-amber-50/60 border-2 border-dashed border-amber-300 text-gray-900 shadow-xs'
+                }`}>
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <span className="font-semibold truncate">{v.violationType}</span>
+                      <span className="text-[10px] text-gray-500 font-medium">
+                        {v.isApproved 
+                          ? (settings.language === 'fa' ? '✓ تایید نهایی و درج در پرونده' : '✓ Approved & Logged') 
+                          : (settings.language === 'fa' ? '⚠ ثبت اولیه - در انتظار تایید مدیریت' : '⚠ Preliminary - Pending Review')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                         <span className={`font-black font-mono text-sm ${v.isApproved ? 'text-red-600' : 'text-amber-600'} ltr`}>{v.score}</span>
+                         <span className="text-gray-400 text-[10px] font-mono">{v.date}</span>
                     </div>
                 </div>
             ))}
             {data.r.map(r => (
-                <div key={r.id} className="flex justify-between items-center text-xs md:text-sm p-2 bg-emerald-50 rounded border-r-2 border-emerald-400">
-                     <span>{(t as any)[`type_${r.rewardType}`] || r.rewardType}</span>
-                     <div className="flex items-center gap-2">
-                         <span className="text-emerald-600 font-bold ltr">+{r.score}</span>
-                         <span className="text-gray-500 text-[10px]">{r.date}</span>
+                <div key={r.id} className={`flex justify-between items-center text-xs md:text-sm p-3 rounded-xl transition-all ${
+                  r.isApproved 
+                    ? 'bg-emerald-50/80 border-r-4 border-emerald-500 text-gray-900 shadow-xs' 
+                    : 'bg-amber-50/60 border-2 border-dashed border-amber-300 text-gray-900 shadow-xs'
+                }`}>
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <span className="font-semibold truncate">{(t as any)[`type_${r.rewardType}`] || r.rewardType}</span>
+                      <span className="text-[10px] text-gray-500 font-medium">
+                        {r.isApproved 
+                          ? (settings.language === 'fa' ? '✓ تایید نهایی و درج در پرونده' : '✓ Approved & Logged') 
+                          : (settings.language === 'fa' ? '⚠ ثبت اولیه - در انتظار تایید مدیریت' : '⚠ Preliminary - Pending Review')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                         <span className={`font-black font-mono text-sm ${r.isApproved ? 'text-emerald-600' : 'text-amber-650'} ltr`}>+{r.score}</span>
+                         <span className="text-gray-400 text-[10px] font-mono">{r.date}</span>
                     </div>
                 </div>
             ))}
@@ -129,9 +154,16 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
                         </div>
                         <div>
                             <div className={`font-bold ${status.color}`}>{t.riskStatus}: {status.text}</div>
-                            <p className="text-xs text-gray-600 mt-0.5 opacity-80">
+                            <div className="text-xs text-gray-600 mt-0.5 opacity-80">
                                 {totalScore < 50 ? "نیاز به اقدام فوری انضباطی" : "وضعیت نرمال"}
-                            </p>
+                                {(pendingViolationsCount > 0 || pendingRewardsCount > 0) && (
+                                  <span className="block mt-1 text-amber-800 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200 text-[10px] animate-pulse">
+                                    {settings.language === 'fa' 
+                                      ? `⚠ تایید نشده: ${pendingViolationsCount + pendingRewardsCount} مورد ثبت اولیه در انتظار تایید`
+                                      : `⚠ Unapproved: ${pendingViolationsCount + pendingRewardsCount} preliminary items pending review`}
+                                  </span>
+                                )}
+                            </div>
                         </div>
                      </div>
                  </div>

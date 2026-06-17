@@ -16,6 +16,8 @@ export interface Employee {
   fullName: string;
   department: string;
   jobTitle?: string;
+  nationalId?: string;
+  hireDate?: string;
 }
 
 export interface Violation {

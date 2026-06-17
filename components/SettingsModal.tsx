@@ -29,6 +29,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newUser, setNewUser] = useState<Partial<User>>({ username: '', password: '', fullName: '', role: 'HSE_OFFICER', managedDepartment: '' });
   const [importMode, setImportMode] = useState<'MERGE' | 'REPLACE'>('MERGE');
   
+  // New employee manual entry state
+  const [empFormData, setEmpFormData] = useState({
+    personnelId: '',
+    fullName: '',
+    nationalId: '',
+    department: '',
+    hireDate: '',
+    jobTitle: ''
+  });
+  const [empSearch, setEmpSearch] = useState('');
+
   // New Code State
   const [newCode, setNewCode] = useState<Partial<CodeItem>>({ code: 0, label: '', score: 0, department: 'HSE' });
   const [codeType, setCodeType] = useState<'VIOLATION' | 'REWARD'>('VIOLATION');
@@ -127,24 +138,61 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           const ws = wb.Sheets[wsname];
           const data = XLSX.utils.sheet_to_json(ws);
           
-          const newEmployees: Employee[] = data.map((row: any) => ({
-            id: Date.now().toString() + Math.random().toString().slice(2),
-            personnelId: row['PersonnelID'] || row['کد پرسنلی'] || '',
-            fullName: row['FullName'] || row['نام و نام خانوادگی'] || '',
-            department: row['Department'] || row['واحد'] || '',
-            jobTitle: row['JobTitle'] || row['سمت'] || ''
-          })).filter((e: Employee) => e.personnelId && e.fullName);
+          const imported: Employee[] = data.map((row: any) => {
+            const pId = String(row['PersonnelID'] || row['کد پرسنلی'] || row['کد'] || row['کد_پرسنلی'] || row['personnel_id'] || row['شماره پرسنلی'] || '').trim();
+            const fName = String(row['FullName'] || row['نام و نام خانوادگی'] || row['نام'] || row['نام کامل'] || row['full_name'] || '').trim();
+            const nId = String(row['NationalID'] || row['کد ملی'] || row['کدملی'] || row['کد_ملی'] || row['national_id'] || '').trim();
+            const dept = String(row['Department'] || row['واحد'] || row['بخش'] || row['قسمت'] || row['department'] || '').trim();
+            const hDate = String(row['HireDate'] || row['تاریخ شروع به کار'] || row['تاریخ شروع'] || row['تاریخ_شروع'] || row['تاریخ استخدام'] || row['hire_date'] || '').trim();
+            const title = String(row['JobTitle'] || row['سمت'] || row['job_title'] || '').trim();
+            
+            return {
+              id: Date.now().toString() + Math.random().toString().slice(2, 6),
+              personnelId: pId,
+              fullName: fName,
+              department: dept,
+              jobTitle: title || undefined,
+              nationalId: nId || undefined,
+              hireDate: hDate || undefined
+            };
+          }).filter((e: Employee) => e.personnelId && e.fullName);
 
-          if (newEmployees.length > 0) {
-             onUpdateEmployees(newEmployees);
-             alert(t.importSuccess.replace('{count}', newEmployees.length.toString()));
+          if (imported.length > 0) {
+             if (importMode === 'MERGE') {
+                const mergedMap = new Map<string, Employee>();
+                employees.forEach(emp => mergedMap.set(emp.personnelId, emp));
+                imported.forEach(emp => {
+                  const existing = mergedMap.get(emp.personnelId);
+                  if (existing) {
+                    mergedMap.set(emp.personnelId, {
+                      ...existing,
+                      fullName: emp.fullName || existing.fullName,
+                      department: emp.department || existing.department,
+                      nationalId: emp.nationalId || existing.nationalId,
+                      hireDate: emp.hireDate || existing.hireDate,
+                      jobTitle: emp.jobTitle || existing.jobTitle
+                    });
+                  } else {
+                    mergedMap.set(emp.personnelId, emp);
+                  }
+                });
+                onUpdateEmployees(Array.from(mergedMap.values()));
+                alert(settings.language === 'fa' 
+                  ? `${imported.length} پرسنل با موفقیت تلفیق و بروزرسانی شدند.` 
+                  : `Successfully merged and updated ${imported.length} employee records.`);
+             } else {
+                onUpdateEmployees(imported);
+                alert(settings.language === 'fa' 
+                  ? `${imported.length} پرسنل جدید بارگذاری و جایگزین کل لیست شدند.` 
+                  : `Successfully imported and replaced with ${imported.length} employee records.`);
+             }
           } else {
-             alert('فایل فاقد اطلاعات معتبر است.');
+             alert(settings.language === 'fa' ? 'فایل فاقد اطلاعات معتبر است. لطفا نام ستون‌ها را بر اساس نمونه الگو تنظیم کنید.' : 'File lacks valid employee data. Please verify your column headers match the template.');
           }
 
         } catch (error) {
           console.error(error);
-          alert('خطا در خواندن فایل اکسل.');
+          alert(settings.language === 'fa' ? 'خطا در خواندن فایل اکسل.' : 'Error parsing Excel sheet.');
         }
       };
       reader.readAsBinaryString(file);
@@ -153,12 +201,69 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleDownloadTemplate = () => {
       const ws = XLSX.utils.json_to_sheet([
-          { 'PersonnelID': '9901', 'FullName': 'علی رضایی', 'Department': 'تولید', 'JobTitle': 'اپراتور' },
-          { 'PersonnelID': '9902', 'FullName': 'محمد احمدی', 'Department': 'انبار', 'JobTitle': 'انباردار' }
+          { 
+            'کد پرسنلی': '1001', 
+            'نام و نام خانوادگی': 'حمید رافیان', 
+            'کد ملی': '1234567890', 
+            'واحد': 'HSE', 
+            'سمت': 'افسر ایمنی',
+            'تاریخ شروع به کار': '1401/10/01'
+          },
+          { 
+            'کد پرسنلی': '1002', 
+            'نام و نام خانوادگی': 'علی رضایی', 
+            'کد ملی': '0987654321', 
+            'واحد': 'تولید', 
+            'سمت': 'اپراتور',
+            'تاریخ شروع به کار': '1402/05/15'
+          }
       ]);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Employees");
       XLSX.writeFile(wb, "Personnel_Template.xlsx");
+  };
+
+  const handleAddEmployeeManual = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!empFormData.personnelId || !empFormData.fullName || !empFormData.department) {
+      alert(settings.language === 'fa' ? 'لطفا کد پرسنلی، نام پرسنل و واحد را وارد کنید.' : 'Please enter Personnel ID, Name, and Department.');
+      return;
+    }
+
+    const trimmedPId = empFormData.personnelId.trim();
+    // Check duplicate
+    const exists = employees.some(emp => emp.personnelId === trimmedPId);
+    if (exists) {
+      alert(settings.language === 'fa' ? 'کد پرسنلی وارد شده از قبل وجود دارد!' : 'Personnel ID already exists!');
+      return;
+    }
+
+    const newEmp: Employee = {
+      id: Date.now().toString() + Math.random().toString().slice(2, 6),
+      personnelId: trimmedPId,
+      fullName: empFormData.fullName.trim(),
+      nationalId: empFormData.nationalId.trim() || undefined,
+      department: empFormData.department.trim(),
+      hireDate: empFormData.hireDate.trim() || undefined,
+      jobTitle: empFormData.jobTitle.trim() || undefined
+    };
+
+    onUpdateEmployees([...employees, newEmp]);
+    setEmpFormData({
+      personnelId: '',
+      fullName: '',
+      nationalId: '',
+      department: '',
+      hireDate: '',
+      jobTitle: ''
+    });
+    alert(settings.language === 'fa' ? 'پرسنل جدید با موفقیت ثبت شد.' : 'Personnel successfully logged.');
+  };
+
+  const handleDeleteEmployee = (personnelId: string) => {
+    if (confirm(settings.language === 'fa' ? 'آیا از حذف این پرسنل اطمینان دارید؟ تمامی رکوردهای فعلی او حفظ اما برای گزارش‌های بعدی فعال نخواهد بود.' : 'Are you sure you want to delete this employee?')) {
+      onUpdateEmployees(employees.filter(emp => emp.personnelId !== personnelId));
+    }
   };
 
   // --- Backup & Restore Logic ---
@@ -769,44 +874,272 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                         </label>
                      </div>
-                </div>
-            )}
+                 </div>
+             )}
 
-            {activeTab === 'DATA' && (
-                <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 md:p-5">
-                         {/* Existing Data Sync/Backup UI */}
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+             {activeTab === 'DATA' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 pb-12">
+                    {/* Backup & Factory Reset SECTION */}
+                    <div className="bg-white border border-gray-150 rounded-2xl p-4 md:p-5 shadow-sm space-y-4">
+                         <h4 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-2">
+                             {settings.language === 'fa' ? 'پشتیبان‌گیری و اعاده تنظیمات سامانه' : 'System Backup & Recovery'}
+                         </h4>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {/* EXPORT */}
                             <button 
                                 onClick={handleExportBackup}
-                                className="flex items-center justify-center gap-2 bg-blue-600 text-white px-3 py-2.5 md:px-4 md:py-3 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95 text-xs md:text-sm"
+                                className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition-all shadow-md active:scale-95 text-xs md:text-sm font-semibold"
                             >
-                                <Download className="w-4 h-4 md:w-5 md:h-5" />
+                                <Download className="w-4 h-4" />
                                 {t.downloadBackup}
                             </button>
 
                             {/* IMPORT */}
-                            <label className="flex items-center justify-center gap-2 bg-white border-2 border-dashed border-gray-300 text-gray-600 px-3 py-2.5 md:px-4 md:py-3 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer active:scale-95 text-xs md:text-sm">
-                                <Upload className="w-4 h-4 md:w-5 md:h-5" />
+                            <label className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-all cursor-pointer shadow-sm active:scale-95 text-xs md:text-sm font-semibold">
+                                <Upload className="w-4 h-4 text-gray-500" />
                                 <span>{importMode === 'MERGE' ? t.mergeData : t.uploadBackup}</span>
                                 <input type="file" accept=".json" className="hidden" onChange={handleImportBackup} />
                             </label>
-                        </div>
-                    </div>
-                    {isDeveloper && (
-                         <div className="border-t border-dashed border-red-200 pt-4 mt-2">
-                            <button 
-                                onClick={handleFactoryReset}
-                                className="w-full bg-red-600 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-red-700 shadow-lg shadow-red-200 transition-colors flex items-center justify-center gap-2"
-                            >
-                                <RefreshCw className="w-4 h-4" />
-                                {t.factoryReset}
-                            </button>
                          </div>
-                    )}
+                         {isDeveloper && (
+                             <div className="pt-2 border-t border-dashed border-red-100 flex justify-end">
+                                <button 
+                                    onClick={handleFactoryReset}
+                                    className="px-4 py-2 bg-red-50 text-red-650 hover:bg-red-100 text-red-600 transition-colors rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-red-200"
+                                >
+                                    <RefreshCw className="w-3.5 h-3.5" />
+                                    {t.factoryReset}
+                                </button>
+                             </div>
+                         )}
+                    </div>
+
+                    {/* PERSONNEL REGISTRY SECTION */}
+                    <div className="bg-white border border-gray-150 rounded-2xl p-4 md:p-5 shadow-sm space-y-5">
+                         <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                             <h4 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                                 <UsersIcon className="w-4 h-4 text-indigo-600" />
+                                 {settings.language === 'fa' ? 'مدیریت بانک اطلاعات پرسنل کارخانه' : 'Factory Personnel Database'}
+                             </h4>
+                             <span className="bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full text-xs font-bold">
+                                 {employees.length} {settings.language === 'fa' ? 'نفر ثبت شده' : 'Registered'}
+                             </span>
+                         </div>
+
+                         {/* Import Settings & Upload Excel */}
+                         <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl space-y-4">
+                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                 <div>
+                                     <span className="block text-xs font-bold text-gray-700 mb-1">
+                                         {settings.language === 'fa' ? 'نحوه بارگذاری لیست جدید پرسنل:' : 'Import Mode Strategy:'}
+                                     </span>
+                                     <div className="flex bg-gray-200 p-0.5 rounded-lg w-fit">
+                                         <button 
+                                             onClick={() => setImportMode('MERGE')} 
+                                             className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${importMode === 'MERGE' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}
+                                         >
+                                             {settings.language === 'fa' ? 'تلفیق با لیست فعلی (افزودن و اصلاح)' : 'Merge & Update'}
+                                         </button>
+                                         <button 
+                                             onClick={() => setImportMode('REPLACE')} 
+                                             className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${importMode === 'REPLACE' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}
+                                         >
+                                             {settings.language === 'fa' ? 'پاکسازی و جایگزینی کامل' : 'Replace Entirely'}
+                                         </button>
+                                     </div>
+                                 </div>
+
+                                 <div className="flex gap-2 font-bold select-none cursor-pointer">
+                                     <button 
+                                         onClick={handleDownloadTemplate}
+                                         className="flex items-center gap-1.5 bg-white border border-gray-200 text-xs text-gray-700 px-3 py-2 rounded-xl hover:bg-gray-100 transition-all font-bold"
+                                     >
+                                         <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                                         <span>{settings.language === 'fa' ? 'دانلود الگوی اکسل پرسنل' : 'Download Excel Template'}</span>
+                                     </button>
+                                     
+                                     <label className="flex items-center gap-1.5 bg-emerald-600 text-white text-xs px-4 py-2 rounded-xl hover:bg-emerald-700 transition-all cursor-pointer shadow-sm active:scale-95 font-bold">
+                                         <Upload className="w-4 h-4" />
+                                         <span>{settings.language === 'fa' ? 'انتخاب و بارگذاری فایل اکسل' : 'Choose Excel File'}</span>
+                                         <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handlePersonnelImport} />
+                                     </label>
+                                 </div>
+                             </div>
+
+                             <div className="text-[11px] text-gray-500 leading-relaxed bg-white border border-gray-100 p-2.5 rounded-lg font-medium opacity-90">
+                                 {settings.language === 'fa' ? (
+                                     <>
+                                         💡 <strong className="text-gray-700">فرم‌بندی فایل اکسل:</strong> کافی است فایل حاوی ستون‌های <strong className="text-indigo-600">کد پرسنلی</strong>، <strong className="text-indigo-600">نام و نام خانوادگی</strong>، <strong className="text-indigo-600">کد ملی</strong>، و <strong className="text-indigo-600">واحد</strong> (یا معادل‌های انگلیسی آنها مانند PersonnelID, FullName, NationalID, Department, HireDate) باشد. بدون نیاز به فیلتر دستی، داده‌ها استخراج و در سامانه قرار می‌گیرند.
+                                     </>
+                                 ) : (
+                                     <>
+                                         💡 <strong className="text-gray-700">Excel Format Requirements:</strong> The spreadsheet must contain columns for <strong className="text-indigo-500">PersonnelID</strong>, <strong className="text-indigo-500">FullName</strong>, <strong className="text-indigo-505">NationalID</strong>, and <strong className="text-indigo-500">Department</strong>. Column header row detection is automatic.
+                                     </>
+                                 )}
+                             </div>
+                         </div>
+
+                         {/* Manual Adding Form */}
+                         <form onSubmit={handleAddEmployeeManual} className="border border-gray-150 rounded-xl p-4 bg-slate-50/50 space-y-3.5">
+                             <span className="block text-xs font-black text-gray-700 flex items-center gap-1">
+                                 <UserPlus className="w-4 h-4 text-indigo-500" />
+                                 {settings.language === 'fa' ? 'ثبت و تعریف دستی پرسنل جدید' : 'Manually Enroll New Personnel'}
+                             </span>
+                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                 <div>
+                                     <label className="block text-[10px] text-gray-500 mb-1">{settings.language === 'fa' ? 'کد پرسنلی (اجباری)' : 'Personnel ID (Required)'}</label>
+                                     <input 
+                                         type="text" 
+                                         placeholder="e.g. 1003"
+                                         value={empFormData.personnelId}
+                                         onChange={e => setEmpFormData({...empFormData, personnelId: e.target.value})}
+                                         className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                         required
+                                     />
+                                 </div>
+                                 <div>
+                                     <label className="block text-[10px] text-gray-500 mb-1">{settings.language === 'fa' ? 'نام و نام خانوادگی (اجباری)' : 'Full Name (Required)'}</label>
+                                     <input 
+                                         type="text" 
+                                         placeholder="e.g. علی عباسی"
+                                         value={empFormData.fullName}
+                                         onChange={e => setEmpFormData({...empFormData, fullName: e.target.value})}
+                                         className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                         required
+                                     />
+                                 </div>
+                                 <div>
+                                     <label className="block text-[10px] text-gray-500 mb-1">{settings.language === 'fa' ? 'کد ملی' : 'National ID'}</label>
+                                     <input 
+                                         type="text" 
+                                         maxLength={10}
+                                         placeholder="e.g. 0012345678"
+                                         value={empFormData.nationalId}
+                                         onChange={e => setEmpFormData({...empFormData, nationalId: e.target.value})}
+                                         className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                     />
+                                 </div>
+                                 <div>
+                                     <label className="block text-[10px] text-gray-500 mb-1">{settings.language === 'fa' ? 'بخش / واحد (اجباری)' : 'Department (Required)'}</label>
+                                     <input 
+                                         type="text" 
+                                         placeholder="e.g. تولید, انبار, HSE"
+                                         value={empFormData.department}
+                                         onChange={e => setEmpFormData({...empFormData, department: e.target.value})}
+                                         className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                         required
+                                     />
+                                 </div>
+                                 <div>
+                                     <label className="block text-[10px] text-gray-500 mb-1">{settings.language === 'fa' ? 'سمت سازمانی (اختیاری)' : 'Job Title (Optional)'}</label>
+                                     <input 
+                                         type="text" 
+                                         placeholder="e.g. اپراتور"
+                                         value={empFormData.jobTitle}
+                                         onChange={e => setEmpFormData({...empFormData, jobTitle: e.target.value})}
+                                         className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                     />
+                                 </div>
+                                 <div>
+                                     <label className="block text-[10px] text-gray-500 mb-1">{settings.language === 'fa' ? 'تاریخ شروع به کار (اختیاری)' : 'Start Hire Date (Optional)'}</label>
+                                     <input 
+                                         type="text" 
+                                         placeholder="e.g. 1402/06/20"
+                                         value={empFormData.hireDate}
+                                         onChange={e => setEmpFormData({...empFormData, hireDate: e.target.value})}
+                                         className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                     />
+                                 </div>
+                             </div>
+                             <div className="flex justify-end pt-2">
+                                 <button type="submit" className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95 font-sans leading-none">
+                                     <UserPlus className="w-3.5 h-3.5" />
+                                     <span>{settings.language === 'fa' ? 'تعریف پرسنل جدید' : 'Enroll Personnel'}</span>
+                                 </button>
+                             </div>
+                         </form>
+
+                         {/* Search & Listing table */}
+                         <div className="space-y-3">
+                             <div className="flex items-center gap-2">
+                                 <input 
+                                     type="text"
+                                     placeholder={settings.language === 'fa' ? '🔍 جستجو در پرسنل بر اساس نام، کد پرسنلی یا کدملی...' : '🔍 Search by name, ID or national code...'}
+                                     value={empSearch}
+                                     onChange={e => setEmpSearch(e.target.value)}
+                                     className="w-full px-4 py-2.5 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                 />
+                             </div>
+
+                             <div className="border border-gray-150 rounded-xl overflow-hidden shadow-xs bg-white">
+                                                               <div className="max-h-64 overflow-y-auto w-full overflow-x-auto">
+                                     <table className="w-full text-xs text-right whitespace-nowrap min-w-[600px]">
+                                         <thead className="bg-gray-100 text-gray-600 sticky top-0 font-extrabold text-[11px] border-b border-gray-200">
+                                             <tr>
+                                                 <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'کد پرسنلی' : 'Personnel ID'}</th>
+                                                 <th className="px-3 py-2.5">{settings.language === 'fa' ? 'نام و نام خانوادگی' : 'Full Name'}</th>
+                                                 <th className="px-3 py-2.5">{settings.language === 'fa' ? 'کد ملی' : 'National ID'}</th>
+                                                 <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'واحد' : 'Department'}</th>
+                                                 <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'تاریخ شروع به کار' : 'Hire Date'}</th>
+                                                 <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'حذف' : 'Remove'}</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody className="divide-y divide-gray-150">
+                                             {employees.filter(emp => {
+                                                 const query = empSearch.toLowerCase().trim();
+                                                 if (!query) return true;
+                                                 return (
+                                                     emp.personnelId.toLowerCase().includes(query) ||
+                                                     emp.fullName.toLowerCase().includes(query) ||
+                                                     (emp.nationalId && emp.nationalId.toLowerCase().includes(query)) ||
+                                                     emp.department.toLowerCase().includes(query)
+                                                 );
+                                             }).map(emp => (
+                                                 <tr key={emp.id} className="hover:bg-slate-50/80 transition-colors">
+                                                     <td className="px-3 py-2.5 text-center font-bold text-slate-700 font-mono text-xs">{emp.personnelId}</td>
+                                                     <td className="px-3 py-2.5">
+                                                         <div className="font-bold text-gray-900">{emp.fullName}</div>
+                                                         {emp.jobTitle && <div className="text-[10px] text-gray-400 font-medium">{emp.jobTitle}</div>}
+                                                     </td>
+                                                     <td className="px-3 py-2.5 font-mono text-gray-600 text-xs text-right leading-none">
+                                                         {emp.nationalId || (settings.language === 'fa' ? '— ثبت نشده' : '— Not Settled')}
+                                                     </td>
+                                                     <td className="px-3 py-2.5 text-center font-medium">
+                                                         <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[10px]">
+                                                             {emp.department}
+                                                         </span>
+                                                     </td>
+                                                     <td className="px-3 py-2.5 text-center font-mono text-xs font-bold text-indigo-600">
+                                                         {emp.hireDate || (settings.language === 'fa' ? '— ثبت نشده' : '— Not Settled')}
+                                                     </td>
+                                                     <td className="px-3 py-2.5 text-center">
+                                                         <button 
+                                                             type="button"
+                                                             onClick={() => handleDeleteEmployee(emp.personnelId)}
+                                                             className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                             title={settings.language === 'fa' ? 'حذف پرسنل' : 'Delete Personnel'}
+                                                         >
+                                                             <Trash2 className="w-3.5 h-3.5" />
+                                                         </button>
+                                                     </td>
+                                                 </tr>
+                                             ))}
+                                             {employees.length === 0 && (
+                                                 <tr>
+                                                     <td colSpan={6} className="px-3 py-8 text-center text-gray-400 font-semibold text-xs">
+                                                         {settings.language === 'fa' ? 'هیچ پرسنلی در بانک اطلاعات موجود نیست' : 'No personnel records on file.'}
+                                                     </td>
+                                                 </tr>
+                                             )}
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                         </div>
+                    </div>
                 </div>
             )}
+
         </div>
       </div>
     </div>

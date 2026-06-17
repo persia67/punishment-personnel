@@ -12,7 +12,7 @@ import CodeLegendModal from './components/CodeLegendModal';
 import PersonnelProfileModal from './components/PersonnelProfileModal';
 import { selectWorkerOfMonth } from './services/geminiService';
 import { syncData } from './services/syncService';
-import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon } from 'lucide-react';
+import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X } from 'lucide-react';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
 
@@ -33,6 +33,26 @@ const App: React.FC = () => {
   const [deleteModal, setDeleteModal] = useState<{isOpen: boolean; id: string | null; type: 'VIOLATION' | 'REWARD'}>({ isOpen: false, id: null, type: 'VIOLATION' });
   const [searchTerm, setSearchTerm] = useState('');
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
+  const [sortField, setSortField] = useState<'SCORE' | 'DEPARTMENT' | 'LAST_NAME' | 'NONE'>('NONE');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC');
+
+  const handleSort = (field: 'SCORE' | 'DEPARTMENT' | 'LAST_NAME') => {
+    if (sortField === field) {
+      if (sortOrder === 'ASC') {
+        setSortOrder('DESC');
+      } else {
+        setSortField('NONE');
+      }
+    } else {
+      setSortField(field);
+      setSortOrder('ASC');
+    }
+  };
+
+  const handleClearSort = () => {
+    setSortField('NONE');
+    setSortOrder('ASC');
+  };
   
   // Dynamic Code State
   const [violationCodes, setViolationCodes] = useState<CodeItem[]>(INITIAL_VIOLATION_CODES);
@@ -161,6 +181,29 @@ const App: React.FC = () => {
   const canViewAll = userDept === 'ALL';
   const canApprove = ['HSE_MANAGER', 'PLANT_MANAGER', 'HR_MANAGER', 'DEVELOPER'].includes(user?.role || '');
 
+  const getCanApproveItem = (item: Violation | Reward) => {
+    if (!user) return false;
+    const role = user.role;
+    if (['PLANT_MANAGER', 'DEVELOPER'].includes(role)) return true;
+    
+    if (item.departmentSource === 'HSE') {
+      return role === 'HSE_MANAGER';
+    }
+    if (['ADMIN', 'HR'].includes(item.departmentSource)) {
+      return role === 'HR_MANAGER';
+    }
+    if (item.departmentSource === 'SECURITY') {
+      return role === 'SECURITY_MANAGER' || role === 'HR_MANAGER';
+    }
+    if (item.departmentSource === 'TRAINING') {
+      return role === 'TRAINING_MANAGER' || role === 'HSE_MANAGER';
+    }
+    if (role === 'DEPARTMENT_MANAGER' && user.managedDepartment === item.departmentSource) {
+      return true;
+    }
+    return false;
+  };
+
   // Filter Data based on Role/Department
   const filterData = <T extends Violation | Reward>(data: T[]) => {
     return data.filter(item => {
@@ -186,6 +229,38 @@ const App: React.FC = () => {
   };
 
   const itemsToDisplay = systemMode === 'VIOLATION' ? filterData(violations) : filterData(rewards);
+
+  const sortedItems = [...itemsToDisplay].sort((a, b) => {
+    if (sortField === 'NONE') return 0;
+    
+    if (sortField === 'SCORE') {
+      const scoreA = a.score || 0;
+      const scoreB = b.score || 0;
+      return sortOrder === 'ASC' ? scoreA - scoreB : scoreB - scoreA;
+    }
+    
+    if (sortField === 'DEPARTMENT') {
+      const deptA = (a.department || '').toLowerCase();
+      const deptB = (b.department || '').toLowerCase();
+      return sortOrder === 'ASC' 
+        ? deptA.localeCompare(deptB, settings.language === 'fa' ? 'fa' : 'en') 
+        : deptB.localeCompare(deptA, settings.language === 'fa' ? 'fa' : 'en');
+    }
+    
+    if (sortField === 'LAST_NAME') {
+      const getLastName = (name: string) => {
+        const parts = name.trim().split(/\s+/);
+        return parts.length > 1 ? parts[parts.length - 1] : name;
+      };
+      const nameA = getLastName(a.employeeName).toLowerCase();
+      const nameB = getLastName(b.employeeName).toLowerCase();
+      return sortOrder === 'ASC' 
+        ? nameA.localeCompare(nameB, settings.language === 'fa' ? 'fa' : 'en') 
+        : nameB.localeCompare(nameA, settings.language === 'fa' ? 'fa' : 'en');
+    }
+    
+    return 0;
+  });
 
   const getThemeColor = () => {
     const theme = settings.themeColor || 'blue';
@@ -436,6 +511,67 @@ const App: React.FC = () => {
              </div>
         </div>
 
+        {/* Sorting controls */}
+        <div className="flex flex-wrap items-center bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 gap-2.5 mb-4 text-xs md:text-sm shadow-xs">
+          <span className="text-gray-500 font-bold flex items-center gap-1.5 shrink-0">
+            <ArrowUpDown className="w-4 h-4 text-gray-400" />
+            {settings.language === 'fa' ? 'مرتب‌سازی بر اساس:' : 'Sort by:'}
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => handleSort('SCORE')}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all active:scale-[0.97] ${
+                sortField === 'SCORE'
+                  ? `${themeStyles.bg} text-white border-transparent`
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              <span>{settings.language === 'fa' ? 'امتیاز عملکرد' : 'Score'}</span>
+              {sortField === 'SCORE' && (
+                sortOrder === 'ASC' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            <button
+              onClick={() => handleSort('DEPARTMENT')}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all active:scale-[0.97] ${
+                sortField === 'DEPARTMENT'
+                  ? `${themeStyles.bg} text-white border-transparent`
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              <span>{settings.language === 'fa' ? 'دپارتمان دفتری' : 'Department'}</span>
+              {sortField === 'DEPARTMENT' && (
+                sortOrder === 'ASC' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            <button
+              onClick={() => handleSort('LAST_NAME')}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all active:scale-[0.97] ${
+                sortField === 'LAST_NAME'
+                  ? `${themeStyles.bg} text-white border-transparent`
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              <span>{settings.language === 'fa' ? 'نام خانوادگی' : 'Last Name (Personnel Name)'}</span>
+              {sortField === 'LAST_NAME' && (
+                sortOrder === 'ASC' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            {sortField !== 'NONE' && (
+              <button
+                onClick={handleClearSort}
+                className="text-red-500 hover:text-red-650 bg-red-50 hover:bg-red-100/80 p-1.5 rounded-xl transition-colors border border-transparent hover:border-red-200"
+                title={settings.language === 'fa' ? 'حذف فیلتر مرتب‌سازی' : 'Clear sorting'}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Data Table / Cards Container */}
         <div className="space-y-4">
           {/* Desktop Version (hidden on mobile) */}
@@ -452,7 +588,7 @@ const App: React.FC = () => {
                       </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                      {itemsToDisplay.map((item) => (
+                      {sortedItems.map((item) => (
                           <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
                               <td className="px-5 py-4 whitespace-nowrap cursor-pointer" onClick={() => setSelectedPersonnelId(item.personnelId)}>
                                   <div className="flex items-center gap-3">
@@ -460,9 +596,20 @@ const App: React.FC = () => {
                                           {item.employeeName.charAt(0)}
                                       </div>
                                       <div>
-                                          <div className="text-sm font-bold text-gray-900 flex items-center gap-1">
+                                          <div className="text-sm font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
                                               {item.employeeName}
                                               <UserIcon className="w-3 h-3 text-gray-400" />
+                                              {item.isApproved ? (
+                                                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                  <Check className="w-2.5 h-2.5 text-emerald-600" />
+                                                  {settings.language === 'fa' ? 'درج در پرونده' : 'Logged'}
+                                                </span>
+                                              ) : (
+                                                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 block"></span>
+                                                  {settings.language === 'fa' ? 'ثبت اولیه' : 'Preliminary'}
+                                                </span>
+                                              )}
                                           </div>
                                           <div className="text-xs text-gray-500 font-mono">{item.personnelId} | {item.department}</div>
                                       </div>
@@ -495,8 +642,11 @@ const App: React.FC = () => {
                                       <button onClick={() => setSelectedPersonnelId(item.personnelId)} className="text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">
                                           {t.viewProfile}
                                       </button>
-                                      {!item.isApproved && canApprove && (
-                                          <button onClick={() => handleApprove(item.id, systemMode)} className="text-emerald-600 bg-emerald-50 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors" title={settings.language === 'fa' ? 'تایید نهایی' : 'Approve'}><Check className="w-4 h-4" /></button>
+                                      {!item.isApproved && getCanApproveItem(item) && (
+                                          <button onClick={() => handleApprove(item.id, systemMode)} className="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors" title={settings.language === 'fa' ? 'تایید نهایی' : 'Approve'}>
+                                              <Check className="w-3.5 h-3.5 text-emerald-600 font-bold" />
+                                              <span>{settings.language === 'fa' ? 'تایید نهایی' : 'Approve'}</span>
+                                          </button>
                                       )}
                                   </div>
                               </td>
@@ -504,7 +654,7 @@ const App: React.FC = () => {
                       ))}
                   </tbody>
               </table>
-              {itemsToDisplay.length === 0 && (
+              {sortedItems.length === 0 && (
                 <div className="text-center py-12 text-gray-400 bg-white">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <UserIcon className="w-8 h-8 text-gray-300" />
@@ -519,7 +669,7 @@ const App: React.FC = () => {
 
           {/* Mobile Cards View (shown on screens smaller than md breakpoint) */}
           <div className="md:hidden space-y-3.5">
-              {itemsToDisplay.map((item) => {
+              {sortedItems.map((item) => {
                   const code = systemMode === 'VIOLATION' ? (item as Violation).violationCode : (item as Reward).rewardCode;
                   const score = systemMode === 'VIOLATION' ? (item as Violation).score : (item as Reward).score;
                   return (
@@ -530,13 +680,26 @@ const App: React.FC = () => {
                                   <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${themeStyles.lightBg} ${themeStyles.lightText}`}>
                                       {item.employeeName.charAt(0)}
                                   </div>
-                                  <div className="space-y-0.5">
-                                      <div className="text-sm font-bold text-gray-900 flex items-center gap-1">
+                                  <div className="space-y-1">
+                                      <div className="text-sm font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
                                           {item.employeeName}
                                           <UserIcon className="w-3.5 h-3.5 text-gray-400" />
                                       </div>
-                                      <div className="text-[11px] text-gray-500 font-mono">
-                                          {item.personnelId} | {item.department}
+                                      <div className="flex gap-2 items-center flex-wrap">
+                                          <span className="text-[11px] text-gray-500 font-mono">
+                                              {item.personnelId} | {item.department}
+                                          </span>
+                                          {item.isApproved ? (
+                                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-205">
+                                              <Check className="w-2.5 h-2.5 text-emerald-600" />
+                                              {settings.language === 'fa' ? 'درج پرونده' : 'Logged'}
+                                            </span>
+                                          ) : (
+                                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 block"></span>
+                                              {settings.language === 'fa' ? 'ثبت اولیه' : 'Prelim'}
+                                            </span>
+                                          )}
                                       </div>
                                   </div>
                               </div>
@@ -576,21 +739,21 @@ const App: React.FC = () => {
                                   <UserIcon className="w-4 h-4" />
                                   {t.viewProfile}
                               </button>
-                              {!item.isApproved && canApprove && (
+                              {!item.isApproved && getCanApproveItem(item) && (
                                   <button 
                                       onClick={() => handleApprove(item.id, systemMode)} 
-                                      className="px-4 py-2.5 text-emerald-600 bg-emerald-50 active:bg-emerald-100/80 rounded-xl border border-emerald-100/40 hover:bg-emerald-100 transition-all flex items-center justify-center gap-1.5 shrink-0"
-                                      title={settings.language === 'fa' ? 'تایید نهایی' : 'Approve'}
+                                      className="px-4 py-2.5 text-emerald-700 bg-emerald-50 active:bg-emerald-110/80 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-all flex items-center justify-center gap-1.5 shrink-0"
+                                      title={settings.language === 'fa' ? 'تایید نهایی و ثبت پرونده' : 'Approve'}
                                   >
-                                      <Check className="w-4 h-4" />
-                                      <span className="text-xs font-bold">{settings.language === 'fa' ? 'تایید' : 'Approve'}</span>
+                                      <Check className="w-4 h-4 font-bold text-emerald-600" />
+                                      <span className="text-xs font-bold">{settings.language === 'fa' ? 'تایید نهایی' : 'Approve'}</span>
                                   </button>
                               )}
                           </div>
                       </div>
                   );
               })}
-              {itemsToDisplay.length === 0 && (
+              {sortedItems.length === 0 && (
                 <div className="text-center py-10 bg-white rounded-2xl border border-gray-200 text-gray-400">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <UserIcon className="w-7 h-7 text-gray-300" />
