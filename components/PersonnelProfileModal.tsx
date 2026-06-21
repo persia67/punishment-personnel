@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { Violation, Reward, User, AppSettings } from '../types';
+import { Violation, Reward, User, AppSettings, Employee } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { X, User as UserIcon, Shield, Activity, TrendingUp, TrendingDown, AlertTriangle, Briefcase, GraduationCap, Gavel, FileText } from 'lucide-react';
+import { X, User as UserIcon, Shield, Activity, TrendingUp, TrendingDown, AlertTriangle, Briefcase, GraduationCap, Gavel, FileText, Calendar } from 'lucide-react';
 
 interface PersonnelProfileModalProps {
   isOpen: boolean;
@@ -10,20 +10,31 @@ interface PersonnelProfileModalProps {
   violations: Violation[];
   rewards: Reward[];
   settings: AppSettings;
+  employees?: Employee[];
 }
 
 const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({ 
-  isOpen, onClose, personnelId, violations, rewards, settings 
+  isOpen, onClose, personnelId, violations, rewards, settings, employees = []
 }) => {
   if (!isOpen) return null;
   const t = TRANSLATIONS[settings.language];
+
+  // Search in primary employee registry
+  const registeredEmployee = employees.find(emp => emp.personnelId === personnelId);
 
   // Aggregate Data
   const userViolations = violations.filter(v => v.personnelId === personnelId);
   const userRewards = rewards.filter(r => r.personnelId === personnelId);
   
-  // Assuming basic info comes from the first record found (in a real app, fetch from User DB)
-  const basicInfo = userViolations[0] || userRewards[0] || { employeeName: 'N/A', department: 'N/A', personnelId };
+  // Assemble basic info preferring registered registry records
+  const basicInfo = {
+    employeeName: registeredEmployee?.fullName || userViolations[0]?.employeeName || userRewards[0]?.employeeName || 'N/A',
+    department: registeredEmployee?.department || userViolations[0]?.department || userRewards[0]?.department || 'N/A',
+    personnelId,
+    nationalId: registeredEmployee?.nationalId || '',
+    jobTitle: registeredEmployee?.jobTitle || '',
+    hireDate: registeredEmployee?.hireDate || ''
+  };
 
   // Calculate Score (Base 100) - Only for approved items as requested
   const startScore = 100;
@@ -122,9 +133,30 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
                 </div>
                 <div>
                     <h2 className="text-xl md:text-2xl font-black">{basicInfo.employeeName}</h2>
-                    <div className="flex gap-4 text-indigo-200 text-xs md:text-sm mt-1">
-                        <span>{t.personnelId}: {basicInfo.personnelId}</span>
-                        <span>{t.department}: {basicInfo.department}</span>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-indigo-200 text-xs md:text-sm mt-2 opacity-95">
+                        <span className="bg-indigo-950/45 px-2 py-0.5 rounded border border-indigo-800/60 font-medium">
+                          {t.personnelId}: {basicInfo.personnelId}
+                        </span>
+                        <span className="bg-indigo-950/45 px-2 py-0.5 rounded border border-indigo-800/60 font-medium">
+                          {t.department}: {basicInfo.department}
+                        </span>
+                        {basicInfo.jobTitle && (
+                          <span className="bg-indigo-950/45 px-2 py-0.5 rounded border border-indigo-800/60 flex items-center gap-1 font-medium">
+                            <Briefcase className="w-3.5 h-3.5 text-indigo-300" />
+                            {basicInfo.jobTitle}
+                          </span>
+                        )}
+                        {basicInfo.nationalId && (
+                          <span className="bg-indigo-950/45 px-2 py-0.5 rounded border border-indigo-800/60 flex items-center gap-1 font-medium font-mono">
+                            {settings.language === 'fa' ? 'کد ملی:' : 'National ID:'} {basicInfo.nationalId}
+                          </span>
+                        )}
+                        {basicInfo.hireDate && (
+                          <span className="bg-indigo-950/45 px-2 py-0.5 rounded border border-indigo-800/60 flex items-center gap-1 font-medium font-mono">
+                            <Calendar className="w-3.5 h-3.5 text-indigo-300" />
+                            {settings.language === 'fa' ? 'تاریخ شروع کار:' : 'Hire Date:'} {basicInfo.hireDate}
+                          </span>
+                        )}
                     </div>
                 </div>
             </div>

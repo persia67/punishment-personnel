@@ -779,6 +779,7 @@ const App: React.FC = () => {
         violations={violations}
         rewards={rewards}
         settings={settings}
+        employees={employees}
       />
       
       <DeleteModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, id: null, type: 'VIOLATION' })} onConfirm={handleDelete} />
