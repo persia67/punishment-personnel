@@ -284,9 +284,16 @@ export const generateSafetyReport = async (violations: Violation[]): Promise<str
 
     // Default: GEMINI API
     console.log("[AI] Requesting response from Google Cloud Gemini API...");
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    const ai = new GoogleGenAI({ 
+      apiKey: getApiKey(),
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       contents: prompt,
     });
     return response.text || "خطا در تولید گزارش از طریق سرور خارجی.";
@@ -367,9 +374,16 @@ export const selectWorkerOfMonth = async (rewards: Reward[], violations: Violati
 
     // Default: Gemini
     console.log("[AI] Requesting Worker from Google Gemini API...");
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    const ai = new GoogleGenAI({ 
+      apiKey: getApiKey(),
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: "application/json"

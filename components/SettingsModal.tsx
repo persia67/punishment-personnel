@@ -44,9 +44,45 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newCode, setNewCode] = useState<Partial<CodeItem>>({ code: 0, label: '', score: 0, department: 'HSE' });
   const [codeType, setCodeType] = useState<'VIOLATION' | 'REWARD'>('VIOLATION');
 
+  // Server network config states
+  const [serverUrl, setServerUrl] = useState(() => localStorage.getItem('sg_serverUrl') || '');
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'checking' | 'success' | 'failed'>('idle');
+
+  const testServerConnection = async () => {
+    setConnectionStatus('checking');
+    try {
+      const activeUrl = serverUrl.trim() || (window.location.hostname ? window.location.origin : 'http://localhost:3000');
+      const res = await fetch(`${activeUrl}/api/health`, { method: 'GET' });
+      if (res.ok) {
+        setConnectionStatus('success');
+      } else {
+        setConnectionStatus('failed');
+      }
+    } catch {
+      setConnectionStatus('failed');
+    }
+  };
+
+  const handleSaveServerUrl = () => {
+    const trimmed = serverUrl.trim();
+    if (trimmed) {
+      localStorage.setItem('sg_serverUrl', trimmed);
+    } else {
+      localStorage.removeItem('sg_serverUrl');
+    }
+    alert(settings.language === 'fa' ? 'آدرس اتصال به سرور با موفقیت ثبت شد. اتصالات بعدی از این آدرس انجام می‌شود.' : 'Server connection URL saved successfully.');
+  };
+
   const t = TRANSLATIONS[settings.language];
   const isDeveloper = currentUser.role === 'DEVELOPER';
-  const canManageUsers = isDeveloper || currentUser.role === 'HSE_MANAGER' || currentUser.role === 'HR_MANAGER' || currentUser.role === 'PLANT_MANAGER';
+  const canManageUsers = isDeveloper; // Restrict creating a new user strictly to DEVELOPER mode
+  const isUnitManager = isDeveloper || 
+    currentUser.role === 'HSE_MANAGER' || 
+    currentUser.role === 'SECURITY_MANAGER' || 
+    currentUser.role === 'TRAINING_MANAGER' || 
+    currentUser.role === 'HR_MANAGER' || 
+    currentUser.role === 'PLANT_MANAGER' ||
+    currentUser.role === 'DEPARTMENT_MANAGER';
 
   if (!isOpen) return null;
 
@@ -374,7 +410,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
             )}
 
-            {isDeveloper && (
+            {isUnitManager && (
                  <button 
                     onClick={() => setActiveTab('CODES')}
                     className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl transition-all whitespace-nowrap ${activeTab === 'CODES' ? 'bg-white shadow-md text-indigo-600 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
@@ -650,7 +686,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
             )}
             
-            {activeTab === 'CODES' && isDeveloper && (
+            {activeTab === 'CODES' && isUnitManager && (
                 <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                      <div className="flex bg-gray-100 p-1 rounded-xl w-full">
                          <button onClick={() => setCodeType('VIOLATION')} className={`flex-1 py-2 text-sm font-bold rounded-lg ${codeType === 'VIOLATION' ? 'bg-white shadow text-red-600' : 'text-gray-500'}`}>{t.mode_violation}</button>
@@ -879,7 +915,64 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
              {activeTab === 'DATA' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 pb-12">
-                    {/* Backup & Factory Reset SECTION */}
+                     {/* Intranet Server Connection Settings SECTION */}
+                     <div className="bg-white border border-gray-150 rounded-2xl p-4 md:p-5 shadow-sm space-y-4">
+                          <h4 className="font-bold text-gray-800 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
+                              {settings.language === 'fa' ? 'اتصال به سرور شبکه داخلی شرکت (Intranet)' : 'Intranet Company Client/Server Connection'}
+                          </h4>
+                          
+                          <div className="space-y-3">
+                              <p className="text-xs text-gray-500 leading-relaxed font-semibold">
+                                  {settings.language === 'fa'
+                                      ? 'برای اشتراک‌گذاری همزمان پرونده‌ها و ثبتیات بین پرسنل و مدیران در شبکه دفتری شرکت، آدرس سرور داخلی را وارد کنید.'
+                                      : 'Configure the host-server IP to securely sync rewards and violations across all local network workstations.'}
+                              </p>
+                              
+                              <div className="flex flex-col md:flex-row gap-2">
+                                  <input 
+                                      type="text" 
+                                      placeholder="e.g. http://192.168.1.100:3000"
+                                      value={serverUrl}
+                                      onChange={(e) => setServerUrl(e.target.value)}
+                                      className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none placeholder-gray-400"
+                                  />
+                                  <div className="flex gap-2">
+                                      <button 
+                                          type="button"
+                                          onClick={handleSaveServerUrl}
+                                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                                      >
+                                          {settings.language === 'fa' ? 'ذخیره آدرس' : 'Save'}
+                                      </button>
+                                      <button 
+                                          type="button"
+                                          onClick={testServerConnection}
+                                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                                      >
+                                          {settings.language === 'fa' ? 'تست اتصال' : 'Test Status'}
+                                      </button>
+                                  </div>
+                              </div>
+
+                              {connectionStatus === 'checking' && (
+                                  <div className="text-xs text-indigo-600 font-bold animate-pulse">
+                                      {settings.language === 'fa' ? '⏳ در حال تست اتصال به سرور...' : '⏳ Checking host connection...'}
+                                  </div>
+                              )}
+                              {connectionStatus === 'success' && (
+                                  <div className="text-xs text-emerald-600 font-semibold bg-emerald-50 border border-emerald-100 p-2.5 rounded-lg font-sans">
+                                      {settings.language === 'fa' ? '✓ اتصال با موفقیت برقرار شد! سرور شبکه با این نسخه سازگار است.' : '✓ Connected successfully! System sync is live on this local node.'}
+                                  </div>
+                              )}
+                              {connectionStatus === 'failed' && (
+                                  <div className="text-xs text-amber-600 font-semibold bg-amber-50 border border-amber-100 p-2.5 rounded-lg font-sans">
+                                      {settings.language === 'fa' ? '✗ خطای اتصال! لطفا از فعال بودن سرور روی پورت ۳۰۰۰ و صحت آدرس اطمینان حاصل کنید. (برنامه در حالت آفلاین بکار خود ادامه میدهد)' : '✗ Direct ping failed! Ensure server is active on Port 3000. Operating in offline replica mode.'}
+                                  </div>
+                              )}
+                          </div>
+                     </div>
+
+                     {/* Backup & Factory Reset SECTION */}
                     <div className="bg-white border border-gray-150 rounded-2xl p-4 md:p-5 shadow-sm space-y-4">
                          <h4 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-2">
                              {settings.language === 'fa' ? 'پشتیبان‌گیری و اعاده تنظیمات سامانه' : 'System Backup & Recovery'}

@@ -11,8 +11,9 @@ import SettingsModal from './components/SettingsModal';
 import CodeLegendModal from './components/CodeLegendModal';
 import PersonnelProfileModal from './components/PersonnelProfileModal';
 import { selectWorkerOfMonth } from './services/geminiService';
-import { syncData } from './services/syncService';
-import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
+import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers } from 'lucide-react';
+import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
 
@@ -68,7 +69,84 @@ const App: React.FC = () => {
   const [workerOfMonth, setWorkerOfMonth] = useState<WorkerOfMonthResult | null>(null);
   const [selectingWorker, setSelectingWorker] = useState(false);
   
+  // Network & Sync helpers
+  const pushDataToServerState = async (
+    vList?: Violation[],
+    rList?: Reward[],
+    uList?: User[],
+    eList?: Employee[],
+    vcList?: CodeItem[],
+    rcList?: CodeItem[],
+    setts?: AppSettings
+  ) => {
+    try {
+      setSyncStatus('syncing');
+      const payload = {
+        violations: vList !== undefined ? vList : violations,
+        rewards: rList !== undefined ? rList : rewards,
+        users: uList !== undefined ? uList : users,
+        employees: eList !== undefined ? eList : employees,
+        violationCodes: vcList !== undefined ? vcList : violationCodes,
+        rewardCodes: rcList !== undefined ? rcList : rewardCodes,
+        settings: setts !== undefined ? setts : settings
+      };
+      const res = await syncCentralData(payload);
+      if (res.success) {
+        setSyncStatus('synced');
+        const now = new Date().toLocaleTimeString();
+        setLastSyncTime(now);
+      } else {
+        setSyncStatus('error');
+      }
+    } catch {
+      setSyncStatus('error');
+    }
+  };
+
+  const pullDataFromServerState = async (forceBootstrap = false) => {
+    try {
+      setSyncStatus('syncing');
+      const data = await fetchCentralData();
+      if (data) {
+        // Automatically bootstrap fresh blank network servers with our default/saved collections
+        if (forceBootstrap && (!data.users || data.users.length === 0)) {
+          console.log('Bootstrapping fresh central Express database with local backup...');
+          await syncCentralData({
+            violations,
+            rewards,
+            users,
+            employees,
+            violationCodes,
+            rewardCodes,
+            settings
+          });
+          setSyncStatus('synced');
+          const now = new Date().toLocaleTimeString();
+          setLastSyncTime(now);
+          return;
+        }
+
+        setSyncStatus('synced');
+        if (data.violations) setViolations(data.violations);
+        if (data.rewards) setRewards(data.rewards);
+        if (data.users && data.users.length > 0) setUsers(data.users);
+        if (data.employees) setEmployees(data.employees);
+        if (data.violationCodes && data.violationCodes.length > 0) setViolationCodes(data.violationCodes);
+        if (data.rewardCodes && data.rewardCodes.length > 0) setRewardCodes(data.rewardCodes);
+        if (data.settings) setSettings(data.settings);
+
+        const now = new Date().toLocaleTimeString();
+        setLastSyncTime(now);
+      } else {
+        setSyncStatus('error');
+      }
+    } catch {
+      setSyncStatus('error');
+    }
+  };
+
   useEffect(() => {
+    // Immediate local cache hydration
     const savedUsers = localStorage.getItem('sg_users');
     if (savedUsers) setUsers(JSON.parse(savedUsers));
     const savedSettings = localStorage.getItem('sg_settings');
@@ -84,42 +162,36 @@ const App: React.FC = () => {
     const savedLastSync = localStorage.getItem('sg_lastSync');
     if (savedLastSync) setLastSyncTime(savedLastSync);
     
-    // Check local storage for data
     const savedViolations = localStorage.getItem('sg_violations');
     if (savedViolations) setViolations(JSON.parse(savedViolations));
-    
     const savedRewards = localStorage.getItem('sg_rewards');
     if (savedRewards) setRewards(JSON.parse(savedRewards));
     
-    // Codes
     const savedVCodes = localStorage.getItem('sg_violationCodes');
     if (savedVCodes) setViolationCodes(JSON.parse(savedVCodes));
     const savedRCodes = localStorage.getItem('sg_rewardCodes');
     if (savedRCodes) setRewardCodes(JSON.parse(savedRCodes));
     
+    // Connect to central network server immediately on boot
+    pullDataFromServerState(true);
+
     window.addEventListener('online', () => setIsOnline(true));
     window.addEventListener('offline', () => setIsOnline(false));
 
-    // Listen for storage changes (Sync across tabs/windows in real-time)
+    // Listen for storage changes across windows
     const handleStorageChange = () => {
         const u = localStorage.getItem('sg_users');
         if(u) setUsers(JSON.parse(u));
-        
         const v = localStorage.getItem('sg_violations');
         if(v) setViolations(JSON.parse(v));
-
         const r = localStorage.getItem('sg_rewards');
         if(r) setRewards(JSON.parse(r));
-
         const e = localStorage.getItem('sg_employees');
         if(e) setEmployees(JSON.parse(e));
-        
         const vc = localStorage.getItem('sg_violationCodes');
         if(vc) setViolationCodes(JSON.parse(vc));
-        
         const rc = localStorage.getItem('sg_rewardCodes');
         if(rc) setRewardCodes(JSON.parse(rc));
-
         const s = localStorage.getItem('sg_settings');
         if(s) {
             const parsed = JSON.parse(s);
@@ -134,7 +206,15 @@ const App: React.FC = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Update localStorage when state changes
+  // Periodic polling interval to pull down fresh records submitted by outer network nodes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      pullDataFromServerState(false);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [violations, rewards, users, employees, violationCodes, rewardCodes, settings]);
+
+  // Sync to local storage
   useEffect(() => { localStorage.setItem('sg_violations', JSON.stringify(violations)); }, [violations]);
   useEffect(() => { localStorage.setItem('sg_rewards', JSON.stringify(rewards)); }, [rewards]);
   useEffect(() => { localStorage.setItem('sg_users', JSON.stringify(users)); }, [users]);
@@ -161,6 +241,24 @@ const App: React.FC = () => {
   const updateEmployees = (newEmployees: Employee[]) => {
       setEmployees(newEmployees);
       localStorage.setItem('sg_employees', JSON.stringify(newEmployees));
+      pushDataToServerState(violations, rewards, users, newEmployees, violationCodes, rewardCodes, settings);
+  };
+
+  const handleUpdateSettings = (s: AppSettings) => {
+    setSettings(s);
+    pushDataToServerState(violations, rewards, users, employees, violationCodes, rewardCodes, s);
+  };
+  const handleUpdateUsers = (u: User[]) => {
+    setUsers(u);
+    pushDataToServerState(violations, rewards, u, employees, violationCodes, rewardCodes, settings);
+  };
+  const handleUpdateViolationCodes = (vc: CodeItem[]) => {
+    setViolationCodes(vc);
+    pushDataToServerState(violations, rewards, users, employees, vc, rewardCodes, settings);
+  };
+  const handleUpdateRewardCodes = (rc: CodeItem[]) => {
+    setRewardCodes(rc);
+    pushDataToServerState(violations, rewards, users, employees, violationCodes, rc, settings);
   };
 
   const t = TRANSLATIONS[settings.language];
@@ -262,35 +360,97 @@ const App: React.FC = () => {
     return 0;
   });
 
-  const getThemeColor = () => {
-    const theme = settings.themeColor || 'blue';
-    const mapper: Record<string, { bg: string; text: string; lightBg: string; lightText: string; ring: string }> = {
-      blue: { bg: 'bg-blue-600', text: 'text-blue-600', lightBg: 'bg-blue-50', lightText: 'text-blue-700', ring: 'ring-blue-500' },
-      red: { bg: 'bg-red-600', text: 'text-red-600', lightBg: 'bg-red-50', lightText: 'text-red-700', ring: 'ring-red-500' },
-      green: { bg: 'bg-emerald-600', text: 'text-emerald-600', lightBg: 'bg-emerald-50', lightText: 'text-emerald-700', ring: 'ring-emerald-500' },
-      violet: { bg: 'bg-violet-600', text: 'text-violet-600', lightBg: 'bg-violet-50', lightText: 'text-violet-700', ring: 'ring-violet-500' },
-      slate: { bg: 'bg-slate-700', text: 'text-slate-700', lightBg: 'bg-slate-100', lightText: 'text-slate-800', ring: 'ring-slate-500' },
-    };
-    return mapper[theme] || mapper.blue;
-  };
-  const themeStyles = getThemeColor();
+  const themeStyles = getTheme(settings.themeColor);
 
-  const handleSync = async () => { /* Sync logic remains same */ };
-  const handleAddViolation = (v: Violation) => { setViolations([v, ...violations]); setIsModalOpen(false); };
-  const handleAddReward = (r: Reward) => { setRewards([r, ...rewards]); setIsRewardModalOpen(false); };
+  const handleSync = async () => {
+    await pullDataFromServerState(false);
+  };
+  const handleAddViolation = (v: Violation) => {
+    const updated = [v, ...violations];
+    setViolations(updated);
+    setIsModalOpen(false);
+    pushDataToServerState(updated, rewards, users, employees, violationCodes, rewardCodes, settings);
+  };
+  const handleAddReward = (r: Reward) => {
+    const updated = [r, ...rewards];
+    setRewards(updated);
+    setIsRewardModalOpen(false);
+    pushDataToServerState(violations, updated, users, employees, violationCodes, rewardCodes, settings);
+  };
   const handleDelete = () => {
       if (deleteModal.id) {
-          if (deleteModal.type === 'VIOLATION') setViolations(violations.filter(v => v.id !== deleteModal.id));
-          else setRewards(rewards.filter(r => r.id !== deleteModal.id));
+          let updatedV = violations;
+          let updatedR = rewards;
+          if (deleteModal.type === 'VIOLATION') {
+              updatedV = violations.filter(v => v.id !== deleteModal.id);
+              setViolations(updatedV);
+          } else {
+              updatedR = rewards.filter(r => r.id !== deleteModal.id);
+              setRewards(updatedR);
+          }
           setDeleteModal({ isOpen: false, id: null, type: 'VIOLATION' });
+          pushDataToServerState(updatedV, updatedR, users, employees, violationCodes, rewardCodes, settings);
       }
   };
   const handleApprove = (id: string, type: 'VIOLATION' | 'REWARD') => {
-      if (type === 'VIOLATION') setViolations(prev => prev.map(v => v.id === id ? { ...v, isApproved: true } : v));
-      else setRewards(prev => prev.map(r => r.id === id ? { ...r, isApproved: true } : r));
+      let updatedV = violations;
+      let updatedR = rewards;
+      if (type === 'VIOLATION') {
+          updatedV = violations.map(v => v.id === id ? { ...v, isApproved: true } : v);
+          setViolations(updatedV);
+      } else {
+          updatedR = rewards.map(r => r.id === id ? { ...r, isApproved: true } : r);
+          setRewards(updatedR);
+      }
+      pushDataToServerState(updatedV, updatedR, users, employees, violationCodes, rewardCodes, settings);
   };
-  const handlePickWorkerOfMonth = async () => { /* Logic remains */ };
-  const handleExportCSV = () => { /* Logic remains */ };
+  const handlePickWorkerOfMonth = async () => {
+    try {
+      setSelectingWorker(true);
+      const res = await selectWorkerOfMonth(rewards, violations);
+      setWorkerOfMonth(res);
+    } catch (e: any) {
+      console.error(e);
+      alert(settings.language === 'fa' 
+        ? "خطا در فرآیند تحلیل هوش مصنوعی: لطفا اتصال به شبکه یا تنظیمات سرور هوش مصنوعی را بازبینی کنید." 
+        : "AI selection process failed. Please check your networks or AI server properties.");
+    } finally {
+      setSelectingWorker(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    try {
+      const dataToExport = systemMode === 'VIOLATION' ? violations : rewards;
+      if (dataToExport.length === 0) {
+        alert(settings.language === 'fa' ? "داده‌ای برای خروجی وجود ندارد" : "No records to export");
+        return;
+      }
+      
+      let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM
+      if (systemMode === 'VIOLATION') {
+        csvContent += "ID,Employee Name,Personnel ID,Department,Severity,Score,Date,Status,Approved\n";
+        dataToExport.forEach((item: any) => {
+          csvContent += `"${item.id}","${item.employeeName}","${item.personnelId}","${item.department}","${item.severity}",${item.score},"${item.date}","${item.status}",${item.isApproved || false}\n`;
+        });
+      } else {
+        csvContent += "ID,Employee Name,Personnel ID,Department,Type,Score,Date,Approved\n";
+        dataToExport.forEach((item: any) => {
+          csvContent += `"${item.id}","${item.employeeName}","${item.personnelId}","${item.department}","${item.rewardType}",${item.score},"${item.date}",${item.isApproved || false}\n`;
+        });
+      }
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `HSE_${systemMode}_Export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error("CSV export error", e);
+    }
+  };
 
   // Helper to map text to code label
   const getDisplayLabel = (code: number, type: 'VIOLATION' | 'REWARD') => {
@@ -323,12 +483,7 @@ const App: React.FC = () => {
            </div>
            
            <div className="flex items-center gap-2 md:gap-3">
-             {/* Mode Switch */}
-             <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 scale-90 md:scale-100">
-                <button onClick={() => setSystemMode('VIOLATION')} className={`px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold flex gap-1 items-center transition-all ${systemMode === 'VIOLATION' ? 'bg-white shadow text-red-600' : 'text-gray-500'}`}><AlertCircle className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t.mode_violation}</span></button>
-                <button onClick={() => setSystemMode('REWARD')} className={`px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold flex gap-1 items-center transition-all ${systemMode === 'REWARD' ? 'bg-white shadow text-emerald-600' : 'text-gray-500'}`}><Medal className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t.mode_reward}</span></button>
-             </div>
-             
+
              <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${themeStyles.bg}`}>{user.username.charAt(0).toUpperCase()}</div>
                 <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 rounded-full hover:bg-white text-gray-500 transition-colors"><Settings className="w-4 h-4" /></button>
@@ -338,139 +493,173 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8 flex-grow w-full">
-        {/* Dual Quick-Action & Mode Command Center */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
-          {/* Card 1: Safety Violations Portal */}
-          <div 
+       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8 flex-grow w-full space-y-6 font-sans">
+         {/* Dynamic Mode Segment Directory - Fresh, Premium & Distinctive */}
+        <div className="p-1.5 rounded-2xl bg-white border border-gray-200 shadow-xs grid grid-cols-1 md:grid-cols-2 gap-2 mb-6">
+          {/* Card 1 Switch: Safety Violations Portal */}
+          <button 
+            type="button"
             onClick={() => setSystemMode('VIOLATION')}
-            className={`relative rounded-2xl p-5 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden border-2 ${
+            className={`flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 outline-none ${
               systemMode === 'VIOLATION' 
-                ? 'border-red-500 bg-gradient-to-br from-red-50/70 via-red-50/30 to-white shadow-md ring-4 ring-red-500/10' 
-                : 'border-gray-200 bg-white hover:border-red-200 hover:shadow shadow-sm opacity-85 hover:opacity-100'
+                ? 'bg-red-50/70 text-red-605 border border-red-200/50 shadow-xs ring-2 ring-red-500/10' 
+                : 'hover:bg-gray-50 text-gray-500 border border-transparent'
             }`}
           >
-            {/* Ambient subtle light inside active card */}
-            {systemMode === 'VIOLATION' && (
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
-            )}
-            
-            <div className="flex justify-between items-start mb-3 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-xl transition-all duration-300 ${
-                  systemMode === 'VIOLATION' ? 'bg-red-600 text-white shadow-md shadow-red-500/20' : 'bg-red-50 text-red-600'
-                }`}>
-                  <AlertCircle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base md:text-lg text-gray-900 leading-tight">
-                    {settings.language === 'fa' ? 'سامانه ثبت و گزارش تخلفات ایمنی' : 'Safety Violations Center'}
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-0.5 font-medium">
-                    {violations.filter(v => !v.isArchived).length}{' '}
-                    {settings.language === 'fa' ? 'مورد فعال در سامانه' : 'Active Cases logged'}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-lg transition-all ${
+                systemMode === 'VIOLATION' ? 'bg-red-600 text-white shadow-sm scale-105' : 'bg-gray-100/80 text-gray-400'
+              }`}>
+                <AlertCircle className="w-5 h-5" />
               </div>
-
-              {/* Status Indicator Badge */}
-              <div className="shrink-0 flex items-center">
-                {systemMode === 'VIOLATION' ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-605 bg-red-600 text-white shadow-sm border border-red-700 animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white block"></span>
-                    {settings.language === 'fa' ? 'در حال پایش' : 'Active View'}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200">
-                    {settings.language === 'fa' ? 'کلیک جهت پایش' : 'View List'}
-                  </span>
-                )}
+              <div className="text-right">
+                <span className="block font-black text-xs md:text-sm text-gray-800">
+                  {settings.language === 'fa' ? 'سامانه ثبت و گزارش تخلفات ایمنی' : 'Safety Violations Center'}
+                </span>
+                <span className="block text-[10px] md:text-xs text-gray-500 font-medium">
+                  {violations.filter(v => !v.isArchived).length}{' '}
+                  {settings.language === 'fa' ? 'مورد فعال در سیستم' : 'Active cases logged'}
+                </span>
               </div>
             </div>
+            
+            <div className="flex items-center">
+              {systemMode === 'VIOLATION' ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold bg-red-600 text-white shadow-xs animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                  {settings.language === 'fa' ? 'در حال پایش' : 'Active View'}
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] md:text-xs font-semibold bg-gray-100 text-gray-400">
+                  {settings.language === 'fa' ? 'انتخاب جهت پایش' : 'View'}
+                </span>
+              )}
+            </div>
+          </button>
 
-            <p className="text-xs md:text-sm text-gray-600 mb-4 leading-relaxed relative z-10">
-              {settings.language === 'fa' 
-                ? 'ثبت، پیگیری و گزارش‌گیری انواع عدم انطباق‌ها و جرایم ایمنی پرسنل بر اساس کدهای آئین‌نامه انضباطی سازمان.' 
-                : 'Log, track, and generate regulatory reports for employee safety violations & non-compliances.'}
-            </p>
-
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsModalOpen(true);
-              }}
-              className="w-full relative z-10 bg-red-600 hover:bg-red-700 text-white font-black py-3.5 px-5 rounded-xl shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm border-b-4 border-red-800 hover:border-red-900 shadow-red-500/10"
-            >
-              <Plus className="w-5 h-5 animate-pulse" />
-              <span>{settings.language === 'fa' ? 'ثبت گزارش تخلف جدید (اخطار منفی)' : 'Log New Violation'}</span>
-            </button>
-          </div>
-
-          {/* Card 2: HSE Positive Rewards Portal */}
-          <div 
+          {/* Card 2 Switch: HSE Positive Rewards Portal */}
+          <button 
+            type="button"
             onClick={() => setSystemMode('REWARD')}
-            className={`relative rounded-2xl p-5 md:p-6 transition-all duration-300 cursor-pointer overflow-hidden border-2 ${
+            className={`flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 outline-none ${
               systemMode === 'REWARD' 
-                ? 'border-emerald-500 bg-gradient-to-br from-emerald-50/70 via-emerald-50/30 to-white shadow-md ring-4 ring-emerald-500/10' 
-                : 'border-gray-200 bg-white hover:border-emerald-200 hover:shadow shadow-sm opacity-85 hover:opacity-100'
+                ? `${themeStyles.accentBg} text-gray-800 border ${themeStyles.borderLight} shadow-xs ring-2 ${themeStyles.ring}/10` 
+                : 'hover:bg-gray-50 text-gray-500 border border-transparent'
             }`}
           >
-            {/* Ambient subtle light inside active card */}
-            {systemMode === 'REWARD' && (
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
-            )}
-            
-            <div className="flex justify-between items-start mb-3 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-xl transition-all duration-300 ${
-                  systemMode === 'REWARD' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'bg-emerald-50 text-emerald-600'
-                }`}>
-                  <Medal className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base md:text-lg text-gray-900 leading-tight">
-                    {settings.language === 'fa' ? 'سامانه تشویقی و امتیازهای مثبت پرسنل' : 'Personnel Rewards & Points'}
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-0.5 font-medium">
-                    {rewards.filter(r => !r.isArchived).length}{' '}
-                    {settings.language === 'fa' ? 'مورد فعال در سامانه' : 'Active Cases logged'}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-lg transition-all ${
+                systemMode === 'REWARD' ? `${themeStyles.bg} text-white shadow-sm scale-105` : 'bg-gray-100/80 text-gray-400'
+              }`}>
+                <Medal className="w-5 h-5" />
               </div>
+              <div className="text-right">
+                <span className="block font-black text-xs md:text-sm text-gray-800">
+                  {settings.language === 'fa' ? 'سامانه تشویقی و امتیازهای مثبت پرسنل' : 'Personnel Rewards & Points'}
+                </span>
+                <span className="block text-[10px] md:text-xs text-gray-500 font-medium">
+                  {rewards.filter(r => !r.isArchived).length}{' '}
+                  {settings.language === 'fa' ? 'مورد تشویقی ثبت شده' : 'Active rewards logged'}
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              {systemMode === 'REWARD' ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold bg-white border border-gray-200 text-gray-700 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  {settings.language === 'fa' ? 'در حال پایش' : 'Active View'}
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] md:text-xs font-semibold bg-gray-100 text-gray-400">
+                  {settings.language === 'fa' ? 'انتخاب جهت پایش' : 'View'}
+                </span>
+              )}
+            </div>
+          </button>
+        </div>
 
-              {/* Status Indicator Badge */}
-              <div className="shrink-0 flex items-center">
-                {systemMode === 'REWARD' ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-sm border border-emerald-700 animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white block"></span>
-                    {settings.language === 'fa' ? 'در حال پایش' : 'Active View'}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200">
-                    {settings.language === 'fa' ? 'کلیک جهت پایش' : 'View List'}
+        {/* Console banner card with dynamic styling based on active mode & theme */}
+        <div className={`relative overflow-hidden rounded-2xl border mb-6 ${
+          systemMode === 'VIOLATION'
+            ? 'border-red-200 bg-gradient-to-br from-red-50/50 via-white to-red-50/10 shadow-xs'
+            : `${themeStyles.borderLight} bg-gradient-to-br ${themeStyles.gradientBg} shadow-xs`
+        } p-5 md:p-6 transition-all duration-500`}>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10" />
+          
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
+            {/* Left Desk: Context and counts */}
+            <div className="space-y-1.5">
+              <div className="flex items-center flex-wrap gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${
+                  systemMode === 'VIOLATION' 
+                    ? 'bg-red-655 bg-red-600 text-white shadow-xs' 
+                    : `${themeStyles.bg} text-white shadow-xs`
+                }`}>
+                  {systemMode === 'VIOLATION' ? <Shield className="w-3.5 h-3.5" /> : <Medal className="w-3.5 h-3.5" />}
+                  {systemMode === 'VIOLATION' ? t.mode_violation : t.mode_reward}
+                </span>
+                {/* Server Status Indicators */}
+                {getServerUrl() && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-gray-150 text-emerald-600">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {settings.language === 'fa' ? 'سرور متصل' : 'Intranet Synced'}
                   </span>
                 )}
               </div>
+              
+              <h2 className="text-base md:text-lg font-black text-gray-900 leading-tight">
+                {systemMode === 'VIOLATION' 
+                  ? (settings.language === 'fa' ? 'پیشخوان کنترل و ثبت تخلفات ایمنی (HSE)' : 'Safety Violations Action Desk')
+                  : (settings.language === 'fa' ? 'پیشخوان تخصیص تشویقی و امتیازات مثبت پرسنلی' : 'Personnel Safe Behavior Rewards Desk')}
+              </h2>
+              <p className="text-xs text-gray-650 leading-relaxed max-w-3xl">
+                {systemMode === 'VIOLATION'
+                  ? (settings.language === 'fa' 
+                      ? 'در این بخش می‌توانید نسبت به ثبت عدم انطباق‌ها، آرشیو مجازات کدهای انضباطی سازمان و کسر امتیازهای متناسب اقدام به پایش نمایید.' 
+                      : 'Log and monitor personnel non-compliances, warnings, disciplinary codes, and performance point deductions.')
+                  : (settings.language === 'fa' 
+                      ? 'در این بخش امتیازات مثبت تشویقی بابت رفتارهای ایمن، ابتکارها و آراستگی پرسنل ثبت و تایید نهایی می‌گردد.' 
+                      : 'Log awards, safety improvements, and positive behavior points to empower high-performing crews.')}
+              </p>
             </div>
 
-            <p className="text-xs md:text-sm text-gray-600 mb-4 leading-relaxed relative z-10">
-              {settings.language === 'fa' 
-                ? 'ثبت و تخصیص امتیازات رفتار ایمن پرسنل جهت ایجاد انگیزه و انتخاب هوشمند پرسنل برتر ماه.' 
-                : 'Award positive behaviors, track performance scores, and seamlessly select workers of the month via AI.'}
-            </p>
+            {/* Right Desk: Core primary actions (No duplicates, elegant animations) */}
+            <div className="flex flex-wrap lg:flex-nowrap gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsLegendOpen(true)}
+                className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-gray-300 font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-xs"
+              >
+                <BookOpen className="w-4 h-4 text-gray-500" />
+                <span>{t.codeLegend}</span>
+              </button>
 
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsRewardModalOpen(true);
-              }}
-              className="w-full relative z-10 bg-emerald-600 hover:bg-emerald-750 text-white font-black py-3.5 px-5 rounded-xl shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm border-b-4 border-emerald-800 hover:border-emerald-900 shadow-emerald-500/10"
-            >
-              <Plus className="w-5 h-5 animate-pulse" />
-              <span>{settings.language === 'fa' ? 'ثبت امتیاز مثبت / تشویق جدید' : 'Log New Reward'}</span>
-            </button>
+              {systemMode === 'REWARD' && canViewAll && (
+                <button
+                  type="button"
+                  disabled={selectingWorker}
+                  onClick={handlePickWorkerOfMonth}
+                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-xs"
+                >
+                  {selectingWorker ? <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" /> : <Sparkles className="w-4 h-4 text-indigo-600" />}
+                  <span>{settings.language === 'fa' ? 'کارمند نمونه ماه (با هوش مصنوعی)' : 'AI Pick Worker of Month'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => systemMode === 'VIOLATION' ? setIsModalOpen(true) : setIsRewardModalOpen(true)}
+                className={`text-white font-black py-2.5 px-4.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-xs shadow-sm hover:shadow-md ${
+                  systemMode === 'VIOLATION' 
+                    ? 'bg-red-600 hover:bg-red-700' 
+                    : `${themeStyles.bg} ${themeStyles.hoverBg}`
+                }`}
+              >
+                <Plus className="w-4 h-4 md:w-5 md:h-5 animate-pulse" />
+                <span>{systemMode === 'VIOLATION' ? t.newViolation : t.newReward}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -788,16 +977,16 @@ const App: React.FC = () => {
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)} 
         settings={settings} 
-        onUpdateSettings={setSettings} 
+        onUpdateSettings={handleUpdateSettings} 
         users={users} 
-        onUpdateUsers={setUsers} 
+        onUpdateUsers={handleUpdateUsers} 
         employees={employees}
         onUpdateEmployees={updateEmployees}
         currentUser={user}
         violationCodes={violationCodes}
-        onUpdateViolationCodes={setViolationCodes}
+        onUpdateViolationCodes={handleUpdateViolationCodes}
         rewardCodes={rewardCodes}
-        onUpdateRewardCodes={setRewardCodes}
+        onUpdateRewardCodes={handleUpdateRewardCodes}
       />
     </div>
   );
