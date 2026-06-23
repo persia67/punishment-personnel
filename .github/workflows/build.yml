@@ -138,17 +138,15 @@ jobs:
           echo "Checking GH CLI version and authorization..."
           gh --version
           
-          # Let's create the release notes content cleanly in a file to prevent YAML parsing and escaping issues
-          cat << 'EOF' > release-notes.md
-This snapshot contains the latest live automated builds of the **SafeWatch AI** system for Windows and Android, compiled on every push to the main branch.
-
----
-### 📥 Download Links
-* **[Android Mobile App (.apk)](${{ github.server_url }}/${{ github.repository }}/releases/download/latest-build/SafeWatch-Android.apk)**
-* **[Windows Desktop Installer (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/latest-build/SafeWatch-Windows-Setup.exe)**
-
-*Please download, transfer to your device, and proceed with standard installation procedures.*
-EOF
+          # Let's create the release notes content cleanly in a file using echo to prevent YAML parsing and escaping issues
+          echo "This snapshot contains the latest live automated builds of the **SafeWatch AI** system for Windows and Android, compiled on every push to the main branch." > release-notes.md
+          echo "" >> release-notes.md
+          echo "---" >> release-notes.md
+          echo "### 📥 Download Links" >> release-notes.md
+          echo "* **[Android Mobile App (.apk)](${{ github.server_url }}/${{ github.repository }}/releases/download/latest-build/SafeWatch-Android.apk)**" >> release-notes.md
+          echo "* **[Windows Desktop Installer (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/latest-build/SafeWatch-Windows-Setup.exe)**" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "*Please download, transfer to your device, and proceed with standard installation procedures.*" >> release-notes.md
           
           # Create tag and release if not exists, then overwrite/upload assets
           # Uses rolling tag 'latest-build' so users always download the newest version on each push.
