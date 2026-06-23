@@ -89,3 +89,68 @@ jobs:
         with:
           name: SafeWatch-Windows-Setup
           path: release/*.exe
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-all, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: SafeWatch-Android-APK
+          path: artifacts/android
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: SafeWatch-Windows-Setup
+          path: artifacts/windows
+
+      - name: Prepare Assets
+        run: |
+          mkdir -p release-assets
+          
+          # Copy Android APK and rename for clean presentation
+          if [ -f "artifacts/android/app-debug.apk" ]; then
+            cp "artifacts/android/app-debug.apk" "release-assets/SafeWatch-Android.apk"
+            echo "Android APK successfully copied."
+          else
+            echo "Android compilation artifact not found!"
+          fi
+          
+          # Copy Windows Installer and rename for clean presentation
+          shopt -s nullglob
+          win_installer=(artifacts/windows/*.exe)
+          if [ ${#win_installer[@]} -gt 0 ]; then
+            cp "${win_installer[0]}" "release-assets/SafeWatch-Windows-Setup.exe"
+            echo "Windows Installer successfully copied: ${win_installer[0]}"
+          else
+            echo "Windows compilation artifact not found!"
+          fi
+
+      - name: Create or Update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking GH CLI version and authorization..."
+          gh --version
+          
+          # Create tag and release if not exists, then overwrite/upload assets
+          # Uses rolling tag 'latest-build' so users always download the newest version on each push.
+          gh release create latest-build \
+            --title "SafeWatch AI - Latest Desktop & Mobile Builds" \
+            --notes "This snapshot contains the latest live automated builds of the **SafeWatch AI** system for Windows and Android, compiled on every push to the main branch.
+
+---
+### 📥 Download Links
+* **[Android Mobile App (.apk)](${{ github.server_url }}/${{ github.repository }}/releases/download/latest-build/SafeWatch-Android.apk)**
+* **[Windows Desktop Installer (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/latest-build/SafeWatch-Windows-Setup.exe)**
+
+*Please download, transfer to your device, and proceed with standard installation procedures.*" \
+            --prerelease || true
+            
+          echo "Uploading compiled release binaries..."
+          gh release upload latest-build release-assets/* --clobber

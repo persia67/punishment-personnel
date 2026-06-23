@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppSettings, User, ThemeColor, Language, Role, Employee, CodeItem } from '../types';
 import { TRANSLATIONS } from '../constants';
 import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot } from 'lucide-react';
