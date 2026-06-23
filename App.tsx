@@ -302,6 +302,30 @@ const App: React.FC = () => {
     return false;
   };
 
+  const getCanDeleteItem = (item: Violation | Reward) => {
+    if (!user) return false;
+    const role = user.role;
+    // Plant manager and developer can delete everything
+    if (['PLANT_MANAGER', 'DEVELOPER'].includes(role)) return true;
+    
+    // HSE Manager can delete HSE and Training items
+    if (role === 'HSE_MANAGER' && ['HSE', 'TRAINING'].includes(item.departmentSource)) return true;
+    
+    // HR Manager can delete admin, HR, security items
+    if (role === 'HR_MANAGER' && ['ADMIN', 'HR', 'SECURITY'].includes(item.departmentSource)) return true;
+
+    // Security Manager can delete security items
+    if (role === 'SECURITY_MANAGER' && item.departmentSource === 'SECURITY') return true;
+
+    // Training Manager can delete training items
+    if (role === 'TRAINING_MANAGER' && item.departmentSource === 'TRAINING') return true;
+    
+    // Custom Department Manager can delete their own department's items
+    if (role === 'DEPARTMENT_MANAGER' && user.managedDepartment === item.departmentSource) return true;
+
+    return false;
+  };
+
   // Filter Data based on Role/Department
   const filterData = <T extends Violation | Reward>(data: T[]) => {
     return data.filter(item => {
@@ -379,13 +403,25 @@ const App: React.FC = () => {
   };
   const handleDelete = () => {
       if (deleteModal.id) {
+          const targetId = deleteModal.id;
+          const item = deleteModal.type === 'VIOLATION'
+              ? violations.find(v => v.id === targetId)
+              : rewards.find(r => r.id === targetId);
+
+          if (!item || !getCanDeleteItem(item)) {
+              alert(settings.language === 'fa' 
+                  ? 'خطای امنیتی: شما دسترسی لازم برای حذف این مورد ثبت شده را ندارید!' 
+                  : 'Security Error: You do not have permission to delete this logged item.');
+              return;
+          }
+
           let updatedV = violations;
           let updatedR = rewards;
           if (deleteModal.type === 'VIOLATION') {
-              updatedV = violations.filter(v => v.id !== deleteModal.id);
+              updatedV = violations.filter(v => v.id !== targetId);
               setViolations(updatedV);
           } else {
-              updatedR = rewards.filter(r => r.id !== deleteModal.id);
+              updatedR = rewards.filter(r => r.id !== targetId);
               setRewards(updatedR);
           }
           setDeleteModal({ isOpen: false, id: null, type: 'VIOLATION' });
@@ -396,9 +432,23 @@ const App: React.FC = () => {
       let updatedV = violations;
       let updatedR = rewards;
       if (type === 'VIOLATION') {
+          const item = violations.find(v => v.id === id);
+          if (!item || !getCanApproveItem(item)) {
+              alert(settings.language === 'fa' 
+                  ? 'خطای امنیتی: شما دسترسی لازم برای تایید این مورد را ندارید!' 
+                  : 'Security Error: You are not authorized to approve this item.');
+              return;
+          }
           updatedV = violations.map(v => v.id === id ? { ...v, isApproved: true } : v);
           setViolations(updatedV);
       } else {
+          const item = rewards.find(r => r.id === id);
+          if (!item || !getCanApproveItem(item)) {
+              alert(settings.language === 'fa' 
+                  ? 'خطای امنیتی: شما دسترسی لازم برای تایید این مورد را ندارید!' 
+                  : 'Security Error: You are not authorized to approve this item.');
+              return;
+          }
           updatedR = rewards.map(r => r.id === id ? { ...r, isApproved: true } : r);
           setRewards(updatedR);
       }
@@ -837,6 +887,12 @@ const App: React.FC = () => {
                                               <span>{settings.language === 'fa' ? 'تایید نهایی' : 'Approve'}</span>
                                           </button>
                                       )}
+                                      {getCanDeleteItem(item) && (
+                                          <button onClick={() => setDeleteModal({ isOpen: true, id: item.id, type: systemMode })} className="text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors hover:text-red-850" title={settings.language === 'fa' ? 'حذف مورد ثبت شده' : 'Delete Log'}>
+                                              <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                                              <span>{settings.language === 'fa' ? 'حذف' : 'Delete'}</span>
+                                          </button>
+                                      )}
                                   </div>
                               </td>
                           </tr>
@@ -936,6 +992,16 @@ const App: React.FC = () => {
                                   >
                                       <Check className="w-4 h-4 font-bold text-emerald-600" />
                                       <span className="text-xs font-bold">{settings.language === 'fa' ? 'تایید نهایی' : 'Approve'}</span>
+                                  </button>
+                              )}
+                              {getCanDeleteItem(item) && (
+                                  <button 
+                                      onClick={() => setDeleteModal({ isOpen: true, id: item.id, type: systemMode })} 
+                                      className="px-4 py-2.5 text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0"
+                                      title={settings.language === 'fa' ? 'حذف مورد ثبت شده' : 'Delete Log'}
+                                  >
+                                      <Trash2 className="w-4 h-4 text-red-600" />
+                                      <span className="text-xs font-bold">{settings.language === 'fa' ? 'حذف' : 'Delete'}</span>
                                   </button>
                               )}
                           </div>

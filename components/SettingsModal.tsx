@@ -141,6 +141,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleAddCode = (e: React.FormEvent) => {
       e.preventDefault();
+      if (!isUnitManager) {
+          alert(settings.language === 'fa' 
+              ? 'خطای امنیتی: شما اجازه تعریف کد جدید را ندارید!' 
+              : 'Security Error: You are not authorized to create a new code.');
+          return;
+      }
       if(newCode.label && newCode.code && newCode.department) {
           const item: CodeItem = {
               id: Date.now().toString(),
@@ -157,6 +163,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleDeleteCode = (id: string, type: 'VIOLATION' | 'REWARD') => {
+      if (!isUnitManager) {
+          alert(settings.language === 'fa' 
+              ? 'خطای امنیتی: شما اجازه حذف کدهای موجود را ندارید!' 
+              : 'Security Error: You are not authorized to delete codes.');
+          return;
+      }
       if(type === 'VIOLATION') onUpdateViolationCodes(violationCodes.filter(c => c.id !== id));
       else onUpdateRewardCodes(rewardCodes.filter(c => c.id !== id));
   };
