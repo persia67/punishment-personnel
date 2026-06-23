@@ -10,9 +10,10 @@ import LoginPage from './components/LoginPage';
 import SettingsModal from './components/SettingsModal';
 import CodeLegendModal from './components/CodeLegendModal';
 import PersonnelProfileModal from './components/PersonnelProfileModal';
+import ChangePasswordModal from './components/ChangePasswordModal';
 import { selectWorkerOfMonth } from './services/geminiService';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
-import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers } from 'lucide-react';
+import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -31,6 +32,7 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false); 
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false); 
   const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{isOpen: boolean; id: string | null; type: 'VIOLATION' | 'REWARD'}>({ isOpen: false, id: null, type: 'VIOLATION' });
   const [searchTerm, setSearchTerm] = useState('');
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
@@ -221,6 +223,123 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('sg_violationCodes', JSON.stringify(violationCodes)); }, [violationCodes]);
   useEffect(() => { localStorage.setItem('sg_rewardCodes', JSON.stringify(rewardCodes)); }, [rewardCodes]);
   useEffect(() => { localStorage.setItem('sg_settings', JSON.stringify(settings)); }, [settings]);
+
+  // Automated snapshot local backup helper
+  const triggerAutoBackup = (
+    v = violations,
+    r = rewards,
+    u = users,
+    e = employees,
+    vc = violationCodes,
+    rc = rewardCodes,
+    s = settings
+  ) => {
+    try {
+      const snapshot = {
+        timestamp: new Date().toISOString(),
+        violations: v,
+        rewards: r,
+        users: u,
+        employees: e,
+        violationCodes: vc,
+        rewardCodes: rc,
+        settings: s
+      };
+
+      const raw = localStorage.getItem('sg_auto_backups');
+      let backups: any[] = [];
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            backups = parsed;
+          }
+        } catch {}
+      }
+
+      // Prepend so index 0 is always newest
+      backups.unshift(snapshot);
+
+      // Keep maximum 10 auto-saved snapshot copies
+      if (backups.length > 10) {
+        backups = backups.slice(0, 10);
+      }
+
+      localStorage.setItem('sg_auto_backups', JSON.stringify(backups));
+    } catch (err) {
+      console.error('[AutoBackup] Failed to save automatic snapshot:', err);
+    }
+  };
+
+  // Debounced auto backup on central database state changes
+  useEffect(() => {
+    // Avoid backing up completely empty state on initial boot
+    if (violations.length === 0 && rewards.length === 0 && employees.length === 0) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      console.log('[AutoBackup] State changes stabilized. Creating database snapshot...');
+      triggerAutoBackup(violations, rewards, users, employees, violationCodes, rewardCodes, settings);
+    }, 3000); // 3 seconds stability debounce
+    return () => clearTimeout(timer);
+  }, [violations, rewards, users, employees, violationCodes, rewardCodes, settings]);
+
+  const handleRestoreFullBackup = (bak: any) => {
+    if (bak.violations) {
+      setViolations(bak.violations);
+      localStorage.setItem('sg_violations', JSON.stringify(bak.violations));
+    }
+    if (bak.rewards) {
+      setRewards(bak.rewards);
+      localStorage.setItem('sg_rewards', JSON.stringify(bak.rewards));
+    }
+    if (bak.users) {
+      setUsers(bak.users);
+      localStorage.setItem('sg_users', JSON.stringify(bak.users));
+      if (user) {
+        const matching = bak.users.find((u: any) => u.username === user.username);
+        if (matching) setUser(matching);
+      }
+    }
+    if (bak.employees) {
+      setEmployees(bak.employees);
+      localStorage.setItem('sg_employees', JSON.stringify(bak.employees));
+    }
+    if (bak.violationCodes) {
+      setViolationCodes(bak.violationCodes);
+      localStorage.setItem('sg_violationCodes', JSON.stringify(bak.violationCodes));
+    }
+    if (bak.rewardCodes) {
+      setRewardCodes(bak.rewardCodes);
+      localStorage.setItem('sg_rewardCodes', JSON.stringify(bak.rewardCodes));
+    }
+    if (bak.settings) {
+      setSettings(bak.settings);
+      localStorage.setItem('sg_settings', JSON.stringify(bak.settings));
+    }
+    // Update live central database to synchronize network nodes
+    pushDataToServerState(
+      bak.violations,
+      bak.rewards,
+      bak.users,
+      bak.employees,
+      bak.violationCodes,
+      bak.rewardCodes,
+      bak.settings
+    );
+  };
+
+  const handleUpdatePassword = (newPass: string) => {
+    if (!user) return;
+    const updatedLoggedInUser = { ...user, password: newPass };
+    setUser(updatedLoggedInUser);
+
+    const updatedUsersList = users.map(u => u.username === user.username ? { ...u, password: newPass } : u);
+    setUsers(updatedUsersList);
+    localStorage.setItem('sg_users', JSON.stringify(updatedUsersList));
+
+    pushDataToServerState(violations, rewards, updatedUsersList, employees, violationCodes, rewardCodes, settings);
+  };
 
   const handleLogin = (u: string, p: string) => {
     const foundUser = users.find(user => user.username === u && user.password === p);
@@ -536,7 +655,8 @@ const App: React.FC = () => {
 
              <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${themeStyles.bg}`}>{user.username.charAt(0).toUpperCase()}</div>
-                <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 rounded-full hover:bg-white text-gray-500 transition-colors"><Settings className="w-4 h-4" /></button>
+                <button onClick={() => setIsChangePasswordOpen(true)} className="p-1.5 rounded-full hover:bg-white text-amber-600 transition-colors" title={settings.language === 'fa' ? 'تغییر رمز عبور کاربر' : 'Change Password'}><Key className="w-4 h-4" /></button>
+                 <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 rounded-full hover:bg-white text-gray-500 transition-colors"><Settings className="w-4 h-4" /></button>
                 <button onClick={handleLogout} className="p-1.5 rounded-full hover:bg-white text-red-500 transition-colors"><LogOut className="w-4 h-4" /></button>
              </div>
            </div>
@@ -660,8 +780,8 @@ const App: React.FC = () => {
               
               <h2 className="text-base md:text-lg font-black text-gray-900 leading-tight">
                 {systemMode === 'VIOLATION' 
-                  ? (settings.language === 'fa' ? 'پیشخوان کنترل و ثبت تخلفات ایمنی (HSE)' : 'Safety Violations Action Desk')
-                  : (settings.language === 'fa' ? 'پیشخوان تخصیص تشویقی و امتیازات مثبت پرسنلی' : 'Personnel Safe Behavior Rewards Desk')}
+                  ? (settings.language === 'fa' ? 'پیشخوان جامع کنترل و ثبت تخلفات سازمانی' : 'Organizational Compliance & Violations Desk')
+                  : (settings.language === 'fa' ? 'پیشخوان انگیزش و تخصیص امتیازات مثبت پرسنلی' : 'Personnel Motivation & Performance Desk')}
               </h2>
               <p className="text-xs text-gray-650 leading-relaxed max-w-3xl">
                 {systemMode === 'VIOLATION'
@@ -1053,7 +1173,18 @@ const App: React.FC = () => {
         onUpdateViolationCodes={handleUpdateViolationCodes}
         rewardCodes={rewardCodes}
         onUpdateRewardCodes={handleUpdateRewardCodes}
+        onRestoreFullBackup={handleRestoreFullBackup}
       />
+
+      {user && (
+        <ChangePasswordModal 
+          isOpen={isChangePasswordOpen}
+          onClose={() => setIsChangePasswordOpen(false)}
+          currentUser={user}
+          settings={settings}
+          onUpdatePassword={handleUpdatePassword}
+        />
+      )}
     </div>
   );
 };

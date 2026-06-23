@@ -91,8 +91,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, settings, error }) => {
                 <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent my-3" />
                 <p className="text-white/80 text-xs font-light leading-relaxed">
                   {settings.language === 'fa' 
-                    ? 'سامانه پیشرفته و هوشمند ثبت وقایع ایمنی، پایش بهداشت حرفه‌ای و سیستم انگیزش پرسنل نمونه بر پایه هوش مصنوعی محلی.' 
-                    : 'Advanced and intelligent enterprise platform for safety logs, HSE compliance auditing, and local AI-driven worker reward systems.'}
+                    ? 'سامانه هوشمند و پیشرفته مدیریت پایش عملکرد، ثبت عدم انطباقات و تخلفات سازمانی به همراه سیستم انگیزش و پاداش پرسنلی.' 
+                    : 'Advanced and intelligent enterprise platform for organizational compliance logs, performance auditing, and local AI-driven worker reward systems.'}
                 </p>
               </div>
             </div>

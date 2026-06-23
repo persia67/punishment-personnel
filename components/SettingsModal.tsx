@@ -19,15 +19,33 @@ interface SettingsModalProps {
   onUpdateViolationCodes: (codes: CodeItem[]) => void;
   rewardCodes: CodeItem[];
   onUpdateRewardCodes: (codes: CodeItem[]) => void;
+  onRestoreFullBackup?: (backup: any) => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ 
   isOpen, onClose, settings, onUpdateSettings, users, onUpdateUsers, employees, onUpdateEmployees, currentUser,
-  violationCodes, onUpdateViolationCodes, rewardCodes, onUpdateRewardCodes
+  violationCodes, onUpdateViolationCodes, rewardCodes, onUpdateRewardCodes, onRestoreFullBackup
 }) => {
   const [activeTab, setActiveTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'AI'>('APPEARANCE');
   const [newUser, setNewUser] = useState<Partial<User>>({ username: '', password: '', fullName: '', role: 'HSE_OFFICER', managedDepartment: '' });
   const [importMode, setImportMode] = useState<'MERGE' | 'REPLACE'>('MERGE');
+  const [autoBackups, setAutoBackups] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (activeTab === 'DATA') {
+      const raw = localStorage.getItem('sg_auto_backups');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            setAutoBackups(parsed);
+          }
+        } catch (e) {
+          console.error('[Settings] Auto backup parse fail:', e);
+        }
+      }
+    }
+  }, [activeTab]);
   
   // New employee manual entry state
   const [empFormData, setEmpFormData] = useState({
@@ -100,6 +118,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
     if(newUser.username && newUser.password && newUser.fullName) {
+        const validateCredentialsObj = (str: string) => {
+            return /[a-z]/.test(str) && /[A-Z]/.test(str) && /\d/.test(str);
+        };
+
+        if (!validateCredentialsObj(newUser.username)) {
+            alert(settings.language === 'fa' 
+                ? 'خطای اعتبارسنجی: نام کاربری حتماً باید شامل حداقل یک حرف بزرگ (A-Z)، یک حرف کوچک (a-z) و یک عدد (0-9) باشد.'
+                : 'Validation Error: Username must contain at least one uppercase letter (A-Z), one lowercase letter (a-z), and a number (0-9).');
+            return;
+        }
+
+        if (!validateCredentialsObj(newUser.password)) {
+            alert(settings.language === 'fa' 
+                ? 'خطای اعتبارسنجی: کلمه عبور حتماً باید شامل حداقل یک حرف بزرگ (A-Z)، یک حرف کوچک (a-z) و یک عدد (0-9) باشد.'
+                : 'Validation Error: Password must contain at least one uppercase letter (A-Z), one lowercase letter (a-z), and a number (0-9).');
+            return;
+        }
+
         // Validate Managed Dept
         if(newUser.role === 'DEPARTMENT_MANAGER' && !newUser.managedDepartment) {
             alert('لطفا نام واحد تحت مدیریت را وارد کنید.');
@@ -126,9 +162,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleResetAllPasswords = () => {
-      if(window.confirm("آیا اطمینان دارید؟ رمز عبور تمام کاربران به 123 تغییر خواهد کرد.")) {
-          onUpdateUsers(users.map(u => ({ ...u, password: '123' })));
-          alert("تمام رمزها ریست شدند.");
+      if(window.confirm("آیا اطمینان دارید؟ رمز عبور تمام کاربران به 'Pass123' تغییر خواهد کرد.")) {
+          onUpdateUsers(users.map(u => ({ ...u, password: 'Pass123' })));
+          alert("تمام رمزها به 'Pass123' ریست شدند.");
       }
   };
 
@@ -594,6 +630,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {activeTab === 'USERS' && (
                 <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                    {/* Security notification banner */}
+                    <div className="bg-amber-50 border border-amber-200 text-amber-900 p-3 md:p-4 rounded-xl text-xs flex gap-2.5 items-start">
+                        <Key className="w-4.5 h-4.5 text-amber-600 mt-0.5 shrink-0" />
+                        <div>
+                            <span className="font-semibold block mb-1">
+                                {settings.language === 'fa' ? 'الزام امنیتی حساب‌های کاربری:' : 'Mandatory Account Security Directives:'}
+                            </span>
+                            <span className="leading-relaxed">
+                                {settings.language === 'fa' 
+                                    ? 'نام کاربری و کلمه عبور حتماً باید حاوی حداقل یک حرف بزرگ انگلیسی (A-Z)، یک حرف کوچک انگلیسی (a-z) و اعداد (0-9) باشند.' 
+                                    : 'Both the Username and Password must contain at least one uppercase letter (A-Z), one lowercase letter (a-z), and numbers (0-9).'}
+                            </span>
+                        </div>
+                    </div>
+
                     <form onSubmit={handleAddUser} className="bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                         <input 
                             placeholder={t.username}
@@ -1006,6 +1057,92 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <input type="file" accept=".json" className="hidden" onChange={handleImportBackup} />
                             </label>
                          </div>
+
+                         {/* AUTOMATIC LOCAL BACKUPS LIST SECTION */}
+                             <div className="pt-4 border-t border-dashed border-gray-150 space-y-3 mb-4">
+                                  <span className="block text-xs font-bold text-gray-700">
+                                      {settings.language === 'fa' ? 'تاریخچه پشتیبان‌گیری‌های خودکار سیستم (ذخیره لوکال)' : 'Automatic System Local Backup History'}
+                                   </span>
+                                   <p className="text-[11px] text-gray-500 leading-normal">
+                                       {settings.language === 'fa'
+                                           ? 'سیستم به طور خودکار با هر تغییر وضعیت جدید یک نسخه پشتیبان کامل به صورت محلی در حافظه مرورگر جهت تداوم کسب‌وکار ذخیره می‌کند.'
+                                           : 'The application automatically captures a complete offline system snapshot to your browser storage upon database modifications.'}
+                                   </p>
+
+                                   <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                       {autoBackups.length === 0 ? (
+                                           <div className="text-[11px] text-gray-400 py-4 text-center border border-dashed rounded-xl">
+                                               {settings.language === 'fa' ? 'هیچ بکاپ خودکاری هنوز ثبت نشده است.' : 'No automatic backups captured yet.'}
+                                           </div>
+                                       ) : (
+                                           autoBackups.map((bak, i) => {
+                                               const dateStr = new Date(bak.timestamp).toLocaleString(
+                                                   settings.language === 'fa' ? 'fa-IR' : 'en-US',
+                                                   { dateStyle: 'medium', timeStyle: 'short' }
+                                               );
+                                               return (
+                                                   <div key={i} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-150 gap-2 hover:bg-gray-100 transition-colors" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
+                                                       <div className="flex flex-col items-start">
+                                                           <span className="text-[11.5px] font-bold text-gray-800">
+                                                               {settings.language === 'fa' ? `پشتیبان خودکار شماره ${autoBackups.length - i}` : `Auto-Snapshot #${autoBackups.length - i}`}
+                                                           </span>
+                                                           <span className="text-[10px] text-gray-500 font-mono mt-0.5">
+                                                               {dateStr}
+                                                           </span>
+                                                       </div>
+                                                       <div className="flex items-center gap-1.5 shrink-0">
+                                                           <button
+                                                               type="button"
+                                                               onClick={() => {
+                                                                   if (window.confirm(settings.language === 'fa' ? 'آیا مطمئن هستید که می‌خواهید اطلاعات فعلی سیستم را به این نسخه بازگردانید؟ تمامی اطلاعات جدید پاک خواهند شد.' : 'Are you sure you want to restore the entire database to this system snapshot? All current modifications will be replaced.')) {
+                                                                       if (onRestoreFullBackup) {
+                                                                           onRestoreFullBackup(bak);
+                                                                           alert(settings.language === 'fa' ? 'اطلاعات با موفقیت بازیابی شد!' : 'Full recovery completed successfully!');
+                                                                       }
+                                                                   }
+                                                               }}
+                                                               className="px-2.5 py-1.5 text-[10.5px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1 shadow-sm active:scale-95"
+                                                           >
+                                                               <Check className="w-3.5 h-3.5" />
+                                                               {settings.language === 'fa' ? 'بازیابی' : 'Restore'}
+                                                           </button>
+                                                           <button
+                                                               type="button"
+                                                               onClick={() => {
+                                                                   const blob = new Blob([JSON.stringify(bak, null, 2)], { type: 'application/json' });
+                                                                   const url = URL.createObjectURL(blob);
+                                                                   const a = document.createElement('a');
+                                                                   a.href = url;
+                                                                   a.download = `safewatch_autobackup_${new Date(bak.timestamp).getTime()}.json`;
+                                                                   a.click();
+                                                               }}
+                                                               className="p-1.5 text-gray-550 hover:text-gray-850 bg-white border border-gray-250 rounded-lg shadow-sm hover:bg-gray-50"
+                                                               title={settings.language === 'fa' ? 'دانلود فایل' : 'Download File'}
+                                                           >
+                                                               <Download className="w-3.5 h-3.5" />
+                                                           </button>
+                                                           <button
+                                                               type="button"
+                                                               onClick={() => {
+                                                                   if (window.confirm(settings.language === 'fa' ? 'حذف این فایل بکاپ؟' : 'Delete this backup file?')) {
+                                                                       const updated = autoBackups.filter((_, idx) => idx !== i);
+                                                                       localStorage.setItem('sg_auto_backups', JSON.stringify(updated));
+                                                                       setAutoBackups(updated);
+                                                                   }
+                                                               }}
+                                                               className="p-1.5 text-red-650 hover:bg-red-50 hover:text-red-800 bg-white border border-gray-250 rounded-lg shadow-sm"
+                                                               title={settings.language === 'fa' ? 'حذف' : 'Delete'}
+                                                           >
+                                                               <Trash2 className="w-3.5 h-3.5" />
+                                                           </button>
+                                                       </div>
+                                                   </div>
+                                               );
+                                           })
+                                       )}
+                                   </div>
+                             </div>
+
                          {isDeveloper && (
                              <div className="pt-2 border-t border-dashed border-red-100 flex justify-end">
                                 <button 

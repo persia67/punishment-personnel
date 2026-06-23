@@ -80,7 +80,7 @@ export const TRANSLATIONS = {
     
     // User Management
     resetPassword: "ریست رمز",
-    resetConfirm: "رمز عبور به '123' تغییر یابد؟",
+    resetConfirm: "رمز عبور به 'Pass123' تغییر یابد؟",
     developerTools: "ابزار توسعه‌دهنده",
     resetAllPasswords: "ریست تمام رمزها",
     factoryReset: "بازگشت به کارخانه",
@@ -252,7 +252,7 @@ export const TRANSLATIONS = {
     replaceData: "Replace All",
     mergeDesc: "Use Merge to combine data from different units.",
     resetPassword: "Reset Pass",
-    resetConfirm: "Reset password to '123'?",
+    resetConfirm: "Reset password to 'Pass123'?",
     developerTools: "Developer Tools",
     resetAllPasswords: "Reset All Passwords",
     factoryReset: "Factory Reset",
@@ -377,27 +377,27 @@ export const INITIAL_REWARD_CODES: CodeItem[] = [
 
 export const DEFAULT_USERS: User[] = [
   // DEV VIEW
-  { id: 'dev1', username: 'dev', password: '123', fullName: 'مدیر سیستم', role: 'DEVELOPER', avatar: '' },
+  { id: 'dev1', username: 'Dev123', password: 'Pass123', fullName: 'مدیر سیستم', role: 'DEVELOPER', avatar: '' },
 
   // GLOBAL VIEW
-  { id: 'u0', username: 'manager', password: '123', fullName: 'مدیر کارخانه', role: 'PLANT_MANAGER', avatar: '' },
-  { id: 'u1', username: 'hr', password: '123', fullName: 'مدیر منابع انسانی', role: 'HR_MANAGER', avatar: '' },
+  { id: 'u0', username: 'Manager123', password: 'Pass123', fullName: 'مدیر کارخانه', role: 'PLANT_MANAGER', avatar: '' },
+  { id: 'u1', username: 'HrManager123', password: 'Pass123', fullName: 'مدیر منابع انسانی', role: 'HR_MANAGER', avatar: '' },
   
   // HSE VIEW
-  { id: 'u2', username: 'hse_manager', password: '123', fullName: 'مدیر ایمنی', role: 'HSE_MANAGER', avatar: '' },
-  { id: 'u3', username: 'hse_officer', password: '123', fullName: 'افسر ایمنی', role: 'HSE_OFFICER', avatar: '' },
+  { id: 'u2', username: 'HseManager123', password: 'Pass123', fullName: 'مدیر ایمنی', role: 'HSE_MANAGER', avatar: '' },
+  { id: 'u3', username: 'HseOfficer123', password: 'Pass123', fullName: 'افسر ایمنی', role: 'HSE_OFFICER', avatar: '' },
   
   // DEPARTMENT SPECIFIC VIEW
-  { id: 'u4', username: 'security', password: '123', fullName: 'سرپرست انتظامات', role: 'SECURITY_MANAGER', avatar: '' },
-  { id: 'u5', username: 'training', password: '123', fullName: 'مسئول آموزش', role: 'TRAINING_MANAGER', avatar: '' },
-  { id: 'u6', username: 'admin', password: '123', fullName: 'کارشناس اداری', role: 'ADMIN_STAFF', avatar: '' },
+  { id: 'u4', username: 'Security123', password: 'Pass123', fullName: 'سرپرست انتظامات', role: 'SECURITY_MANAGER', avatar: '' },
+  { id: 'u5', username: 'Training123', password: 'Pass123', fullName: 'مسئول آموزش', role: 'TRAINING_MANAGER', avatar: '' },
+  { id: 'u6', username: 'Admin123', password: 'Pass123', fullName: 'کارشناس اداری', role: 'ADMIN_STAFF', avatar: '' },
 ];
 
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'fa',
   themeColor: 'blue',
   companyLogo: './app_icon_1781090095655.png',
-  companyName: 'سامانه جامع پایش HSE SafeWatch',
+  companyName: 'سامانه جامع پایش و انگیزش سازمانی SafeWatch',
   customApiKey: '',
   aiProvider: 'GEMINI',
   ollamaUrl: 'http://localhost:11434',
