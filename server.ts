@@ -30,14 +30,14 @@ interface DBState {
 
 // Minimal Bootstrapping Defaults for Server
 const DEFAULT_USERS_BACKUP = [
-  { id: 'u1', username: 'dev', password: '123', fullName: 'Developer Admin', role: 'DEVELOPER' },
-  { id: 'u2', username: 'plant', password: '123', fullName: 'Plant Manager', role: 'PLANT_MANAGER' },
-  { id: 'u3', username: 'hr', password: '123', fullName: 'HR Manager', role: 'HR_MANAGER' },
-  { id: 'u4', username: 'hse_m', password: '123', fullName: 'HSE Manager', role: 'HSE_MANAGER' },
-  { id: 'u5', username: 'hse_o', password: '123', fullName: 'HSE Officer', role: 'HSE_OFFICER' },
-  { id: 'u6', username: 'security', password: '123', fullName: 'Security Manager', role: 'SECURITY_MANAGER' },
-  { id: 'u7', username: 'training', password: '123', fullName: 'Training Manager', role: 'TRAINING_MANAGER' },
-  { id: 'u8', username: 'admin', password: '123', fullName: 'Admin Staff', role: 'ADMIN_STAFF' }
+  { id: 'dev1', username: 'Dev123', password: 'Pass123', fullName: 'مدیر سیستم', role: 'DEVELOPER', avatar: '' },
+  { id: 'u0', username: 'Manager123', password: 'Pass123', fullName: 'مدیر کارخانه', role: 'PLANT_MANAGER', avatar: '' },
+  { id: 'u1', username: 'HrManager123', password: 'Pass123', fullName: 'مدیر منابع انسانی', role: 'HR_MANAGER', avatar: '' },
+  { id: 'u2', username: 'HseManager123', password: 'Pass123', fullName: 'مدیر ایمنی', role: 'HSE_MANAGER', avatar: '' },
+  { id: 'u3', username: 'HseOfficer123', password: 'Pass123', fullName: 'افسر ایمنی', role: 'HSE_OFFICER', avatar: '' },
+  { id: 'u4', username: 'Security123', password: 'Pass123', fullName: 'سرپرست انتظامات', role: 'SECURITY_MANAGER', avatar: '' },
+  { id: 'u5', username: 'Training123', password: 'Pass123', fullName: 'مسئول آموزش', role: 'TRAINING_MANAGER', avatar: '' },
+  { id: 'u6', username: 'Admin123', password: 'Pass123', fullName: 'کارشناس اداری', role: 'ADMIN_STAFF', avatar: '' }
 ];
 
 function readDB(): DBState {

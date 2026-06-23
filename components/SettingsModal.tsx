@@ -117,19 +117,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if(newUser.username && newUser.password && newUser.fullName) {
+    const trimmedUsername = newUser.username.trim();
+    const trimmedPassword = newUser.password.trim();
+    const trimmedFullName = newUser.fullName.trim();
+    if(trimmedUsername && trimmedPassword && trimmedFullName) {
         const validateCredentialsObj = (str: string) => {
             return /[a-z]/.test(str) && /[A-Z]/.test(str) && /\d/.test(str);
         };
 
-        if (!validateCredentialsObj(newUser.username)) {
+        if (trimmedUsername.length < 3) {
             alert(settings.language === 'fa' 
-                ? 'خطای اعتبارسنجی: نام کاربری حتماً باید شامل حداقل یک حرف بزرگ (A-Z)، یک حرف کوچک (a-z) و یک عدد (0-9) باشد.'
-                : 'Validation Error: Username must contain at least one uppercase letter (A-Z), one lowercase letter (a-z), and a number (0-9).');
+                ? 'خطای اعتبارسنجی: نام کاربری باید حداقل ۳ کاراکتر باشد.'
+                : 'Validation Error: Username must be at least 3 characters.');
             return;
         }
 
-        if (!validateCredentialsObj(newUser.password)) {
+        if (!validateCredentialsObj(trimmedPassword)) {
             alert(settings.language === 'fa' 
                 ? 'خطای اعتبارسنجی: کلمه عبور حتماً باید شامل حداقل یک حرف بزرگ (A-Z)، یک حرف کوچک (a-z) و یک عدد (0-9) باشد.'
                 : 'Validation Error: Password must contain at least one uppercase letter (A-Z), one lowercase letter (a-z), and a number (0-9).');
@@ -144,9 +147,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
         const u: User = {
             id: Date.now().toString(),
-            username: newUser.username!,
-            password: newUser.password!,
-            fullName: newUser.fullName!,
+            username: trimmedUsername,
+            password: trimmedPassword,
+            fullName: trimmedFullName,
             role: newUser.role as Role,
             managedDepartment: newUser.role === 'DEPARTMENT_MANAGER' ? newUser.managedDepartment : undefined
         };
@@ -639,8 +642,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             </span>
                             <span className="leading-relaxed">
                                 {settings.language === 'fa' 
-                                    ? 'نام کاربری و کلمه عبور حتماً باید حاوی حداقل یک حرف بزرگ انگلیسی (A-Z)، یک حرف کوچک انگلیسی (a-z) و اعداد (0-9) باشند.' 
-                                    : 'Both the Username and Password must contain at least one uppercase letter (A-Z), one lowercase letter (a-z), and numbers (0-9).'}
+                                    ? 'کلمه عبور حتماً باید حاوی حداقل یک حرف بزرگ انگلیسی (A-Z)، یک حرف کوچک انگلیسی (a-z) و اعداد (0-9) باشد. نام کاربری باید حداقل ۳ کاراکتر داشته باشد.' 
+                                    : 'The Password must contain at least one uppercase letter (A-Z), one lowercase letter (a-z), and numbers (0-9). The Username must be at least 3 characters.'}
                             </span>
                         </div>
                     </div>
@@ -650,6 +653,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             placeholder={t.username}
                             value={newUser.username} 
                             onChange={e => setNewUser({...newUser, username: e.target.value})}
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
                             className="px-3 py-2 md:px-4 md:py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                             required
                         />
@@ -657,6 +663,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             placeholder={t.password}
                             value={newUser.password} 
                             onChange={e => setNewUser({...newUser, password: e.target.value})}
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
                             className="px-3 py-2 md:px-4 md:py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                             required
                         />

@@ -150,7 +150,23 @@ const App: React.FC = () => {
   useEffect(() => {
     // Immediate local cache hydration
     const savedUsers = localStorage.getItem('sg_users');
-    if (savedUsers) setUsers(JSON.parse(savedUsers));
+    if (savedUsers) {
+      try {
+        const parsed = JSON.parse(savedUsers);
+        const hasLegacyUsers = Array.isArray(parsed) && parsed.some(u => u.username === 'dev' || u.password === '123' || u.id === 'u8');
+        if (hasLegacyUsers) {
+          console.warn('Legacy system users detected. Upgrading local database with new secure default credentials...');
+          localStorage.setItem('sg_users', JSON.stringify(DEFAULT_USERS));
+          setUsers(DEFAULT_USERS);
+        } else {
+          setUsers(parsed);
+        }
+      } catch (err) {
+        setUsers(DEFAULT_USERS);
+      }
+    } else {
+      setUsers(DEFAULT_USERS);
+    }
     const savedSettings = localStorage.getItem('sg_settings');
     if (savedSettings) {
       const parsed = JSON.parse(savedSettings);

@@ -16,7 +16,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, settings, error }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(username, password);
+    onLogin(username.trim(), password.trim());
   };
 
   // Dynamic background style based on theme
@@ -125,6 +125,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, settings, error }) => {
                       placeholder={t.username}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       className={`w-full bg-black/25 border border-white/10 rounded-xl py-2.5 md:py-3 ${settings.language === 'fa' ? 'pr-10 md:pr-12 pl-4' : 'pl-10 md:pl-12 pr-4'} text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-white/20 focus:bg-black/35 transition-all text-base md:text-sm`}
                     />
                   </div>
@@ -138,6 +141,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, settings, error }) => {
                       placeholder={t.password}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       className={`w-full bg-black/25 border border-white/10 rounded-xl py-2.5 md:py-3 ${settings.language === 'fa' ? 'pr-10 md:pr-12 pl-4' : 'pl-10 md:pl-12 pr-4'} text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-white/20 focus:bg-black/35 transition-all text-base md:text-sm`}
                     />
                   </div>

@@ -40,6 +40,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return; 
+  
+  // Do not intercept or cache API endpoints
+  if (event.request.url.includes('/api/')) return;
 
   // Network-First for index.html or root root to always fetch latest updates when online
   const isHtml = event.request.url.endsWith('/') || event.request.url.includes('index.html');

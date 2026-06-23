@@ -1,0 +1,277 @@
+{
+  "violations": [],
+  "rewards": [],
+  "users": [
+    {
+      "id": "dev1",
+      "username": "Dev123",
+      "password": "Pass123",
+      "fullName": "مدیر سیستم",
+      "role": "DEVELOPER",
+      "avatar": ""
+    },
+    {
+      "id": "u0",
+      "username": "Manager123",
+      "password": "Pass123",
+      "fullName": "مدیر کارخانه",
+      "role": "PLANT_MANAGER",
+      "avatar": ""
+    },
+    {
+      "id": "u1",
+      "username": "HrManager123",
+      "password": "Pass123",
+      "fullName": "مدیر منابع انسانی",
+      "role": "HR_MANAGER",
+      "avatar": ""
+    },
+    {
+      "id": "u2",
+      "username": "HseManager123",
+      "password": "Pass123",
+      "fullName": "مدیر ایمنی",
+      "role": "HSE_MANAGER",
+      "avatar": ""
+    },
+    {
+      "id": "u3",
+      "username": "HseOfficer123",
+      "password": "Pass123",
+      "fullName": "افسر ایمنی",
+      "role": "HSE_OFFICER",
+      "avatar": ""
+    },
+    {
+      "id": "u4",
+      "username": "Security123",
+      "password": "Pass123",
+      "fullName": "سرپرست انتظامات",
+      "role": "SECURITY_MANAGER",
+      "avatar": ""
+    },
+    {
+      "id": "u5",
+      "username": "Training123",
+      "password": "Pass123",
+      "fullName": "مسئول آموزش",
+      "role": "TRAINING_MANAGER",
+      "avatar": ""
+    },
+    {
+      "id": "u6",
+      "username": "Admin123",
+      "password": "Pass123",
+      "fullName": "کارشناس اداری",
+      "role": "ADMIN_STAFF",
+      "avatar": ""
+    }
+  ],
+  "employees": [],
+  "violationCodes": [
+    {
+      "id": "v1",
+      "code": 10,
+      "label": "عدم استفاده از کلاه ایمنی",
+      "score": -5,
+      "department": "HSE"
+    },
+    {
+      "id": "v2",
+      "code": 11,
+      "label": "عدم استفاده از کفش ایمنی",
+      "score": -5,
+      "department": "HSE"
+    },
+    {
+      "id": "v3",
+      "code": 12,
+      "label": "عدم استفاده از لوازم حفاظت فردی متناسب با کار",
+      "score": -10,
+      "department": "HSE"
+    },
+    {
+      "id": "v4",
+      "code": 20,
+      "label": "کار در ارتفاع بدون کمربند ایمنی",
+      "score": -20,
+      "department": "HSE"
+    },
+    {
+      "id": "v5",
+      "code": 30,
+      "label": "استعمال دخانیات در محیط کار",
+      "score": -15,
+      "department": "HSE"
+    },
+    {
+      "id": "v6",
+      "code": 40,
+      "label": "سرعت غیر مجاز در محوطه سایت",
+      "score": -10,
+      "department": "HSE"
+    },
+    {
+      "id": "v7",
+      "code": 50,
+      "label": "رفتار نا ایمن (شوخی در محیط کار)",
+      "score": -10,
+      "department": "HSE"
+    },
+    {
+      "id": "v8",
+      "code": 60,
+      "label": "عدم اخذ پرمیت (Permit)",
+      "score": -15,
+      "department": "HSE"
+    },
+    {
+      "id": "v9",
+      "code": 70,
+      "label": "نداشتن مجوز تردد معتبر (پیمانکاران)",
+      "score": -10,
+      "department": "HSE"
+    },
+    {
+      "id": "v10",
+      "code": 13,
+      "label": "استفاده از لباس کار یا کفش نامناسب/فرسوده",
+      "score": -5,
+      "department": "HSE"
+    },
+    {
+      "id": "v11",
+      "code": 201,
+      "label": "خروج غیرمجاز اموال",
+      "score": -50,
+      "department": "SECURITY"
+    },
+    {
+      "id": "v12",
+      "code": 202,
+      "label": "خوابیدن در شیفت کاری",
+      "score": -30,
+      "department": "SECURITY"
+    },
+    {
+      "id": "v13",
+      "code": 203,
+      "label": "عدم ثبت ورود/خروج",
+      "score": -10,
+      "department": "SECURITY"
+    },
+    {
+      "id": "v14",
+      "code": 204,
+      "label": "درگیری فیزیکی",
+      "score": -40,
+      "department": "SECURITY"
+    },
+    {
+      "id": "v15",
+      "code": 301,
+      "label": "تاخیر ورود بیش از حد",
+      "score": -5,
+      "department": "ADMIN"
+    },
+    {
+      "id": "v16",
+      "code": 302,
+      "label": "غیبت غیرموجه",
+      "score": -10,
+      "department": "ADMIN"
+    },
+    {
+      "id": "v17",
+      "code": 303,
+      "label": "عدم رعایت پوشش اداری",
+      "score": -5,
+      "department": "ADMIN"
+    },
+    {
+      "id": "v18",
+      "code": 401,
+      "label": "غیبت در کلاس آموزشی",
+      "score": -10,
+      "department": "TRAINING"
+    },
+    {
+      "id": "v19",
+      "code": 402,
+      "label": "نمره مردودی در آزمون",
+      "score": -10,
+      "department": "TRAINING"
+    }
+  ],
+  "rewardCodes": [
+    {
+      "id": "r1",
+      "code": 100,
+      "label": "استفاده صحیح از PPE (تشویقی)",
+      "score": 5,
+      "department": "HSE"
+    },
+    {
+      "id": "r2",
+      "code": 101,
+      "label": "گزارش شبه حادثه (Near Miss)",
+      "score": 10,
+      "department": "HSE"
+    },
+    {
+      "id": "r3",
+      "code": 105,
+      "label": "نجات همکار/پیشگیری از حادثه",
+      "score": 30,
+      "department": "HSE"
+    },
+    {
+      "id": "r4",
+      "code": 250,
+      "label": "کشف سرقت",
+      "score": 40,
+      "department": "SECURITY"
+    },
+    {
+      "id": "r5",
+      "code": 251,
+      "label": "هوشیاری بالا در شیفت شب",
+      "score": 15,
+      "department": "SECURITY"
+    },
+    {
+      "id": "r6",
+      "code": 450,
+      "label": "نمره کامل در آزمون ایمنی",
+      "score": 10,
+      "department": "TRAINING"
+    },
+    {
+      "id": "r7",
+      "code": 451,
+      "label": "مربی‌گری داوطلبانه",
+      "score": 20,
+      "department": "TRAINING"
+    },
+    {
+      "id": "r8",
+      "code": 350,
+      "label": "نظم و انضباط نمونه (یک ماه)",
+      "score": 10,
+      "department": "ADMIN"
+    }
+  ],
+  "settings": {
+    "language": "fa",
+    "themeColor": "violet",
+    "companyLogo": "./app_icon_1781090095655.png",
+    "companyName": "سامانه جامع پایش HSE SafeWatch",
+    "customApiKey": "",
+    "aiProvider": "GEMINI",
+    "ollamaUrl": "http://localhost:11434",
+    "ollamaModel": "llama3",
+    "localHfUrl": "http://localhost:8000",
+    "localHfModel": "Qwen/Qwen2.5-Copilot-3B",
+    "autoOfflineFailover": true
+  }
+}
