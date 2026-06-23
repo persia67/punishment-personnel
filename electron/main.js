@@ -10,7 +10,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.cjs'),
+      preload: path.join(__dirname, 'preload.js'),
       sandbox: false // Often helps with renderer issues in production
     },
     title: "SafeWatch AI - Smart Safety & Reward Management",
