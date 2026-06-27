@@ -18,6 +18,7 @@ export interface Employee {
   jobTitle?: string;
   nationalId?: string;
   hireDate?: string;
+  phoneNumber?: string;
 }
 
 export interface Violation {
@@ -140,4 +141,29 @@ export interface CodeItem {
   label: string;
   score: number; // Impact on personnel score
   department: Department;
+}
+
+export interface SmsConfig {
+  isEnabled: boolean;
+  provider: 'KAVENEGAR' | 'FARAZSMS' | 'MELIPAYAMAK' | 'CUSTOM' | 'SIMULATOR';
+  apiKey: string;
+  senderLine: string;
+  warningTemplate: string; // e.g. "همکار گرامی {name}، در تاریخ {date} اخطاری به علت {reason} در پرونده شما ثبت گردید."
+  rewardTemplate: string;  // e.g. "همکار گرامی {name}، در تاریخ {date} تشویقی به علت {reason} در پرونده شما ثبت گردید."
+  customUrl?: string;
+  customMethod?: 'GET' | 'POST';
+  customHeaders?: string; // JSON headers
+  customBodyTemplate?: string; // JSON body with placeholders
+}
+
+export interface SmsLog {
+  id: string;
+  recipientName: string;
+  recipientPhone: string;
+  type: 'WARNING' | 'REWARD';
+  message: string;
+  date: string;
+  status: 'SUCCESS' | 'FAILED' | 'PENDING';
+  provider: string;
+  responseMessage?: string;
 }

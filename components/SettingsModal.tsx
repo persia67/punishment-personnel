@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AppSettings, User, ThemeColor, Language, Role, Employee, CodeItem } from '../types';
+import { AppSettings, User, ThemeColor, Language, Role, Employee, CodeItem, SmsConfig, SmsLog } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot } from 'lucide-react';
+import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save } from 'lucide-react';
 // @ts-ignore
 import * as XLSX from 'xlsx';
+import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -26,10 +27,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen, onClose, settings, onUpdateSettings, users, onUpdateUsers, employees, onUpdateEmployees, currentUser,
   violationCodes, onUpdateViolationCodes, rewardCodes, onUpdateRewardCodes, onRestoreFullBackup
 }) => {
-  const [activeTab, setActiveTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'AI'>('APPEARANCE');
+  const [activeTab, setActiveTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'AI' | 'SMS'>('APPEARANCE');
   const [newUser, setNewUser] = useState<Partial<User>>({ username: '', password: '', fullName: '', role: 'HSE_OFFICER', managedDepartment: '' });
   const [importMode, setImportMode] = useState<'MERGE' | 'REPLACE'>('MERGE');
   const [autoBackups, setAutoBackups] = useState<any[]>([]);
+
+  // SMS settings & log state
+  const [smsConfig, setSmsConfigState] = useState<SmsConfig>(() => getSmsConfig());
+  const [smsLogs, setSmsLogsState] = useState<SmsLog[]>(() => getSmsLogs());
 
   useEffect(() => {
     if (activeTab === 'DATA') {
@@ -44,6 +49,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           console.error('[Settings] Auto backup parse fail:', e);
         }
       }
+    } else if (activeTab === 'SMS') {
+      setSmsLogsState(getSmsLogs());
     }
   }, [activeTab]);
   
@@ -54,7 +61,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     nationalId: '',
     department: '',
     hireDate: '',
-    jobTitle: ''
+    jobTitle: '',
+    phoneNumber: ''
   });
   const [empSearch, setEmpSearch] = useState('');
 
@@ -64,6 +72,54 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // Server network config states
   const [serverUrl, setServerUrl] = useState(() => localStorage.getItem('sg_serverUrl') || '');
+  const [testPhone, setTestPhone] = useState('');
+  const [testMessage, setTestMessage] = useState(settings.language === 'fa' ? 'این یک پیامک تست از سامانه HSE است.' : 'This is a test SMS from HSE system.');
+  const [isSendingTest, setIsSendingTest] = useState(false);
+
+  const handleSaveSmsConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveSmsConfig(smsConfig);
+    alert(settings.language === 'fa' ? 'تنظیمات پیامک با موفقیت ذخیره شد.' : 'SMS configuration saved successfully.');
+  };
+
+  const handleClearSmsLogs = () => {
+    if (confirm(settings.language === 'fa' ? 'آیا از پاک کردن تمامی لاگ‌های ارسال پیامک مطمئن هستید؟' : 'Are you sure you want to clear all SMS log history?')) {
+      saveSmsLogs([]);
+      setSmsLogsState([]);
+    }
+  };
+
+  const handleSendTest = async () => {
+    if (!testPhone.trim() || !testMessage.trim()) {
+      alert(settings.language === 'fa' ? 'لطفا شماره همراه و متن پیامک را وارد کنید.' : 'Please enter a test mobile number and message.');
+      return;
+    }
+    setIsSendingTest(true);
+    try {
+      const response = await fetch('/api/sms/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config: smsConfig,
+          recipientPhone: testPhone,
+          message: testMessage,
+          placeholders: { name: 'کاربر تست', date: 'امروز', reason: 'تست سیستم', type: 'WARNING' }
+        })
+      });
+      const result = await response.json();
+      setIsSendingTest(false);
+      if (response.ok && result.success) {
+        alert(settings.language === 'fa' ? `پیامک با موفقیت ارسال شد: ${result.message}` : `SMS sent successfully: ${result.message}`);
+        setSmsLogsState(getSmsLogs());
+      } else {
+        alert(settings.language === 'fa' ? `خطا در ارسال پیامک: ${result.message}` : `Error sending SMS: ${result.message}`);
+        setSmsLogsState(getSmsLogs());
+      }
+    } catch (e: any) {
+      setIsSendingTest(false);
+      alert(settings.language === 'fa' ? `خطا در برقراری ارتباط با سرور: ${e.message}` : `Server connection error: ${e.message}`);
+    }
+  };
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'checking' | 'success' | 'failed'>('idle');
 
   const testServerConnection = async () => {
@@ -232,6 +288,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             const dept = String(row['Department'] || row['واحد'] || row['بخش'] || row['قسمت'] || row['department'] || '').trim();
             const hDate = String(row['HireDate'] || row['تاریخ شروع به کار'] || row['تاریخ شروع'] || row['تاریخ_شروع'] || row['تاریخ استخدام'] || row['hire_date'] || '').trim();
             const title = String(row['JobTitle'] || row['سمت'] || row['job_title'] || '').trim();
+            const phone = String(row['PhoneNumber'] || row['شماره تماس'] || row['تلفن'] || row['موبایل'] || row['تلفن همراه'] || row['شماره همراه'] || row['phone'] || row['mobile'] || row['phone_number'] || '').trim();
             
             return {
               id: Date.now().toString() + Math.random().toString().slice(2, 6),
@@ -240,7 +297,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               department: dept,
               jobTitle: title || undefined,
               nationalId: nId || undefined,
-              hireDate: hDate || undefined
+              hireDate: hDate || undefined,
+              phoneNumber: phone || undefined
             };
           }).filter((e: Employee) => e.personnelId && e.fullName);
 
@@ -257,7 +315,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       department: emp.department || existing.department,
                       nationalId: emp.nationalId || existing.nationalId,
                       hireDate: emp.hireDate || existing.hireDate,
-                      jobTitle: emp.jobTitle || existing.jobTitle
+                      jobTitle: emp.jobTitle || existing.jobTitle,
+                      phoneNumber: emp.phoneNumber || existing.phoneNumber
                     });
                   } else {
                     mergedMap.set(emp.personnelId, emp);
@@ -332,7 +391,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       nationalId: empFormData.nationalId.trim() || undefined,
       department: empFormData.department.trim(),
       hireDate: empFormData.hireDate.trim() || undefined,
-      jobTitle: empFormData.jobTitle.trim() || undefined
+      jobTitle: empFormData.jobTitle.trim() || undefined,
+      phoneNumber: empFormData.phoneNumber.trim() || undefined
     };
 
     onUpdateEmployees([...employees, newEmp]);
@@ -342,7 +402,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       nationalId: '',
       department: '',
       hireDate: '',
-      jobTitle: ''
+      jobTitle: '',
+      phoneNumber: ''
     });
     alert(settings.language === 'fa' ? 'پرسنل جدید با موفقیت ثبت شد.' : 'Personnel successfully logged.');
   };
@@ -351,6 +412,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     if (confirm(settings.language === 'fa' ? 'آیا از حذف این پرسنل اطمینان دارید؟ تمامی رکوردهای فعلی او حفظ اما برای گزارش‌های بعدی فعال نخواهد بود.' : 'Are you sure you want to delete this employee?')) {
       onUpdateEmployees(employees.filter(emp => emp.personnelId !== personnelId));
     }
+  };
+
+  const handleUpdateEmployeePhone = (personnelId: string, newPhone: string) => {
+    const updated = employees.map(emp => emp.personnelId === personnelId ? { ...emp, phoneNumber: newPhone } : emp);
+    onUpdateEmployees(updated);
   };
 
   // --- Backup & Restore Logic ---
@@ -490,6 +556,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <span className="text-xs md:text-sm">{t.dataManagement}</span>
                 </button>
             )}
+
+            {(isDeveloper || currentUser.role === 'HSE_MANAGER' || currentUser.role === 'PLANT_MANAGER') && (
+                <button 
+                    onClick={() => setActiveTab('SMS')}
+                    className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl transition-all whitespace-nowrap ${activeTab === 'SMS' ? 'bg-white shadow-md text-indigo-600 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                    <MessageSquare className="w-4 h-4 md:w-5 md:h-5" />
+                    <span className="text-xs md:text-sm">{(settings.language === 'fa' ? 'تنظیمات پیامک' : 'SMS Settings')}</span>
+                </button>
+            )}
         </div>
 
         {/* Content */}
@@ -501,6 +577,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     {activeTab === 'DATA' && t.dataManagement}
                     {activeTab === 'CODES' && t.codingSystem}
                     {activeTab === 'AI' && t.aiSettings}
+                     {activeTab === 'SMS' && (settings.language === 'fa' ? 'تنظیمات اتصال پیامک و لاگ‌ها' : 'SMS Gateway & Notification Logs')}
                 </h3>
                 <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                     <X className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
@@ -1296,12 +1373,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                      <input 
                                          type="text" 
                                          placeholder="e.g. 1402/06/20"
-                                         value={empFormData.hireDate}
-                                         onChange={e => setEmpFormData({...empFormData, hireDate: e.target.value})}
-                                         className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                     />
-                                 </div>
-                             </div>
+                                          value={empFormData.hireDate}
+                                          onChange={e => setEmpFormData({...empFormData, hireDate: e.target.value})}
+                                          className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                      />
+                                  </div>
+                                  <div>
+                                      <label className="block text-[10px] text-gray-500 mb-1">{settings.language === 'fa' ? 'شماره همراه جهت پیامک (اختیاری)' : 'SMS Mobile for Notifications (Optional)'}</label>
+                                      <input 
+                                          type="text" 
+                                          placeholder="e.g. 09123456789"
+                                          value={empFormData.phoneNumber}
+                                          onChange={e => setEmpFormData({...empFormData, phoneNumber: e.target.value})}
+                                          className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                      />
+                                  </div>
+                              </div>
                              <div className="flex justify-end pt-2">
                                  <button type="submit" className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95 font-sans leading-none">
                                      <UserPlus className="w-3.5 h-3.5" />
@@ -1329,7 +1416,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                              <tr>
                                                  <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'کد پرسنلی' : 'Personnel ID'}</th>
                                                  <th className="px-3 py-2.5">{settings.language === 'fa' ? 'نام و نام خانوادگی' : 'Full Name'}</th>
-                                                 <th className="px-3 py-2.5">{settings.language === 'fa' ? 'کد ملی' : 'National ID'}</th>
+                                                 <th className="px-3 py-2.5">{settings.language === 'fa' ? 'کد ملی' : 'National ID'}</th><th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'تلفن همراه پیامک' : 'Mobile Phone (SMS)'}</th>
                                                  <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'واحد' : 'Department'}</th>
                                                  <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'تاریخ شروع به کار' : 'Hire Date'}</th>
                                                  <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'حذف' : 'Remove'}</th>
@@ -1353,7 +1440,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                          {emp.jobTitle && <div className="text-[10px] text-gray-400 font-medium">{emp.jobTitle}</div>}
                                                      </td>
                                                      <td className="px-3 py-2.5 font-mono text-gray-600 text-xs text-right leading-none">
-                                                         {emp.nationalId || (settings.language === 'fa' ? '— ثبت نشده' : '— Not Settled')}
+                                                         {emp.nationalId || (settings.language === 'fa' ? '— ثبت نشده' : '— Not Settled')}</td><td className="px-3 py-2.5 text-center"><input type="text" value={emp.phoneNumber || ''} placeholder={settings.language === 'fa' ? 'مثال: 0912...' : '0912...'} onChange={e => handleUpdateEmployeePhone(emp.personnelId, e.target.value)} className="w-28 text-center bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all text-xs font-mono font-bold text-slate-800 text-left" dir="ltr" /></td><td>
                                                      </td>
                                                      <td className="px-3 py-2.5 text-center font-medium">
                                                          <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[10px]">
@@ -1378,23 +1465,245 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                              {employees.length === 0 && (
                                                  <tr>
                                                      <td colSpan={6} className="px-3 py-8 text-center text-gray-400 font-semibold text-xs">
-                                                         {settings.language === 'fa' ? 'هیچ پرسنلی در بانک اطلاعات موجود نیست' : 'No personnel records on file.'}
-                                                     </td>
-                                                 </tr>
-                                             )}
-                                         </tbody>
-                                     </table>
-                                 </div>
+                                                         {settings.language === 'fa' ? 'هیچ پرسنلی در بانک اطلاعات موجود نیست' : 'No personnel records on file.'}</td></tr>)}</tbody></table></div></div></div></div></div>)}
+
+             {activeTab === 'SMS' && (
+                 <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-right" dir="rtl">
+                     {/* SMS Config Card */}
+                     <form onSubmit={handleSaveSmsConfig} className="bg-white border border-gray-150 p-5 md:p-6 rounded-2xl shadow-sm space-y-4">
+                         <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                             <div className="flex items-center gap-2 text-gray-800 font-bold text-sm md:text-base">
+                                 <MessageSquare className="w-5 h-5 text-indigo-600" />
+                                 {settings.language === 'fa' ? 'پیکربندی سامانه پیامکی' : 'SMS Gateway Configuration'}
+                             </div>
+                             <label className="relative inline-flex items-center cursor-pointer">
+                                 <input 
+                                     type="checkbox" 
+                                     checked={smsConfig.isEnabled} 
+                                     onChange={e => setSmsConfigState({ ...smsConfig, isEnabled: e.target.checked })}
+                                     className="sr-only peer" 
+                                 />
+                                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                 <span className="mr-2 text-xs font-bold text-gray-700 font-sans">
+                                     {smsConfig.isEnabled 
+                                         ? (settings.language === 'fa' ? 'فعال' : 'Enabled') 
+                                         : (settings.language === 'fa' ? 'غیرفعال' : 'Disabled')}
+                                 </span>
+                             </label>
+                         </div>
+
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div>
+                                 <label className="block text-xs font-bold text-gray-700 mb-1">
+                                     {settings.language === 'fa' ? 'ارائه‌دهنده سرویس پیامک' : 'SMS Gateway Provider'}
+                                 </label>
+                                 <select
+                                     value={smsConfig.provider}
+                                     onChange={e => setSmsConfigState({ ...smsConfig, provider: e.target.value as any })}
+                                     className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                 >
+                                     <option value="SIMULATOR">{settings.language === 'fa' ? 'شبیه‌ساز (لاگ محلی)' : 'Simulator (Local Log)'}</option>
+                                     <option value="FARAZSMS">FarazSMS (ippanel.com)</option>
+                                     <option value="KAVEHNEGAR">Kavehnegar</option>
+                                     <option value="MELIPAYAMAK">MeliPayamak</option>
+                                 </select>
+                             </div>
+
+                             <div>
+                                 <label className="block text-xs font-bold text-gray-700 mb-1">
+                                     {settings.language === 'fa' ? 'شماره خط فرستنده' : 'Sender Number'}
+                                 </label>
+                                 <input 
+                                     type="text"
+                                     value={smsConfig.senderLine || ''}
+                                     onChange={e => setSmsConfigState({ ...smsConfig, senderLine: e.target.value })}
+                                     placeholder="e.g. 3000505"
+                                     className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-left"
+                                 />
+                             </div>
+
+                             <div className="md:col-span-2">
+                                 <label className="block text-xs font-bold text-gray-700 mb-1">
+                                     {settings.language === 'fa' ? 'کلید وب‌سرویس / API Key' : 'API Token / API Key'}
+                                 </label>
+                                 <input 
+                                     type="password"
+                                     value={smsConfig.apiKey || ''}
+                                     onChange={e => setSmsConfigState({ ...smsConfig, apiKey: e.target.value })}
+                                     placeholder="API key or authentication token from provider"
+                                     className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-left"
+                                 />
+                             </div>
+
+                             <div className="md:col-span-2">
+                                 <label className="block text-xs font-bold text-gray-700 mb-1">
+                                     {settings.language === 'fa' ? 'الگوی پیامک اخطار' : 'Warning Template'}
+                                 </label>
+                                 <textarea 
+                                     rows={2}
+                                     value={smsConfig.warningTemplate || ''}
+                                     onChange={e => setSmsConfigState({ ...smsConfig, warningTemplate: e.target.value })}
+                                     className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                 />
+                                 <p className="text-[10px] text-gray-400 mt-1 col-span-2 text-right">
+                                     {settings.language === 'fa' 
+                                         ? 'پارامترها: {name} (نام پرسنل)، {date} (تاریخ)، {reason} (علت اخطار)، {type} (نوع)' 
+                                         : 'Placeholders: {name} (name), {date} (date), {reason} (reason), {type} (type)'}
+                                 </p>
+                             </div>
+
+                             <div className="md:col-span-2">
+                                 <label className="block text-xs font-bold text-gray-700 mb-1">
+                                     {settings.language === 'fa' ? 'الگوی پیامک تشویقی' : 'Reward Template'}
+                                 </label>
+                                 <textarea 
+                                     rows={2}
+                                     value={smsConfig.rewardTemplate || ''}
+                                     onChange={e => setSmsConfigState({ ...smsConfig, rewardTemplate: e.target.value })}
+                                     className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                 />
+                                 <p className="text-[10px] text-gray-400 mt-1 col-span-2 text-right">
+                                     {settings.language === 'fa' 
+                                         ? 'پارامترها: {name} (نام پرسنل)، {date} (تاریخ)، {reason} (علت تشویق)، {type} (نوع)' 
+                                         : 'Placeholders: {name} (name), {date} (date), {reason} (reason), {type} (type)'}
+                                 </p>
                              </div>
                          </div>
-                    </div>
-                </div>
-            )}
 
-        </div>
-      </div>
-    </div>
-  );
-};
+                         <div className="flex justify-end pt-2">
+                             <button type="submit" className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 leading-none">
+                                 <Save className="w-4 h-4" />
+                                 <span>{settings.language === 'fa' ? 'ذخیره تنظیمات درگاه' : 'Save Connection Configuration'}</span>
+                             </button>
+                         </div>
+                     </form>
+
+                     {/* Test SMS Card */}
+                     {smsConfig.isEnabled && (
+                         <div className="bg-white border border-gray-150 p-5 md:p-6 rounded-2xl shadow-sm space-y-4">
+                             <div className="flex items-center gap-2 text-gray-800 font-bold text-sm md:text-base border-b border-gray-100 pb-3">
+                                 <Send className="w-5 h-5 text-indigo-600" />
+                                 {settings.language === 'fa' ? 'ارسال پیامک آزمایشی' : 'Send Test SMS'}
+                             </div>
+                             
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                 <div>
+                                     <label className="block text-xs font-bold text-gray-700 mb-1">
+                                         {settings.language === 'fa' ? 'شماره همراه تست' : 'Test Mobile Number'}
+                                     </label>
+                                     <input 
+                                         type="text"
+                                         value={testPhone}
+                                         onChange={e => setTestPhone(e.target.value)}
+                                         placeholder="e.g. 09123456789"
+                                         className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-left"
+                                     />
+                                 </div>
+                                 <div className="md:col-span-2">
+                                     <label className="block text-xs font-bold text-gray-700 mb-1">
+                                         {settings.language === 'fa' ? 'متن پیامک آزمایشی' : 'Test Message Text'}
+                                     </label>
+                                     <input 
+                                         type="text"
+                                         value={testMessage}
+                                         onChange={e => setTestMessage(e.target.value)}
+                                         className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                     />
+                                 </div>
+                             </div>
+
+                             <div className="flex justify-end pt-2">
+                                 <button 
+                                     onClick={handleSendTest}
+                                     disabled={isSendingTest}
+                                     className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none leading-none animate-none"
+                                 >
+                                     <Smartphone className="w-4 h-4" />
+                                     <span>{isSendingTest ? (settings.language === 'fa' ? 'در حال ارسال...' : 'Sending...') : (settings.language === 'fa' ? 'ارسال پیامک آزمایشی' : 'Send Test SMS')}</span>
+                                 </button>
+                             </div>
+                         </div>
+                     )}
+
+                     {/* Notification Logs Card */}
+                     <div className="bg-white border border-gray-150 p-5 md:p-6 rounded-2xl shadow-sm space-y-4">
+                         <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                             <div className="flex items-center gap-2 text-gray-800 font-bold text-sm md:text-base">
+                                 <Smartphone className="w-5 h-5 text-indigo-600" />
+                                 {settings.language === 'fa' ? 'تاریخچه پیامک‌های ارسالی' : 'SMS Notification Dispatch History'}
+                             </div>
+                             {smsLogs.length > 0 && (
+                                 <button 
+                                     onClick={handleClearSmsLogs}
+                                     className="px-3 py-1.5 border border-red-200 text-red-500 hover:bg-red-50 text-[10px] font-bold rounded-lg transition-colors"
+                                 >
+                                     {settings.language === 'fa' ? 'پاک‌سازی تاریخچه' : 'Clear History'}
+                                 </button>
+                             )}
+                         </div>
+
+                         <div className="overflow-x-auto border border-gray-150 rounded-xl">
+                             <table className="w-full text-xs text-right whitespace-nowrap min-w-[700px]">
+                                 <thead className="bg-gray-50 text-gray-600 border-b border-gray-150 font-extrabold text-[11px]">
+                                     <tr>
+                                         <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'نام همکار' : 'Recipient Name'}</th>
+                                         <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'تلفن همراه' : 'Mobile Number'}</th>
+                                         <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'نوع پیام' : 'Notification Type'}</th>
+                                         <th className="px-3 py-2.5 text-right">{settings.language === 'fa' ? 'متن ارسالی' : 'Sent Content'}</th>
+                                         <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'تاریخ و زمان' : 'Date / Time'}</th>
+                                         <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'سامانه' : 'Provider'}</th>
+                                         <th className="px-3 py-2.5 text-center">{settings.language === 'fa' ? 'وضعیت' : 'Delivery Status'}</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody className="divide-y divide-gray-150">
+                                     {smsLogs.map(log => (
+                                         <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                                             <td className="px-3 py-3 text-center font-bold text-gray-900">{log.recipientName}</td>
+                                             <td className="px-3 py-3 text-center font-mono font-bold text-gray-700">{log.recipientPhone}</td>
+                                             <td className="px-3 py-3 text-center">
+                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${log.type === 'WARNING' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                     {log.type === 'WARNING' ? (settings.language === 'fa' ? 'اخطار' : 'Warning') : (settings.language === 'fa' ? 'تشویق' : 'Reward')}
+                                                 </span>
+                                             </td>
+                                             <td className="px-3 py-3 font-medium text-gray-600 text-right whitespace-normal max-w-xs text-[11px]">
+                                                 {log.message}
+                                             </td>
+                                             <td className="px-3 py-3 text-center font-mono text-[11px] text-gray-500">{log.date}</td>
+                                             <td className="px-3 py-3 text-center text-[10px] text-gray-400 font-bold font-mono">{log.provider}</td>
+                                             <td className="px-3 py-3 text-center">
+                                                 <div className="flex items-center justify-center gap-1">
+                                                     <span className={`w-1.5 h-1.5 rounded-full ${log.status === 'SUCCESS' ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                                                     <span className={`text-[10px] font-extrabold ${log.status === 'SUCCESS' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                         {log.status === 'SUCCESS' ? (settings.language === 'fa' ? 'موفق' : 'Success') : (settings.language === 'fa' ? 'ناموفق' : 'Failed')}
+                                                     </span>
+                                                 </div>
+                                                 {log.responseMessage && log.status === 'FAILED' && (
+                                                     <div className="text-[9px] text-red-400 max-w-[120px] truncate" title={log.responseMessage}>
+                                                         {log.responseMessage}
+                                                     </div>
+                                                 )}
+                                             </td>
+                                         </tr>
+                                     ))}
+                                     {smsLogs.length === 0 && (
+                                         <tr>
+                                             <td colSpan={7} className="px-3 py-8 text-center text-gray-400 font-semibold">
+                                                 {settings.language === 'fa' ? 'تاریخچه پیامک‌های ارسالی خالی است.' : 'No sent notifications logged.'}
+                                             </td>
+                                         </tr>
+                                     )}
+                                 </tbody>
+                             </table>
+                         </div>
+                     </div>
+                 </div>
+             )}
+
+ 
+         </div>
+       </div>
+     </div>
+   );
+ };
 
 export default SettingsModal;

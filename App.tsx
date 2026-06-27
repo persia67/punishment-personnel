@@ -9,11 +9,13 @@ import DeleteModal from './components/DeleteModal';
 import LoginPage from './components/LoginPage';
 import SettingsModal from './components/SettingsModal';
 import CodeLegendModal from './components/CodeLegendModal';
+import PrintReportModal from './components/PrintReportModal';
 import PersonnelProfileModal from './components/PersonnelProfileModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import { selectWorkerOfMonth } from './services/geminiService';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
-import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key } from 'lucide-react';
+import { sendNotificationSms } from './services/smsService';
+import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -32,6 +34,7 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false); 
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false); 
   const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const [isPrintReportOpen, setIsPrintReportOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{isOpen: boolean; id: string | null; type: 'VIOLATION' | 'REWARD'}>({ isOpen: false, id: null, type: 'VIOLATION' });
   const [searchTerm, setSearchTerm] = useState('');
@@ -529,19 +532,37 @@ const App: React.FC = () => {
     setViolations(updated);
     setIsModalOpen(false);
     pushDataToServerState(updated, rewards, users, employees, violationCodes, rewardCodes, settings);
+
+    // Auto dispatch SMS notification to employee if auto-approved on creation
+    if (v.isApproved) {
+      const emp = employees.find(e => e.personnelId === v.personnelId);
+      if (emp && emp.phoneNumber) {
+        sendNotificationSms(emp.fullName, emp.phoneNumber, 'WARNING', v.date, v.reason)
+          .catch(err => console.error('[SMS] Fail auto warning notification dispatch:', err));
+      }
+    }
   };
   const handleAddReward = (r: Reward) => {
     const updated = [r, ...rewards];
     setRewards(updated);
     setIsRewardModalOpen(false);
     pushDataToServerState(violations, updated, users, employees, violationCodes, rewardCodes, settings);
+
+    // Auto dispatch SMS notification to employee if auto-approved on creation
+    if (r.isApproved) {
+      const emp = employees.find(e => e.personnelId === r.personnelId);
+      if (emp && emp.phoneNumber) {
+        sendNotificationSms(emp.fullName, emp.phoneNumber, 'REWARD', r.date, r.reason)
+          .catch(err => console.error('[SMS] Fail auto reward notification dispatch:', err));
+      }
+    }
   };
   const handleDelete = () => {
       if (deleteModal.id) {
           const targetId = deleteModal.id;
           const item = deleteModal.type === 'VIOLATION'
-              ? violations.find(v => v.id === targetId)
-              : rewards.find(r => r.id === targetId);
+               ? violations.find(v => v.id === targetId)
+               : rewards.find(r => r.id === targetId);
 
           if (!item || !getCanDeleteItem(item)) {
               alert(settings.language === 'fa' 
@@ -576,6 +597,13 @@ const App: React.FC = () => {
           }
           updatedV = violations.map(v => v.id === id ? { ...v, isApproved: true } : v);
           setViolations(updatedV);
+
+          // SMS dispatch on final approval
+          const emp = employees.find(e => e.personnelId === item.personnelId);
+          if (emp && emp.phoneNumber) {
+              sendNotificationSms(emp.fullName, emp.phoneNumber, 'WARNING', item.date, item.reason)
+                .catch(err => console.error('[SMS] Fail auto warning notification dispatch:', err));
+          }
       } else {
           const item = rewards.find(r => r.id === id);
           if (!item || !getCanApproveItem(item)) {
@@ -586,6 +614,13 @@ const App: React.FC = () => {
           }
           updatedR = rewards.map(r => r.id === id ? { ...r, isApproved: true } : r);
           setRewards(updatedR);
+
+          // SMS dispatch on final approval
+          const emp = employees.find(e => e.personnelId === item.personnelId);
+          if (emp && emp.phoneNumber) {
+              sendNotificationSms(emp.fullName, emp.phoneNumber, 'REWARD', item.date, item.reason)
+                .catch(err => console.error('[SMS] Fail auto reward notification dispatch:', err));
+          }
       }
       pushDataToServerState(updatedV, updatedR, users, employees, violationCodes, rewardCodes, settings);
   };
@@ -819,6 +854,15 @@ const App: React.FC = () => {
               >
                 <BookOpen className="w-4 h-4 text-gray-500" />
                 <span>{t.codeLegend}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPrintReportOpen(true)}
+                className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-gray-300 font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-xs"
+              >
+                <Printer className="w-4 h-4 text-indigo-600 animate-pulse" />
+                <span>{settings.language === 'fa' ? 'گزارش چاپی واحدها' : 'Print Dept Report'}</span>
               </button>
 
               {systemMode === 'REWARD' && canViewAll && (
@@ -1175,6 +1219,14 @@ const App: React.FC = () => {
       
       <DeleteModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, id: null, type: 'VIOLATION' })} onConfirm={handleDelete} />
       <CodeLegendModal isOpen={isLegendOpen} onClose={() => setIsLegendOpen(false)} settings={settings} mode={systemMode} violationCodes={violationCodes} rewardCodes={rewardCodes} />
+      <PrintReportModal 
+        isOpen={isPrintReportOpen} 
+        onClose={() => setIsPrintReportOpen(false)} 
+        settings={settings} 
+        violations={violations} 
+        rewards={rewards} 
+        employees={employees} 
+      />
       <SettingsModal 
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)} 
