@@ -13,14 +13,21 @@ export interface SyncPayload {
 // Dynamically resolves active connection endpoint
 export const getServerUrl = (): string => {
   const saved = localStorage.getItem('sg_serverUrl');
-  if (saved) return saved;
   
   // Default to window origin if running inside a web browser, otherwise fallback to local server port 3000
   if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-    if (window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.')) {
+    const isRemote = window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.');
+    if (isRemote) {
+      // If we are on a remote server, only use the saved URL if it is also remote.
+      // If it is localhost, ignore it to prevent browser mixed-content/connection block.
+      if (saved && !saved.includes('localhost') && !saved.includes('127.0.0.1')) {
+        return saved;
+      }
       return window.location.origin;
     }
   }
+  
+  if (saved) return saved;
   return 'http://localhost:3000';
 };
 
