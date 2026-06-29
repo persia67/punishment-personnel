@@ -145,7 +145,7 @@ export interface CodeItem {
 
 export interface SmsConfig {
   isEnabled: boolean;
-  provider: 'KAVENEGAR' | 'FARAZSMS' | 'MELIPAYAMAK' | 'CUSTOM' | 'SIMULATOR';
+  provider: 'KAVENEGAR' | 'FARAZSMS' | 'MELIPAYAMAK' | 'SMSIR' | 'CUSTOM' | 'SIMULATOR';
   apiKey: string;
   senderLine: string;
   warningTemplate: string; // e.g. "همکار گرامی {name}، در تاریخ {date} اخطاری به علت {reason} در پرونده شما ثبت گردید."

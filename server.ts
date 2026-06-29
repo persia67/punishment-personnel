@@ -208,6 +208,30 @@ app.post('/api/sms/send', async (req, res) => {
         })
       };
     } 
+    else if (provider === 'SMSIR') {
+      // SMS.ir v1 Verify / Pattern sending API
+      url = 'https://api.sms.ir/v1/send/verify';
+      const templateId = type === 'اخطار' ? config.warningTemplate : config.rewardTemplate;
+      
+      options = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/plain',
+          'x-api-key': config.apiKey
+        },
+        body: JSON.stringify({
+          mobile: recipientPhone,
+          templateId: parseInt(templateId || '0'),
+          parameters: [
+            { name: 'name', value: name },
+            { name: 'date', value: date },
+            { name: 'reason', value: reason },
+            { name: 'type', value: type }
+          ]
+        })
+      };
+    } 
     else if (provider === 'CUSTOM') {
       // Fully custom HTTP client
       let customUrl = config.customUrl || '';

@@ -1504,7 +1504,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                  >
                                      <option value="SIMULATOR">{settings.language === 'fa' ? 'شبیه‌ساز (لاگ محلی)' : 'Simulator (Local Log)'}</option>
                                      <option value="FARAZSMS">FarazSMS (ippanel.com)</option>
-                                     <option value="KAVEHNEGAR">Kavehnegar</option>
+                                     <option value="KAVENEGAR">Kavehnegar</option>
+                                      <option value="SMSIR">Sms.ir (جدید)</option>
                                      <option value="MELIPAYAMAK">MeliPayamak</option>
                                  </select>
                              </div>
@@ -1547,7 +1548,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                  />
                                  <p className="text-[10px] text-gray-400 mt-1 col-span-2 text-right">
                                      {settings.language === 'fa' 
-                                         ? 'پارامترها: {name} (نام پرسنل)، {date} (تاریخ)، {reason} (علت اخطار)، {type} (نوع)' 
+                                         ? 'راهنما: برای درگاه‌های الگومحور (Sms.ir, FarazSMS, Kavenegar, MeliPayamak) به جای متن، شناسه الگو را وارد نمایید. پارامترها: {name}، {date}، {reason}، {type}' 
                                          : 'Placeholders: {name} (name), {date} (date), {reason} (reason), {type} (type)'}
                                  </p>
                              </div>
@@ -1564,7 +1565,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                  />
                                  <p className="text-[10px] text-gray-400 mt-1 col-span-2 text-right">
                                      {settings.language === 'fa' 
-                                         ? 'پارامترها: {name} (نام پرسنل)، {date} (تاریخ)، {reason} (علت تشویق)، {type} (نوع)' 
+                                         ? 'راهنما: برای درگاه‌های الگومحور (Sms.ir, FarazSMS, Kavenegar, MeliPayamak) به جای متن، شناسه الگو را وارد نمایید. پارامترها: {name}، {date}، {reason}، {type}' 
                                          : 'Placeholders: {name} (name), {date} (date), {reason} (reason), {type} (type)'}
                                  </p>
                              </div>
