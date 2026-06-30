@@ -5,6 +5,7 @@ import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as
 // @ts-ignore
 import * as XLSX from 'xlsx';
 import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
+import { ManualEmployeeForm } from './ManualEmployeeForm';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -54,17 +55,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [activeTab]);
   
-  // New employee manual entry state
-  const [empFormData, setEmpFormData] = useState({
-    personnelId: '',
-    fullName: '',
-    nationalId: '',
-    department: '',
-    hireDate: '',
-    jobTitle: '',
-    phoneNumber: ''
-  });
+  // New employee search state
   const [empSearch, setEmpSearch] = useState('');
+  const empFormData = { personnelId: '', fullName: '', nationalId: '', department: '', hireDate: '', jobTitle: '', phoneNumber: '' };
+  const setEmpFormData = (val: any) => {};
 
   // New Code State
   const [newCode, setNewCode] = useState<Partial<CodeItem>>({ code: 0, label: '', score: 0, department: 'HSE' });
@@ -369,43 +363,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       XLSX.writeFile(wb, "Personnel_Template.xlsx");
   };
 
-  const handleAddEmployeeManual = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!empFormData.personnelId || !empFormData.fullName || !empFormData.department) {
-      alert(settings.language === 'fa' ? 'لطفا کد پرسنلی، نام پرسنل و واحد را وارد کنید.' : 'Please enter Personnel ID, Name, and Department.');
-      return;
-    }
-
-    const trimmedPId = empFormData.personnelId.trim();
-    // Check duplicate
-    const exists = employees.some(emp => emp.personnelId === trimmedPId);
-    if (exists) {
-      alert(settings.language === 'fa' ? 'کد پرسنلی وارد شده از قبل وجود دارد!' : 'Personnel ID already exists!');
-      return;
-    }
-
-    const newEmp: Employee = {
-      id: Date.now().toString() + Math.random().toString().slice(2, 6),
-      personnelId: trimmedPId,
-      fullName: empFormData.fullName.trim(),
-      nationalId: empFormData.nationalId.trim() || undefined,
-      department: empFormData.department.trim(),
-      hireDate: empFormData.hireDate.trim() || undefined,
-      jobTitle: empFormData.jobTitle.trim() || undefined,
-      phoneNumber: empFormData.phoneNumber.trim() || undefined
-    };
-
+  const handleAddEmployeeDirect = (newEmp: Employee) => {
     onUpdateEmployees([...employees, newEmp]);
-    setEmpFormData({
-      personnelId: '',
-      fullName: '',
-      nationalId: '',
-      department: '',
-      hireDate: '',
-      jobTitle: '',
-      phoneNumber: ''
-    });
-    alert(settings.language === 'fa' ? 'پرسنل جدید با موفقیت ثبت شد.' : 'Personnel successfully logged.');
   };
 
   const handleDeleteEmployee = (personnelId: string) => {
@@ -1308,7 +1267,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                          </div>
 
                          {/* Manual Adding Form */}
-                         <form onSubmit={handleAddEmployeeManual} className="border border-gray-150 rounded-xl p-4 bg-slate-50/50 space-y-3.5">
+                          <ManualEmployeeForm
+                              settings={settings}
+                              employees={employees}
+                              onAddEmployee={handleAddEmployeeDirect}
+                          />
+                          <div className="hidden">
                              <span className="block text-xs font-black text-gray-700 flex items-center gap-1">
                                  <UserPlus className="w-4 h-4 text-indigo-500" />
                                  {settings.language === 'fa' ? 'ثبت و تعریف دستی پرسنل جدید' : 'Manually Enroll New Personnel'}
@@ -1395,7 +1359,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                      <span>{settings.language === 'fa' ? 'تعریف پرسنل جدید' : 'Enroll Personnel'}</span>
                                  </button>
                              </div>
-                         </form>
+                          </div>
 
                          {/* Search & Listing table */}
                          <div className="space-y-3">
