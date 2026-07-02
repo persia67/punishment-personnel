@@ -12,7 +12,33 @@ export interface SyncPayload {
 
 // Dynamically resolves active connection endpoint
 export const getServerUrl = (): string => {
-  const saved = localStorage.getItem('sg_serverUrl');
+  const savedRaw = localStorage.getItem('sg_serverUrl');
+  
+  const normalizeSavedUrl = (url: string): string => {
+    let trimmed = url.trim();
+    if (!trimmed) return '';
+    if (!/^https?:\/\//i.test(trimmed)) {
+      trimmed = 'http://' + trimmed;
+    }
+    try {
+      const urlObj = new URL(trimmed);
+      if (!urlObj.port) {
+        const hostname = urlObj.hostname;
+        const isIpOrLocal = /^(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/.test(hostname) || /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostname);
+        if (isIpOrLocal) {
+          urlObj.port = '3000';
+          trimmed = urlObj.toString().replace(/\/$/, '');
+        }
+      }
+    } catch {
+      if (!trimmed.includes(':', 6)) {
+        trimmed = trimmed + ':3000';
+      }
+    }
+    return trimmed;
+  };
+
+  const saved = savedRaw ? normalizeSavedUrl(savedRaw) : '';
   
   if (typeof window !== 'undefined' && window.location && window.location.hostname) {
     const protocol = window.location.protocol;

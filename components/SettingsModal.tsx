@@ -116,12 +116,72 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'checking' | 'success' | 'failed'>('idle');
 
+  const normalizeUrl = (url: string): string => {
+    let trimmed = url.trim();
+    if (!trimmed) return '';
+    
+    // If it doesn't have a protocol, prepend http://
+    if (!/^https?:\/\//i.test(trimmed)) {
+      trimmed = 'http://' + trimmed;
+    }
+    
+    try {
+      const parsed = new URL(trimmed);
+      // If there's no port specified and it's a typical IP or localhost, append :3000
+      if (!parsed.port) {
+        const hostname = parsed.hostname;
+        const isIpOrLocal = /^(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/.test(hostname) || /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostname);
+        if (isIpOrLocal) {
+          parsed.port = '3000';
+          trimmed = parsed.toString().replace(/\/$/, ''); // remove trailing slash
+        }
+      }
+    } catch (e) {
+      if (!trimmed.includes(':', 6)) {
+        trimmed = trimmed + ':3000';
+      }
+    }
+    return trimmed;
+  };
+
+  const getNormalizedActiveUrl = (): string => {
+    const normalized = normalizeUrl(serverUrl);
+    return normalized || (window.location.hostname ? window.location.origin : 'http://localhost:3000');
+  };
+
+  const isCloudPreview = typeof window !== 'undefined' && 
+    window.location.hostname && 
+    !window.location.hostname.includes('localhost') && 
+    !window.location.hostname.includes('127.0.0.1') && 
+    !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(window.location.hostname);
+
+  const isTestingLocalUrlOnCloud = (): boolean => {
+    const activeUrl = getNormalizedActiveUrl();
+    if (!activeUrl) return false;
+    try {
+      const parsed = new URL(activeUrl);
+      const host = parsed.hostname;
+      const isLocalHostOrIp = host === 'localhost' || 
+        host === '127.0.0.1' || 
+        /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) ||
+        /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(host);
+      return !!(isCloudPreview && isLocalHostOrIp);
+    } catch {
+      return false;
+    }
+  };
+
   const testServerConnection = async () => {
     setConnectionStatus('checking');
     try {
-      const activeUrl = serverUrl.trim() || (window.location.hostname ? window.location.origin : 'http://localhost:3000');
+      const activeUrl = getNormalizedActiveUrl();
       const res = await fetch(`${activeUrl}/api/health`, { method: 'GET' });
-      if (res.ok) {
+      
+      const contentType = res.headers.get('content-type') || '';
+      const isHtmlResponse = contentType.includes('text/html');
+      const isCustomServer = serverUrl.trim() !== '' && !getNormalizedActiveUrl().startsWith(window.location.origin);
+      
+      if (res.ok && !(isCustomServer && isHtmlResponse)) {
         setConnectionStatus('success');
       } else {
         setConnectionStatus('failed');
@@ -132,10 +192,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleSaveServerUrl = () => {
-    const trimmed = serverUrl.trim();
-    if (trimmed) {
-      localStorage.setItem('sg_serverUrl', trimmed);
+    const normalized = normalizeUrl(serverUrl);
+    if (normalized) {
+      setServerUrl(normalized);
+      localStorage.setItem('sg_serverUrl', normalized);
     } else {
+      setServerUrl('');
       localStorage.removeItem('sg_serverUrl');
     }
     alert(settings.language === 'fa' ? 'آدرس اتصال به سرور با موفقیت ثبت شد. اتصالات بعدی از این آدرس انجام می‌شود.' : 'Server connection URL saved successfully.');
@@ -1073,8 +1135,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   </div>
                               )}
                               {connectionStatus === 'failed' && (
-                                  <div className="text-xs text-amber-600 font-semibold bg-amber-50 border border-amber-100 p-2.5 rounded-lg font-sans">
-                                      {settings.language === 'fa' ? '✗ خطای اتصال! لطفا از فعال بودن سرور روی پورت ۳۰۰۰ و صحت آدرس اطمینان حاصل کنید. (برنامه در حالت آفلاین بکار خود ادامه میدهد)' : '✗ Direct ping failed! Ensure server is active on Port 3000. Operating in offline replica mode.'}
+                                  <div className="text-xs text-amber-600 font-semibold bg-amber-50 border border-amber-100 p-2.5 rounded-lg font-sans space-y-2">
+                                      <div>
+                                          {settings.language === 'fa' 
+                                              ? '✗ خطای اتصال! لطفا از فعال بودن سرور روی پورت ۳۰۰۰ و صحت آدرس اطمینان حاصل کنید. (برنامه در حالت آفلاین بکار خود ادامه میدهد)' 
+                                              : '✗ Direct ping failed! Ensure server is active on Port 3000. Operating in offline replica mode.'}
+                                      </div>
+                                      {isTestingLocalUrlOnCloud() && (
+                                          <div className="mt-2 pt-2 border-t border-amber-200 text-amber-700 leading-relaxed text-[11px] font-medium bg-amber-100/40 p-2.5 rounded-md">
+                                              {settings.language === 'fa' 
+                                                  ? '💡 راهنمایی: به دلیل اینکه این پیش‌نمایش در بستر امن ابری (HTTPS) اجرا می‌شود، مرورگر شما اجازه ارسال درخواست مستقیم به آی‌پی‌های محلی و شبکه داخلی شرکت (مانند ۱۰.۱.۱.۱۳۵ یا localhost) را نمی‌دهد. نگران نباشید، آدرس صحیح را وارد کرده و دکمه «ذخیره آدرس» را بزنید؛ این تنظیم در نسخه دسکتاپ محلی شما که مستقیماً به شبکه داخلی متصل است، کاملاً صحیح کار خواهد کرد.' 
+                                                  : '💡 Note: Since this preview runs in a secure Cloud sandbox (HTTPS), browser security prevents direct connection requests to your private Intranet IP or localhost. Rest assured, just type the correct address and click "Save Address"; this setup will function flawlessly in your local Desktop build connected to your intranet.'}
+                                          </div>
+                                      )}
                                   </div>
                               )}
                           </div>
