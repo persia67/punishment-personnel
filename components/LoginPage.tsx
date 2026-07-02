@@ -12,6 +12,7 @@ interface LoginPageProps {
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin, settings, error }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showGuide, setShowGuide] = useState(false);
   const t = TRANSLATIONS[settings.language];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -163,6 +164,59 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, settings, error }) => {
                   <LogIn className={`w-4 h-4 md:w-5 md:h-5 ${settings.language === 'fa' ? 'rotate-180' : ''}`} />
                 </button>
               </form>
+
+              {/* Default Accounts Guide */}
+              <div className="mt-6 border-t border-white/5 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowGuide(!showGuide)}
+                  className="w-full flex items-center justify-between text-xs text-white/40 hover:text-white/75 transition-colors focus:outline-none"
+                >
+                  <span>
+                    {settings.language === 'fa' 
+                      ? '🔑 راهنمای حساب‌های کاربری پیش‌فرض سیستم' 
+                      : '🔑 Default System Accounts Guide'}
+                  </span>
+                  <span className="text-[10px] bg-white/5 px-1.5 py-0.5 rounded-md border border-white/10">
+                    {showGuide 
+                      ? (settings.language === 'fa' ? 'بستن' : 'Close') 
+                      : (settings.language === 'fa' ? 'مشاهده' : 'View')}
+                  </span>
+                </button>
+                
+                {showGuide && (
+                  <div className="mt-3 bg-black/35 rounded-xl p-3 border border-white/10 space-y-2 animate-in fade-in duration-200" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
+                    <p className="text-[11px] text-white/50 leading-relaxed text-right">
+                      {settings.language === 'fa' 
+                        ? 'جهت ورود به سیستم می‌توانید از نام‌های کاربری زیر استفاده کنید (رمز عبور تمام حساب‌ها Pass123 می‌باشد):' 
+                        : 'To access the system, you can use the following default usernames (password for all is Pass123):'}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      {[
+                        { username: 'Dev123', label: settings.language === 'fa' ? 'مدیر سیستم' : 'SysAdmin', role: 'DEVELOPER' },
+                        { username: 'Manager123', label: settings.language === 'fa' ? 'مدیر کارخانه' : 'Factory Mgr', role: 'PLANT_MANAGER' },
+                        { username: 'HseManager123', label: settings.language === 'fa' ? 'مدیر ایمنی' : 'HSE Mgr', role: 'HSE_MANAGER' },
+                        { username: 'HrManager123', label: settings.language === 'fa' ? 'مدیر منابع انسانی' : 'HR Mgr', role: 'HR_MANAGER' },
+                        { username: 'Security123', label: settings.language === 'fa' ? 'سرپرست انتظامات' : 'Security Mgr', role: 'SECURITY_MANAGER' },
+                        { username: 'Admin123', label: settings.language === 'fa' ? 'کارشناس اداری' : 'Admin Staff', role: 'ADMIN_STAFF' },
+                      ].map((acc) => (
+                        <button
+                          key={acc.username}
+                          type="button"
+                          onClick={() => {
+                            setUsername(acc.username);
+                            setPassword('Pass123');
+                          }}
+                          className={`flex flex-col items-start p-2 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 rounded-lg transition-all duration-150 active:scale-95 group text-white/80 ${settings.language === 'fa' ? 'text-right' : 'text-left'}`}
+                        >
+                          <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">{acc.username}</span>
+                          <span className="text-[10px] text-white/40">{acc.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="mt-8 pt-4 border-t border-white/5 text-center">

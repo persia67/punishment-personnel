@@ -44,7 +44,20 @@ function readDB(): DBState {
   try {
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, 'utf8');
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      
+      // Self-healing: Ensure users exists, is an array, and is not empty
+      if (!parsed.users || !Array.isArray(parsed.users) || parsed.users.length === 0) {
+        parsed.users = DEFAULT_USERS_BACKUP;
+      }
+      
+      // Self-healing: Upgrade legacy users
+      const hasLegacyUsers = parsed.users.some((u: any) => u.username === 'dev' || u.password === '123' || u.id === 'u8');
+      if (hasLegacyUsers) {
+        parsed.users = DEFAULT_USERS_BACKUP;
+      }
+      
+      return parsed;
     }
   } catch (err) {
     console.error('Error reading DB, using defaults', err);
@@ -91,10 +104,18 @@ app.post('/api/db', (req, res) => {
   const incoming = req.body;
   const current = readDB();
   
+  let incomingUsers = incoming.users;
+  if (incomingUsers && Array.isArray(incomingUsers)) {
+    const hasLegacy = incomingUsers.some((u: any) => u.username === 'dev' || u.password === '123' || u.id === 'u8');
+    if (incomingUsers.length === 0 || hasLegacy) {
+      incomingUsers = DEFAULT_USERS_BACKUP;
+    }
+  }
+  
   const updated: DBState = {
     violations: incoming.violations || current.violations,
     rewards: incoming.rewards || current.rewards,
-    users: incoming.users || current.users,
+    users: incomingUsers || current.users,
     employees: incoming.employees || current.employees,
     violationCodes: incoming.violationCodes || current.violationCodes,
     rewardCodes: incoming.rewardCodes || current.rewardCodes,
@@ -108,6 +129,13 @@ app.post('/api/db', (req, res) => {
 // Single-endpoint full replacement (excellent for continuous sync)
 app.put('/api/db/sync', (req, res) => {
   const data = req.body;
+  
+  if (data) {
+    if (!data.users || !Array.isArray(data.users) || data.users.length === 0 || data.users.some((u: any) => u.username === 'dev' || u.password === '123' || u.id === 'u8')) {
+      data.users = DEFAULT_USERS_BACKUP;
+    }
+  }
+  
   writeDB(data);
   res.json({ success: true, message: 'Synchronized completely' });
 });

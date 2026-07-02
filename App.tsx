@@ -361,12 +361,13 @@ const App: React.FC = () => {
   };
 
   const handleLogin = (u: string, p: string) => {
-    const foundUser = users.find(user => user.username === u && user.password === p);
+    const cleanU = u.trim().toLowerCase();
+    const foundUser = users.find(user => user.username.trim().toLowerCase() === cleanU && user.password === p);
     if (foundUser) {
       setUser(foundUser);
       setLoginError('');
     } else {
-      setLoginError('Invalid username or password');
+      setLoginError(settings.language === 'fa' ? 'نام کاربری یا رمز عبور اشتباه است.' : 'Invalid username or password');
     }
   };
 
