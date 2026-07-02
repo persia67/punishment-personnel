@@ -53,7 +53,7 @@ export const fetchCentralData = async (): Promise<SyncPayload | null> => {
     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
     return await res.json();
   } catch (err) {
-    console.warn(`Failed to contact central company server at ${fetchUrl}:`, err);
+    console.info(`Failed to contact central company server at ${fetchUrl}:`, err);
     
     // Fallback 1: Try relative path if we previously used an absolute url
     if (url !== '') {
@@ -69,7 +69,7 @@ export const fetchCentralData = async (): Promise<SyncPayload | null> => {
           return data;
         }
       } catch (fallbackErr) {
-        console.error('Fallback to relative path also failed:', fallbackErr);
+        console.info('Fallback to relative path also failed:', fallbackErr);
       }
     }
 
@@ -90,7 +90,7 @@ export const fetchCentralData = async (): Promise<SyncPayload | null> => {
             return data;
           }
         } catch (fallbackErr) {
-          console.error('Fallback to window origin also failed:', fallbackErr);
+          console.info('Fallback to window origin also failed:', fallbackErr);
         }
       }
     }
@@ -110,11 +110,11 @@ export const fetchCentralData = async (): Promise<SyncPayload | null> => {
           return data;
         }
       } catch (fallbackErr) {
-        console.error('Fallback to localhost:3000 also failed:', fallbackErr);
+        console.info('Fallback to localhost:3000 also failed:', fallbackErr);
       }
     }
 
-    console.error('Failed to contact central company server: All fallbacks exhausted.');
+    console.info('Operating in offline/local-cache mode: Central company server could not be reached.');
     return null;
   }
 };
@@ -133,7 +133,7 @@ export const syncCentralData = async (payload: SyncPayload): Promise<{ success: 
     const data = await res.json();
     return { success: true, message: data.message || "Data synchronized with central server successfully." };
   } catch (err: any) {
-    console.warn(`Local sync failed on ${fetchUrl}, checking fallbacks...`, err);
+    console.info(`Local sync failed on ${fetchUrl}, checking fallbacks...`, err);
 
     // Fallback 1: Try relative path
     if (url !== '') {
@@ -148,7 +148,7 @@ export const syncCentralData = async (payload: SyncPayload): Promise<{ success: 
           return { success: true, message: "Data synchronized via relative API path successfully." };
         }
       } catch (fallbackErr) {
-        console.error('Sync fallback to relative path failed:', fallbackErr);
+        console.info('Sync fallback to relative path failed:', fallbackErr);
       }
     }
 
@@ -168,7 +168,7 @@ export const syncCentralData = async (payload: SyncPayload): Promise<{ success: 
             return { success: true, message: "Data synchronized with window origin server successfully." };
           }
         } catch (fallbackErr) {
-          console.error('Sync fallback to window origin failed:', fallbackErr);
+          console.info('Sync fallback to window origin failed:', fallbackErr);
         }
       }
     }
@@ -187,7 +187,7 @@ export const syncCentralData = async (payload: SyncPayload): Promise<{ success: 
           return { success: true, message: "Data synchronized with localhost:3000 server successfully." };
         }
       } catch (fallbackErr) {
-        console.error('Sync fallback to localhost:3000 failed:', fallbackErr);
+        console.info('Sync fallback to localhost:3000 failed:', fallbackErr);
       }
     }
 
