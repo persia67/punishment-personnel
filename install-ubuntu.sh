@@ -73,18 +73,20 @@ mkdir -p "$INSTALL_DIR"
 # Copy files excluding node_modules, .git etc.
 rsync -av --exclude='node_modules' --exclude='.git' --exclude='dist' --exclude='release' "$SRC_DIR/" "$INSTALL_DIR/"
 
-# Create storage directory for database if needed and secure permission
+# Create storage directory for database if needed
 mkdir -p "$INSTALL_DIR/data"
 touch "$INSTALL_DIR/data/db.json"
-chown -R hse-app:hse-app "$INSTALL_DIR"
 
-echo -e "${BLUE}در حال نصب بسته‌های npm و بیلد پروژه (این مرحله ممکن است چند دقیقه طول بکشد)...${NC}"
-echo -e "${BLUE}Installing npm packages and building project (this may take a few minutes)...${NC}"
+echo -e "${BLUE}در حال نصب بسته‌های npm و بیلد پروژه... / Installing npm packages and building project...${NC}"
+echo -e "${YELLOW}این کار با دسترسی بالا انجام می‌شود تا پارت‌های محلی و محیط سیستم به طور کامل و صحیح شناسایی شوند.${NC}"
 
-# Install dependencies and build as hse-app
+# Install dependencies and build as root (safer for PATH resolution and Node.js toolchains)
 cd "$INSTALL_DIR" || exit
-su - hse-app -c "cd $INSTALL_DIR && npm install"
-su - hse-app -c "cd $INSTALL_DIR && npm run build"
+npm install
+npm run build
+
+# Secure permissions and assign full ownership to 'hse-app' AFTER installation and build are complete
+chown -R hse-app:hse-app "$INSTALL_DIR"
 
 # Ensure environmental sample exists
 if [ ! -f "$INSTALL_DIR/.env" ]; then
@@ -117,16 +119,29 @@ echo "   Internet Domain Name (Auto Let's Encrypt SSL)"
 echo "2) آدرس IP سرور داخلی (تولید گواهینامه SSL خودامضا امن)"
 echo "   Internal Server IP (Secure Self-Signed SSL Certificate)"
 echo "------------------------------------------------------------"
-read -p "گزینه مورد نظر (1 یا 2) / Choose option (1 or 2): " SSL_CHOICE
-
 # Get primary server IP as helper
 SERVER_IP=$(hostname -I | awk '{print $1}')
+if [ -z "$SERVER_IP" ]; then
+  SERVER_IP="127.0.0.1"
+fi
+
+if [ -t 0 ]; then
+  read -p "گزینه مورد نظر (1 یا 2) / Choose option (1 or 2): " SSL_CHOICE
+else
+  echo -e "${YELLOW}غیرتعاملی (پایپ شده): انتخاب خودکار گزینه ۲ (SSL خودامضا روی آی‌پی سرور) / Non-interactive (piped): Auto-selecting option 2 (Self-signed SSL)...${NC}"
+  SSL_CHOICE="2"
+fi
 
 if [ "$SSL_CHOICE" == "1" ]; then
   # Let's Encrypt Domain Option
   echo -e "\n${CYAN}تنظیم آدرس دامنه / Domain Name Setup${NC}"
-  read -p "نام دامنه خود را وارد کنید (مثال: hse.company.ir): " DOMAIN_NAME
-  read -p "ایمیل خود را جهت دریافت هشدارهای تمدید SSL وارد کنید: " SSL_EMAIL
+  if [ -t 0 ]; then
+    read -p "نام دامنه خود را وارد کنید (مثال: hse.company.ir): " DOMAIN_NAME
+    read -p "ایمیل خود را جهت دریافت هشدارهای تمدید SSL وارد کنید: " SSL_EMAIL
+  else
+    DOMAIN_NAME=""
+    SSL_EMAIL=""
+  fi
   
   if [ -z "$DOMAIN_NAME" ] || [ -z "$SSL_EMAIL" ]; then
     echo -e "${RED}خطا: نام دامنه و ایمیل نمی‌توانند خالی باشند. بازگشت به حالت IP.${NC}"
@@ -288,6 +303,12 @@ fi
 echo -e "\n${BLUE}[6/7] ایجاد سرویس پس‌زمینه لینوکس (Systemd Service)... / Configuring systemd daemon...${NC}"
 echo -e "${YELLOW}این سرویس تضمین می‌کند که نرم‌افزار حتی با ریستارت شدن سرور، به‌طور خودکار بالا بیاید و همیشه فعال بماند.${NC}"
 
+# Dynamically locate the exact path to node binary on the server
+NODE_PATH=$(which node)
+if [ -z "$NODE_PATH" ]; then
+  NODE_PATH="/usr/bin/node"
+fi
+
 cat > /etc/systemd/system/hse-safewatch.service <<EOF
 [Unit]
 Description=HSE SafeWatch & Reward AI Application Service
@@ -297,7 +318,7 @@ After=network.target
 Type=simple
 User=hse-app
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/node dist/server.cjs
+ExecStart=$NODE_PATH dist/server.cjs
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production

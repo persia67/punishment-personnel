@@ -823,10 +823,24 @@ const App: React.FC = () => {
                 </span>
                 {/* Server Status Indicators */}
                 {getServerUrl() && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-gray-150 text-emerald-600">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    {settings.language === 'fa' ? 'سرور متصل' : 'Intranet Synced'}
-                  </span>
+                  <>
+                    {(syncStatus === 'synced' && isOnline) ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-emerald-100 text-emerald-600 shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        {settings.language === 'fa' ? 'سرور متصل' : 'Intranet Connected'}
+                      </span>
+                    ) : syncStatus === 'syncing' ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-blue-100 text-blue-600 shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                        {settings.language === 'fa' ? 'در حال همگام‌سازی...' : 'Syncing...'}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-amber-200 text-amber-700 shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        {settings.language === 'fa' ? 'آفلاین (نسخه محلی و امن)' : 'Offline (Local Replica)'}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
               

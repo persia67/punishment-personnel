@@ -21,7 +21,7 @@ function createWindow() {
   const isDev = !app.isPackaged;
   
   if (isDev) {
-      win.loadURL('http://localhost:5173');
+      win.loadURL('http://localhost:3000');
       // win.webContents.openDevTools(); 
   } else {
       // Correctly resolving path for production (packed inside asar)
