@@ -13,10 +13,11 @@ import PrintReportModal from './components/PrintReportModal';
 import PersonnelProfileModal from './components/PersonnelProfileModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import OfflineSyncModal from './components/OfflineSyncModal';
+import { EditAvatarModal } from './components/EditAvatarModal';
 import { selectWorkerOfMonth } from './services/geminiService';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { sendNotificationSms } from './services/smsService';
-import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight } from 'lucide-react';
+import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2 } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -38,6 +39,7 @@ const App: React.FC = () => {
   const [isPrintReportOpen, setIsPrintReportOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isOfflineSyncOpen, setIsOfflineSyncOpen] = useState(false);
+  const [isEditAvatarOpen, setIsEditAvatarOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{isOpen: boolean; id: string | null; type: 'VIOLATION' | 'REWARD'}>({ isOpen: false, id: null, type: 'VIOLATION' });
   const [searchTerm, setSearchTerm] = useState('');
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
@@ -398,6 +400,16 @@ const App: React.FC = () => {
     setSystemMode('VIOLATION');
   };
 
+  const handleUpdateAvatar = (newAvatar: string) => {
+    if (!user) return;
+    const updatedUser = { ...user, avatar: newAvatar };
+    setUser(updatedUser);
+    const updatedUsersList = users.map(u => u.username === user.username ? updatedUser : u);
+    setUsers(updatedUsersList);
+    localStorage.setItem('sg_users', JSON.stringify(updatedUsersList));
+    pushDataToServerState(violations, rewards, updatedUsersList, employees, violationCodes, rewardCodes, settings);
+  };
+
   const updateEmployees = (newEmployees: Employee[]) => {
       setEmployees(newEmployees);
       localStorage.setItem('sg_employees', JSON.stringify(newEmployees));
@@ -437,7 +449,7 @@ const App: React.FC = () => {
 
   const userDept = getUserDepartment();
   const canViewAll = userDept === 'ALL';
-  const canApprove = ['HSE_MANAGER', 'PLANT_MANAGER', 'HR_MANAGER', 'DEVELOPER'].includes(user?.role || '');
+  const canApprove = ['HSE_MANAGER', 'PLANT_MANAGER', 'HR_MANAGER', 'DEVELOPER', 'ADMIN_STAFF'].includes(user?.role || '');
 
   const getCanApproveItem = (item: Violation | Reward) => {
     if (!user) return false;
@@ -448,13 +460,13 @@ const App: React.FC = () => {
       return role === 'HSE_MANAGER';
     }
     if (['ADMIN', 'HR'].includes(item.departmentSource)) {
-      return role === 'HR_MANAGER';
+      return role === 'HR_MANAGER' || role === 'ADMIN_STAFF';
     }
     if (item.departmentSource === 'SECURITY') {
       return role === 'SECURITY_MANAGER' || role === 'HR_MANAGER';
     }
     if (item.departmentSource === 'TRAINING') {
-      return role === 'TRAINING_MANAGER' || role === 'HSE_MANAGER';
+      return role === 'TRAINING_MANAGER' || role === 'HSE_MANAGER' || role === 'HR_MANAGER' || role === 'ADMIN_STAFF';
     }
     if (role === 'DEPARTMENT_MANAGER' && user.managedDepartment === item.departmentSource) {
       return true;
@@ -749,6 +761,87 @@ const App: React.FC = () => {
       </header>
 
        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8 flex-grow w-full space-y-6 font-sans">
+         {/* Welcome & Session Profile Banner */}
+         {user && (
+           <div className="bg-gradient-to-r from-indigo-900 to-slate-800 text-white rounded-3xl p-5 md:p-6 shadow-md border border-indigo-950 flex flex-col md:flex-row items-center justify-between gap-5 transition-all relative overflow-hidden" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
+             {/* Abstract background graphics */}
+             <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-500 rounded-full opacity-10 blur-xl"></div>
+             <div className="absolute -left-10 -top-10 w-32 h-32 bg-sky-500 rounded-full opacity-10 blur-xl"></div>
+             
+             <div className="flex flex-col sm:flex-row items-center gap-5 relative z-10 w-full md:w-auto text-center sm:text-right">
+               {/* Clickable Profile Photo */}
+               <div className="relative group shrink-0">
+                 <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-indigo-950/80 border-2 border-indigo-400/50 p-1 shadow-inner flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:scale-105 group-hover:border-indigo-300">
+                   {user.avatar ? (
+                     <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover rounded-xl" referrerPolicy="no-referrer" />
+                   ) : (
+                     <div className="w-full h-full bg-linear-to-br from-indigo-500 to-indigo-700 text-white flex items-center justify-center rounded-xl font-bold text-2xl md:text-3xl shadow-sm">
+                       {user.fullName.charAt(0)}
+                     </div>
+                   )}
+                 </div>
+                 <button 
+                   onClick={() => setIsEditAvatarOpen(true)}
+                   className="absolute -bottom-1.5 -right-1.5 bg-indigo-500 hover:bg-indigo-600 text-white p-1.5 rounded-lg border border-indigo-700/50 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-[10px] font-bold flex items-center justify-center"
+                   title={settings.language === 'fa' ? 'تغییر عکس پروفایل' : 'Change Profile Photo'}
+                 >
+                   <Camera className="w-3.5 h-3.5" />
+                 </button>
+               </div>
+               
+               <div className="space-y-1.5">
+                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                   <h2 className="text-lg md:text-2xl font-black tracking-tight">{settings.language === 'fa' ? 'خوش آمدید،' : 'Welcome,'} {user.fullName}</h2>
+                   <span className="bg-indigo-500/35 border border-indigo-400/30 text-[10px] md:text-xs font-bold px-2.5 py-0.5 rounded-full backdrop-blur-xs flex items-center gap-1">
+                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                     {settings.language === 'fa' ? 'فعال در سامانه' : 'Active Session'}
+                   </span>
+                 </div>
+                 
+                 <p className="text-xs md:text-sm text-indigo-200 font-medium leading-relaxed flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1">
+                   <span>
+                     <strong className="text-white">{settings.language === 'fa' ? 'سمت سازمانی:' : 'Job Title:'}</strong>{' '}
+                     {(TRANSLATIONS as any)[settings.language][`role_${user.role.toLowerCase()}`] || user.role}
+                   </span>
+                   <span className="text-indigo-400 hidden sm:inline">•</span>
+                   <span>
+                     <strong className="text-white">{settings.language === 'fa' ? 'سطح دسترسی:' : 'Access Level:'}</strong>{' '}
+                     {user.role === 'DEVELOPER' ? (settings.language === 'fa' ? 'مدیریت کل سیستم (دولوپر)' : 'Full System Control (Developer)') : 
+                      user.role === 'PLANT_MANAGER' ? (settings.language === 'fa' ? 'مدیریت ارشد کارخانه' : 'Plant Senior Management') : 
+                      user.role === 'HR_MANAGER' ? (settings.language === 'fa' ? 'مدیریت منابع انسانی' : 'HR Management') : 
+                      (settings.language === 'fa' ? `پایش و ثبت اختصاصی واحد ${userDept}` : `Departmental Node: ${userDept}`)}
+                   </span>
+                 </p>
+               </div>
+             </div>
+             
+             {/* Quick Actions inside Profile Banner */}
+             <div className="flex flex-wrap items-center justify-center gap-2.5 w-full md:w-auto relative z-10 border-t border-indigo-800/50 pt-3 md:pt-0 md:border-0">
+               <button
+                 onClick={() => setIsEditAvatarOpen(true)}
+                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-800/40 hover:bg-indigo-800/60 text-indigo-100 hover:text-white border border-indigo-700/40 text-xs font-bold transition-all active:scale-95"
+               >
+                 <Camera className="w-3.5 h-3.5" />
+                 <span>{settings.language === 'fa' ? 'تغییر عکس' : 'Change Avatar'}</span>
+               </button>
+               <button
+                 onClick={() => setIsChangePasswordOpen(true)}
+                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-800/40 hover:bg-indigo-800/60 text-indigo-100 hover:text-white border border-indigo-700/40 text-xs font-bold transition-all active:scale-95"
+               >
+                 <Key className="w-3.5 h-3.5" />
+                 <span>{settings.language === 'fa' ? 'تغییر رمز عبور' : 'Change Password'}</span>
+               </button>
+               <button
+                 onClick={handleLogout}
+                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-200 hover:text-red-100 border border-red-500/30 text-xs font-bold transition-all active:scale-95"
+               >
+                 <LogOut className="w-3.5 h-3.5" />
+                 <span>{settings.language === 'fa' ? 'خروج' : 'Logout'}</span>
+               </button>
+             </div>
+           </div>
+         )}
+
          {/* Dynamic Mode Segment Directory - Fresh, Premium & Distinctive */}
         <div className="p-1.5 rounded-2xl bg-white border border-gray-200 shadow-xs grid grid-cols-1 md:grid-cols-2 gap-2 mb-6">
           {/* Card 1 Switch: Safety Violations Portal */}
@@ -1309,6 +1402,16 @@ const App: React.FC = () => {
           currentUser={user}
           settings={settings}
           onUpdatePassword={handleUpdatePassword}
+        />
+      )}
+
+      {user && (
+        <EditAvatarModal
+          isOpen={isEditAvatarOpen}
+          onClose={() => setIsEditAvatarOpen(false)}
+          currentUser={user}
+          onUpdateAvatar={handleUpdateAvatar}
+          settings={settings}
         />
       )}
     </div>

@@ -16,7 +16,8 @@ import {
   Database,
   History,
   Trash2,
-  Info
+  Info,
+  Share2
 } from 'lucide-react';
 import { Violation, Reward, Employee, AppSettings } from '../types';
 
@@ -331,6 +332,65 @@ export default function OfflineSyncModal({
       showToast(isFa ? 'فایل همگام‌سازی با موفقیت آماده و دانلود شد.' : 'Sync file downloaded successfully!', 'success');
     } catch (e) {
       showToast(isFa ? 'خطا در خروجی گرفتن اطلاعات.' : 'Error generating export file.', 'error');
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const payload: SyncFilePayload = {
+        version: '3.2.0',
+        source: isFa ? 'واحد پایش محلی SafeWatch' : 'Local SafeWatch Node',
+        exportDate: new Date().toISOString(),
+        filterPeriod: exportMonth,
+        filterDept: exportDept,
+        violations: exportV,
+        rewards: exportR,
+        employees: exportE
+      };
+
+      const dateTag = new Date().toLocaleDateString(isFa ? 'fa-IR' : 'en-US')
+        .replace(/\//g, '-');
+      const filename = `SafeWatch_Sync_${exportMonth.replace(/\//g, '_')}_${dateTag}.json`;
+      const jsonString = JSON.stringify(payload, null, 2);
+
+      if (navigator.share) {
+        const file = new File([jsonString], filename, { type: 'application/json' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: isFa ? 'فایل همگام‌سازی SafeWatch' : 'SafeWatch Sync File',
+            text: isFa ? 'فایل تبادل آفلاین اطلاعات جهت انتقال به سیستم مقصد' : 'Offline exchange file for system transfer'
+          });
+          showToast(isFa ? 'فایل تبادل با موفقیت به اشتراک گذاشته شد.' : 'Sync file shared successfully!', 'success');
+        } else {
+          await navigator.share({
+            title: isFa ? 'فایل همگام‌سازی SafeWatch' : 'SafeWatch Sync File',
+            text: jsonString
+          });
+          showToast(isFa ? 'داده‌ها به صورت متنی به اشتراک گذاشته شدند.' : 'Data shared as text successfully!', 'success');
+        }
+
+        // Add Share log
+        const newLog: SyncLogEntry = {
+          id: 'log_' + Math.random().toString(36).substr(2, 9),
+          timestamp: new Date().toISOString(),
+          fileName: filename + ' (Shared)',
+          actionType: 'EXPORT',
+          period: exportMonth,
+          violationsCount: exportV.length,
+          rewardsCount: exportR.length,
+          employeesCount: exportE.length
+        };
+        saveLogs([newLog, ...syncLogs]);
+      } else {
+        await navigator.clipboard.writeText(jsonString);
+        showToast(isFa ? 'داده‌ها در حافظه موقت کپی شدند. دانلود خودکار فایل آغاز می‌شود...' : 'Data copied! Starting file download fallback...', 'success');
+        handleExport();
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        showToast(isFa ? `خطا در اشتراک‌گذاری: ${error.message}` : `Share failed: ${error.message}`, 'error');
+      }
     }
   };
 
@@ -671,14 +731,25 @@ export default function OfflineSyncModal({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleExport}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white py-3 px-4 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center gap-2 shadow-md transition-all mt-4"
-              >
-                <Download className="w-4.5 h-4.5" />
-                <span>{t.downloadButton}</span>
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  className="flex-grow bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white py-3 px-4 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center gap-2 shadow-md transition-all"
+                >
+                  <Download className="w-4.5 h-4.5" />
+                  <span>{t.downloadButton}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white py-3 px-4 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center gap-2 shadow-md transition-all shrink-0"
+                  title={isFa ? 'اشتراک‌گذاری مستقیم (اندروید/پیامرسان‌ها/بلوتوث)' : 'Direct Share (Android/Messenger/Bluetooth)'}
+                >
+                  <Share2 className="w-4.5 h-4.5" />
+                  <span>{isFa ? 'اشتراک‌گذاری' : 'Share'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Right Box: Import & Smart Merge */}

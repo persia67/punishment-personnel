@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, User, ThemeColor, Language, Role, Employee, CodeItem, SmsConfig, SmsLog } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save, ShieldAlert } from 'lucide-react';
+import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save, ShieldAlert, Share2 } from 'lucide-react';
 // @ts-ignore
 import * as XLSX from 'xlsx';
 import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
@@ -463,6 +463,57 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleShareBackup = async () => {
+    const dataToExport = {
+      sg_users: localStorage.getItem('sg_users'),
+      sg_settings: localStorage.getItem('sg_settings'),
+      sg_violations: localStorage.getItem('sg_violations'),
+      sg_rewards: localStorage.getItem('sg_rewards'),
+      sg_employees: localStorage.getItem('sg_employees'),
+      sg_violationCodes: localStorage.getItem('sg_violationCodes'),
+      sg_rewardCodes: localStorage.getItem('sg_rewardCodes'),
+      version: "3.2.0",
+      exportDate: new Date().toISOString()
+    };
+
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const fileName = `SafeWatch_Backup_${new Date().toLocaleDateString('fa-IR').replace(/\//g, '-')}.json`;
+
+    if (navigator.share) {
+      try {
+        const file = new File([jsonString], fileName, { type: 'application/json' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'SafeWatch Backup',
+            text: settings.language === 'fa' ? 'فایل پشتیبان کامل سامانه SafeWatch' : 'SafeWatch Complete Backup File'
+          });
+        } else {
+          await navigator.share({
+            title: 'SafeWatch Backup JSON',
+            text: jsonString
+          });
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          alert(settings.language === 'fa' 
+            ? `خطا در اشتراک‌گذاری: ${err.message}` 
+            : `Share failed: ${err.message}`);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(jsonString);
+        alert(settings.language === 'fa'
+          ? 'داده‌های پشتیبان در حافظه موقت (Clipboard) کپی شدند. دانلود خودکار فایل آغاز می‌شود...'
+          : 'Backup JSON copied to clipboard successfully. Downloading file now.');
+        handleExportBackup();
+      } catch (e) {
+        handleExportBackup();
+      }
+    }
   };
 
   const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1189,7 +1240,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                          <h4 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-2">
                              {settings.language === 'fa' ? 'پشتیبان‌گیری و اعاده تنظیمات سامانه' : 'System Backup & Recovery'}
                          </h4>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {/* EXPORT */}
                             <button 
                                 onClick={handleExportBackup}
@@ -1197,6 +1248,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             >
                                 <Download className="w-4 h-4" />
                                 {t.downloadBackup}
+                            </button>
+
+                            {/* SHARE */}
+                            <button 
+                                onClick={handleShareBackup}
+                                className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition-all shadow-md active:scale-95 text-xs md:text-sm font-semibold"
+                            >
+                                <Share2 className="w-4 h-4" />
+                                {settings.language === 'fa' ? 'اشتراک‌گذاری داده‌ها' : 'Share Data'}
                             </button>
 
                             {/* IMPORT */}
