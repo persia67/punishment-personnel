@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, User, ThemeColor, Language, Role, Employee, CodeItem, SmsConfig, SmsLog } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save } from 'lucide-react';
+import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save, ShieldAlert } from 'lucide-react';
 // @ts-ignore
 import * as XLSX from 'xlsx';
 import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
@@ -206,6 +206,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const t = TRANSLATIONS[settings.language];
   const isDeveloper = currentUser.role === 'DEVELOPER';
   const canManageUsers = isDeveloper; // Restrict creating a new user strictly to DEVELOPER mode
+  const canManageCodes = isDeveloper || currentUser.role === 'HR_MANAGER';
   const isUnitManager = isDeveloper || 
     currentUser.role === 'HSE_MANAGER' || 
     currentUser.role === 'SECURITY_MANAGER' || 
@@ -292,7 +293,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleAddCode = (e: React.FormEvent) => {
       e.preventDefault();
-      if (!isUnitManager) {
+      if (!canManageCodes) {
           alert(settings.language === 'fa' 
               ? 'خطای امنیتی: شما اجازه تعریف کد جدید را ندارید!' 
               : 'Security Error: You are not authorized to create a new code.');
@@ -314,7 +315,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleDeleteCode = (id: string, type: 'VIOLATION' | 'REWARD') => {
-      if (!isUnitManager) {
+      if (!canManageCodes) {
           alert(settings.language === 'fa' 
               ? 'خطای امنیتی: شما اجازه حذف کدهای موجود را ندارید!' 
               : 'Security Error: You are not authorized to delete codes.');
@@ -806,6 +807,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             <thead className="bg-gray-50 text-gray-500 sticky top-0">
                                 <tr>
                                     <th className={`px-3 py-2 md:px-4 md:py-3 ${settings.language === 'fa' ? 'text-right' : 'text-left'}`}>{t.username}</th>
+                                    {isDeveloper && (
+                                        <th className={`px-3 py-2 md:px-4 md:py-3 ${settings.language === 'fa' ? 'text-right' : 'text-left'}`}>
+                                            {settings.language === 'fa' ? 'رمز عبور' : 'Password'}
+                                        </th>
+                                    )}
                                     <th className={`px-3 py-2 md:px-4 md:py-3 ${settings.language === 'fa' ? 'text-right' : 'text-left'}`}>Name</th>
                                     <th className={`px-3 py-2 md:px-4 md:py-3 ${settings.language === 'fa' ? 'text-right' : 'text-left'}`}>{t.role}</th>
                                     <th className="px-3 py-2 md:px-4 md:py-3 text-center">{t.actions}</th>
@@ -814,7 +820,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             <tbody className="divide-y divide-gray-100">
                                 {users.map(u => (
                                     <tr key={u.id} className="hover:bg-gray-50">
-                                        <td className="px-3 py-2 md:px-4 md:py-3">{u.username}</td>
+                                        <td className="px-3 py-2 md:px-4 md:py-3 font-semibold text-gray-900">{u.username}</td>
+                                        {isDeveloper && (
+                                            <td className="px-3 py-2 md:px-4 md:py-3 font-mono text-xs text-indigo-600 font-bold bg-indigo-50/50">
+                                                <span className="select-all bg-white px-2 py-0.5 rounded border border-indigo-100 shadow-sm">{u.password}</span>
+                                            </td>
+                                        )}
                                         <td className="px-3 py-2 md:px-4 md:py-3">{u.fullName}</td>
                                         <td className="px-3 py-2 md:px-4 md:py-3">
                                             <div className="flex flex-col">
@@ -863,7 +874,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                          <button onClick={() => setCodeType('REWARD')} className={`flex-1 py-2 text-sm font-bold rounded-lg ${codeType === 'REWARD' ? 'bg-white shadow text-emerald-600' : 'text-gray-500'}`}>{t.mode_reward}</button>
                      </div>
 
-                     <form onSubmit={handleAddCode} className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                     {canManageCodes ? (
+                         <form onSubmit={handleAddCode} className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
                          <input type="number" placeholder="Code #" className="p-2 text-sm rounded border" required value={newCode.code || ''} onChange={e => setNewCode({...newCode, code: Number(e.target.value)})} />
                          <input type="number" placeholder={t.codeScore} className="p-2 text-sm rounded border" required value={newCode.score || ''} onChange={e => setNewCode({...newCode, score: Number(e.target.value)})} />
                          <input type="text" placeholder={t.codeTitle} className="p-2 text-sm rounded border col-span-2" required value={newCode.label || ''} onChange={e => setNewCode({...newCode, label: e.target.value})} />
@@ -872,6 +884,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                              <Plus className="w-4 h-4" /> {t.addCode}
                          </button>
                      </form>
+                     ) : (
+                         <div className="bg-amber-50/70 border border-amber-200 text-amber-800 p-4 rounded-xl text-xs flex gap-3 leading-relaxed animate-in fade-in" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
+                             <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                             <div>
+                                 <span className="font-bold block text-amber-900 mb-1">
+                                     {settings.language === 'fa' ? 'محدودیت دسترسی مدیریت کدها' : 'Code Management Restricted'}
+                                 </span>
+                                 <span>
+                                     {settings.language === 'fa' 
+                                         ? 'همکار گرامی، طبق سیاست‌های امنیتی سیستم، امکان تعریف کدهای جدید آیین‌نامه یا حذف آن‌ها تنها برای «مدیر سیستم (دولوپر)» و «مدیر منابع انسانی» مجاز می‌باشد.' 
+                                         : 'According to system security policies, defining new regulatory codes or deleting them is strictly restricted to SysAdmin (Developer) and HR Manager.'}
+                                 </span>
+                             </div>
+                         </div>
+                     )}
 
                      <div className="border border-gray-100 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
                         <table className="w-full text-xs md:text-sm text-left">
@@ -893,9 +920,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </td>
                                         <td className="px-3 py-2 text-center text-xs text-gray-400">{code.department}</td>
                                         <td className="px-3 py-2 text-center">
-                                            <button onClick={() => handleDeleteCode(code.id, codeType)} className="text-red-500 hover:text-red-700 p-1">
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
+                                            {canManageCodes ? (
+                                                <button onClick={() => handleDeleteCode(code.id, codeType)} className="text-red-500 hover:text-red-700 p-1">
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            ) : (
+                                                <span className="text-gray-300 font-mono">-</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

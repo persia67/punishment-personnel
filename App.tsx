@@ -12,10 +12,11 @@ import CodeLegendModal from './components/CodeLegendModal';
 import PrintReportModal from './components/PrintReportModal';
 import PersonnelProfileModal from './components/PersonnelProfileModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
+import OfflineSyncModal from './components/OfflineSyncModal';
 import { selectWorkerOfMonth } from './services/geminiService';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { sendNotificationSms } from './services/smsService';
-import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer } from 'lucide-react';
+import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -36,6 +37,7 @@ const App: React.FC = () => {
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isPrintReportOpen, setIsPrintReportOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isOfflineSyncOpen, setIsOfflineSyncOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{isOpen: boolean; id: string | null; type: 'VIOLATION' | 'REWARD'}>({ isOpen: false, id: null, type: 'VIOLATION' });
   const [searchTerm, setSearchTerm] = useState('');
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
@@ -345,6 +347,25 @@ const App: React.FC = () => {
       bak.violationCodes,
       bak.rewardCodes,
       bak.settings
+    );
+  };
+
+  const handleOfflineMergeSuccess = (
+    mergedViolations: Violation[], 
+    mergedRewards: Reward[], 
+    mergedEmployees: Employee[]
+  ) => {
+    setViolations(mergedViolations);
+    setRewards(mergedRewards);
+    setEmployees(mergedEmployees);
+    pushDataToServerState(
+      mergedViolations,
+      mergedRewards,
+      users,
+      mergedEmployees,
+      violationCodes,
+      rewardCodes,
+      settings
     );
   };
 
@@ -704,6 +725,18 @@ const App: React.FC = () => {
            </div>
            
            <div className="flex items-center gap-2 md:gap-3">
+
+             <button 
+                type="button"
+                onClick={() => setIsOfflineSyncOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 text-xs font-black transition-all shadow-xs active:scale-95 shrink-0"
+                title={settings.language === 'fa' ? 'تبادل آفلاین داده‌ها (فلش/ایمیل)' : 'Offline Exchange (USB/Email)'}
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5 animate-pulse text-indigo-600" />
+                <span className="hidden md:inline">
+                  {settings.language === 'fa' ? 'تبادل آفلاین داده‌ها' : 'Offline Exchange'}
+                </span>
+              </button>
 
              <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${themeStyles.bg}`}>{user.username.charAt(0).toUpperCase()}</div>
@@ -1257,6 +1290,16 @@ const App: React.FC = () => {
         rewardCodes={rewardCodes}
         onUpdateRewardCodes={handleUpdateRewardCodes}
         onRestoreFullBackup={handleRestoreFullBackup}
+      />
+
+      <OfflineSyncModal
+        isOpen={isOfflineSyncOpen}
+        onClose={() => setIsOfflineSyncOpen(false)}
+        settings={settings}
+        violations={violations}
+        rewards={rewards}
+        employees={employees}
+        onMergeSuccess={handleOfflineMergeSuccess}
       />
 
       {user && (
