@@ -206,14 +206,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const t = TRANSLATIONS[settings.language];
   const isDeveloper = currentUser.role === 'DEVELOPER';
   const canManageUsers = isDeveloper; // Restrict creating a new user strictly to DEVELOPER mode
-  const canManageCodes = isDeveloper || currentUser.role === 'HR_MANAGER';
+  const canManageCodes = isDeveloper || currentUser.role === 'HR_MANAGER' || currentUser.role === 'ADMIN_STAFF';
   const isUnitManager = isDeveloper || 
     currentUser.role === 'HSE_MANAGER' || 
     currentUser.role === 'SECURITY_MANAGER' || 
     currentUser.role === 'TRAINING_MANAGER' || 
     currentUser.role === 'HR_MANAGER' || 
     currentUser.role === 'PLANT_MANAGER' ||
-    currentUser.role === 'DEPARTMENT_MANAGER';
+    currentUser.role === 'DEPARTMENT_MANAGER' ||
+    currentUser.role === 'ADMIN_STAFF';
 
   if (!isOpen) return null;
 
