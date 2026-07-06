@@ -30,14 +30,14 @@ interface DBState {
 
 // Minimal Bootstrapping Defaults for Server
 const DEFAULT_USERS_BACKUP = [
-  { id: 'dev1', username: 'Dev123', password: 'Pass123', fullName: 'مدیر سیستم', role: 'DEVELOPER', avatar: '' },
-  { id: 'u0', username: 'Manager123', password: 'Pass123', fullName: 'مدیر کارخانه', role: 'PLANT_MANAGER', avatar: '' },
-  { id: 'u1', username: 'HrManager123', password: 'Pass123', fullName: 'مدیر منابع انسانی', role: 'HR_MANAGER', avatar: '' },
-  { id: 'u2', username: 'HseManager123', password: 'Pass123', fullName: 'مدیر ایمنی', role: 'HSE_MANAGER', avatar: '' },
-  { id: 'u3', username: 'HseOfficer123', password: 'Pass123', fullName: 'افسر ایمنی', role: 'HSE_OFFICER', avatar: '' },
-  { id: 'u4', username: 'Security123', password: 'Pass123', fullName: 'سرپرست انتظامات', role: 'SECURITY_MANAGER', avatar: '' },
-  { id: 'u5', username: 'Training123', password: 'Pass123', fullName: 'مسئول آموزش', role: 'TRAINING_MANAGER', avatar: '' },
-  { id: 'u6', username: 'Admin123', password: 'Pass123', fullName: 'کارشناس اداری', role: 'ADMIN_STAFF', avatar: '' }
+  { id: 'dev1', username: 'Dev123', password: 'Pass123', fullName: 'مدیر سیستم', role: 'DEVELOPER', avatar: '', phoneNumber: '09121111111', email: 'dev@safewatch.ir', telegramUsername: '@Dev123_Support' },
+  { id: 'u0', username: 'Manager123', password: 'Pass123', fullName: 'مدیر کارخانه', role: 'PLANT_MANAGER', avatar: '', phoneNumber: '09122222222', email: 'manager@safewatch.ir', telegramUsername: '@Manager123_Support' },
+  { id: 'u1', username: 'HrManager123', password: 'Pass123', fullName: 'مدیر منابع انسانی', role: 'HR_MANAGER', avatar: '', phoneNumber: '09123333333', email: 'hr@safewatch.ir' },
+  { id: 'u2', username: 'HseManager123', password: 'Pass123', fullName: 'مدیر ایمنی', role: 'HSE_MANAGER', avatar: '', phoneNumber: '09124444444', email: 'hse@safewatch.ir' },
+  { id: 'u3', username: 'HseOfficer123', password: 'Pass123', fullName: 'افسر ایمنی', role: 'HSE_OFFICER', avatar: '', phoneNumber: '09125555555', email: 'officer@safewatch.ir' },
+  { id: 'u4', username: 'Security123', password: 'Pass123', fullName: 'سرپرست انتظامات', role: 'SECURITY_MANAGER', avatar: '', phoneNumber: '09126666666', email: 'security@safewatch.ir' },
+  { id: 'u5', username: 'Training123', password: 'Pass123', fullName: 'مسئول آموزش', role: 'TRAINING_MANAGER', avatar: '', phoneNumber: '09127777777', email: 'training@safewatch.ir' },
+  { id: 'u6', username: 'Admin123', password: 'Pass123', fullName: 'کارشناس اداری', role: 'ADMIN_STAFF', avatar: '', phoneNumber: '09128888888', email: 'admin@safewatch.ir' }
 ];
 
 function readDB(): DBState {

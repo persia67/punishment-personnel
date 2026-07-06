@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, Camera, Link as LinkIcon, Check } from 'lucide-react';
+import { X, Save, Camera, Link as LinkIcon, Check, Upload } from 'lucide-react';
 import { User, AppSettings } from '../types';
 
 interface EditAvatarModalProps {
@@ -43,6 +43,27 @@ export const EditAvatarModal: React.FC<EditAvatarModalProps> = ({
     if (customUrl.trim()) {
       setSelectedAvatar(customUrl.trim());
       setCustomUrl('');
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert(isFa 
+          ? 'حجم فایل انتخاب شده نباید بیشتر از ۲ مگابایت باشد.' 
+          : 'File size should not exceed 2MB.'
+        );
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setSelectedAvatar(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -139,10 +160,39 @@ export const EditAvatarModal: React.FC<EditAvatarModalProps> = ({
             </div>
           </div>
 
+          {/* File Upload from PC / Phone */}
+          <div className="space-y-3 pt-2">
+            <span className="block text-xs font-black text-gray-700">
+              {isFa ? '۲. بارگذاری عکس از روی رایانه یا گوشی تلفن همراه' : '2. Upload Photo from PC or Mobile'}
+            </span>
+            <div className="relative border-2 border-dashed border-gray-200 hover:border-indigo-400 rounded-2xl p-5 text-center transition-colors cursor-pointer group bg-gray-50/45">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+              />
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Upload className="w-4 h-4" />
+                </div>
+                <div className="text-[11px] text-gray-600">
+                  <span className="font-bold text-indigo-600 hover:underline">
+                    {isFa ? 'برای انتخاب فایل کلیک کنید' : 'Click to choose image'}
+                  </span>
+                  {isFa ? ' یا تصویر را به این کادر بکشید' : ' or drag and drop image here'}
+                </div>
+                <p className="text-[9px] text-gray-400">
+                  PNG, JPG, JPEG (Max. 2MB)
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Custom Link Input */}
           <div className="space-y-3 pt-2">
             <span className="block text-xs font-black text-gray-700">
-              {isFa ? '۲. استفاده از آدرس اینترنتی سفارشی' : '2. Enter Custom Image URL'}
+              {isFa ? '۳. استفاده از آدرس اینترنتی سفارشی' : '3. Enter Custom Image URL'}
             </span>
             <div className="flex gap-2">
               <div className="relative flex-grow">

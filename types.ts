@@ -119,6 +119,9 @@ export interface User {
   role: Role;
   avatar?: string;
   managedDepartment?: string; // For DEPARTMENT_MANAGER role
+  phoneNumber?: string;
+  email?: string;
+  telegramUsername?: string;
 }
 
 export interface AppSettings {

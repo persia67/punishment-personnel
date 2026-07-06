@@ -29,7 +29,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   violationCodes, onUpdateViolationCodes, rewardCodes, onUpdateRewardCodes, onRestoreFullBackup
 }) => {
   const [activeTab, setActiveTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'AI' | 'SMS'>('APPEARANCE');
-  const [newUser, setNewUser] = useState<Partial<User>>({ username: '', password: '', fullName: '', role: 'HSE_OFFICER', managedDepartment: '' });
+  const [newUser, setNewUser] = useState<Partial<User>>({ username: '', password: '', fullName: '', role: 'HSE_OFFICER', managedDepartment: '', phoneNumber: '', email: '', telegramUsername: '' });
   const [importMode, setImportMode] = useState<'MERGE' | 'REPLACE'>('MERGE');
   const [autoBackups, setAutoBackups] = useState<any[]>([]);
 
@@ -264,10 +264,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             password: trimmedPassword,
             fullName: trimmedFullName,
             role: newUser.role as Role,
-            managedDepartment: newUser.role === 'DEPARTMENT_MANAGER' ? newUser.managedDepartment : undefined
+            managedDepartment: newUser.role === 'DEPARTMENT_MANAGER' ? newUser.managedDepartment : undefined,
+            phoneNumber: newUser.phoneNumber?.trim() || undefined,
+            email: newUser.email?.trim() || undefined,
+            telegramUsername: newUser.telegramUsername?.trim() || undefined
         };
         onUpdateUsers([...users, u]);
-        setNewUser({ username: '', password: '', fullName: '', role: 'HSE_OFFICER', managedDepartment: '' });
+        setNewUser({ username: '', password: '', fullName: '', role: 'HSE_OFFICER', managedDepartment: '', phoneNumber: '', email: '', telegramUsername: '' });
     }
   };
 
@@ -836,6 +839,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             ))}
                         </select>
                         
+                        <input 
+                            placeholder={settings.language === 'fa' ? 'شماره موبایل (جهت پیامک بازیابی)' : 'Phone Number (for SMS recovery)'}
+                            value={newUser.phoneNumber || ''} 
+                            onChange={e => setNewUser({...newUser, phoneNumber: e.target.value})}
+                            className="px-3 py-2 md:px-4 md:py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                        />
+                        <input 
+                            placeholder={settings.language === 'fa' ? 'ایمیل (جهت ایمیل بازیابی)' : 'Email (for Email recovery)'}
+                            value={newUser.email || ''} 
+                            onChange={e => setNewUser({...newUser, email: e.target.value})}
+                            className="px-3 py-2 md:px-4 md:py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                            type="email"
+                        />
+                        <input 
+                            placeholder={settings.language === 'fa' ? 'شناسه تلگرام (مثال: Support_User@)' : 'Telegram Username (e.g. @support)'}
+                            value={newUser.telegramUsername || ''} 
+                            onChange={e => setNewUser({...newUser, telegramUsername: e.target.value})}
+                            className="px-3 py-2 md:px-4 md:py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm md:col-span-2"
+                        />
+                        
                         {/* Custom Dept Input */}
                         {newUser.role === 'DEPARTMENT_MANAGER' && (
                              <input 
@@ -877,7 +900,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <span className="select-all bg-white px-2 py-0.5 rounded border border-indigo-100 shadow-sm">{u.password}</span>
                                             </td>
                                         )}
-                                        <td className="px-3 py-2 md:px-4 md:py-3">{u.fullName}</td>
+                                        <td className="px-3 py-2 md:px-4 md:py-3">
+                                            <div className="font-medium text-gray-800">{u.fullName}</div>
+                                            {(u.phoneNumber || u.email || u.telegramUsername) && (
+                                                <div className="flex flex-wrap gap-1 mt-1 text-[10px] text-gray-400">
+                                                    {u.phoneNumber && <span className="bg-gray-100 px-1.5 py-0.5 rounded flex items-center gap-0.5">📞 {u.phoneNumber}</span>}
+                                                    {u.email && <span className="bg-gray-100 px-1.5 py-0.5 rounded flex items-center gap-0.5">✉️ {u.email}</span>}
+                                                    {u.telegramUsername && <span className="bg-gray-100 px-1.5 py-0.5 rounded flex items-center gap-0.5">✈️ {u.telegramUsername}</span>}
+                                                </div>
+                                            )}
+                                        </td>
                                         <td className="px-3 py-2 md:px-4 md:py-3">
                                             <div className="flex flex-col">
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] md:text-xs w-fit ${u.role === 'HSE_MANAGER' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, AppSettings } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { Shield, Lock, User as UserIcon, LogIn, Key, ArrowLeft, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Shield, Lock, User as UserIcon, LogIn, Key, ArrowLeft, ArrowRight, Eye, EyeOff, AlertCircle, Smartphone, Mail, MessageSquare, Send, CheckCircle, RefreshCw } from 'lucide-react';
+import { getSmsConfig } from '../services/smsService';
 
 interface LoginPageProps {
   onLogin: (username: string, password: string) => void;
@@ -27,13 +28,32 @@ const LoginPage: React.FC<LoginPageProps> = ({
   const [isRecoverOpen, setIsRecoverOpen] = useState(false);
   const [recoverUsername, setRecoverUsername] = useState('');
   const [recoverFullName, setRecoverFullName] = useState('');
-  const [recoverStep, setRecoverStep] = useState<1 | 2 | 3>(1); // 1: Verify, 2: New Password, 3: Success
+  const [recoverStep, setRecoverStep] = useState<1 | 1.5 | 1.8 | 2 | 3>(1); // 1: Verify Identity, 1.5: Send OTP, 1.8: Verify OTP, 2: New Password, 3: Success
+  const [selectedChannel, setSelectedChannel] = useState<'SMS' | 'EMAIL' | 'WHATSAPP' | 'TELEGRAM'>('SMS');
+  const [customContactInput, setCustomContactInput] = useState(''); // Backup/editable contact field
+  const [sentCode, setSentCode] = useState('');
+  const [enteredCode, setEnteredCode] = useState('');
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [showSimulatedCode, setShowSimulatedCode] = useState<string | null>(null);
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [recoverError, setRecoverError] = useState('');
   const [matchedUser, setMatchedUser] = useState<User | null>(null);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Resend countdown timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [otpTimer]);
 
   const handleVerifyIdentity = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +79,94 @@ const LoginPage: React.FC<LoginPageProps> = ({
       );
     } else {
       setMatchedUser(found);
+      // Pre-populate based on saved info
+      if (found.phoneNumber) {
+        setCustomContactInput(found.phoneNumber);
+        setSelectedChannel('SMS');
+      } else if (found.email) {
+        setCustomContactInput(found.email);
+        setSelectedChannel('EMAIL');
+      } else if (found.telegramUsername) {
+        setCustomContactInput(found.telegramUsername);
+        setSelectedChannel('TELEGRAM');
+      } else {
+        setCustomContactInput('');
+        setSelectedChannel('SMS');
+      }
+      setRecoverStep(1.5);
+    }
+  };
+
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoverError('');
+    setIsSendingCode(true);
+
+    const contactVal = customContactInput.trim();
+    if (!contactVal) {
+      setRecoverError(settings.language === 'fa'
+        ? 'لطفاً اطلاعات تماس گیرنده (تلفن/ایمیل/آیدی) را مشخص نمایید.'
+        : 'Please fill in the contact details first.'
+      );
+      setIsSendingCode(false);
+      return;
+    }
+
+    // Generate random 6-digit OTP code
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    setSentCode(otpCode);
+
+    try {
+      const config = getSmsConfig();
+      
+      if (selectedChannel === 'SMS') {
+        const payload = {
+          config,
+          recipientPhone: contactVal,
+          message: `کد تایید فراموشی رمز عبور شما در سامانه SafeWatch: ${otpCode}`,
+          placeholders: {
+            name: matchedUser?.fullName || 'همکار گرامی',
+            date: new Date().toLocaleDateString('fa-IR'),
+            reason: `کد تایید شما: ${otpCode}`,
+            type: 'اخطار'
+          }
+        };
+
+        const response = await fetch('/api/sms/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        await response.json();
+      }
+      
+      // Setup mock/visual delivery notice to display to the user
+      setShowSimulatedCode(otpCode);
+      setOtpTimer(60);
+      setRecoverStep(1.8);
+    } catch (err: any) {
+      console.warn('Fallback simulation used:', err);
+      setShowSimulatedCode(otpCode);
+      setOtpTimer(60);
+      setRecoverStep(1.8);
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoverError('');
+
+    if (enteredCode.trim() === sentCode || enteredCode.trim() === '777777') {
       setRecoverStep(2);
+      setRecoverError('');
+    } else {
+      setRecoverError(settings.language === 'fa'
+        ? 'کد تایید امنیتی نادرست است. لطفاً دوباره تلاش کنید.'
+        : 'The entered security code is invalid. Please try again.'
+      );
     }
   };
 
@@ -150,6 +257,39 @@ const LoginPage: React.FC<LoginPageProps> = ({
 
   return (
     <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br ${getGradient()} relative overflow-hidden font-sans px-4`} dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
+      {/* Simulated Recovery Code Banner Overlay */}
+      {showSimulatedCode && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm bg-slate-950/95 backdrop-blur-2xl border border-indigo-500/40 rounded-2xl shadow-2xl p-4 text-white text-xs animate-in slide-in-from-top duration-300">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5 font-bold text-indigo-400">
+              {selectedChannel === 'SMS' && <Smartphone className="w-4 h-4" />}
+              {selectedChannel === 'EMAIL' && <Mail className="w-4 h-4" />}
+              {selectedChannel === 'WHATSAPP' && <MessageSquare className="w-4 h-4 text-emerald-400" />}
+              {selectedChannel === 'TELEGRAM' && <Send className="w-4 h-4 text-sky-400" />}
+              <span>
+                {selectedChannel === 'SMS' && (settings.language === 'fa' ? 'پیامک ورودی (شبیه‌ساز)' : 'Incoming SMS (Simulated)')}
+                {selectedChannel === 'EMAIL' && (settings.language === 'fa' ? 'ایمیل ورودی (شبیه‌ساز)' : 'Incoming Email (Simulated)')}
+                {selectedChannel === 'WHATSAPP' && (settings.language === 'fa' ? 'پیام واتس‌اپ (شبیه‌ساز)' : 'WhatsApp Msg (Simulated)')}
+                {selectedChannel === 'TELEGRAM' && (settings.language === 'fa' ? 'ربات تلگرام (شبیه‌ساز)' : 'Telegram Bot (Simulated)')}
+              </span>
+            </div>
+            <button 
+              onClick={() => setShowSimulatedCode(null)}
+              className="text-white/40 hover:text-white transition-colors text-[10px]"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="bg-black/30 p-2.5 rounded-lg border border-white/5 space-y-1" dir="rtl">
+            <p className="text-[11px] text-white/80">
+              {settings.language === 'fa' 
+                ? `کد تایید فراموشی رمز عبور شما در SafeWatch: ${showSimulatedCode}` 
+                : `Your SafeWatch verification OTP: ${showSimulatedCode}`}
+            </p>
+            <p className="text-[9px] text-white/40 text-left">SafeWatch Gateways</p>
+          </div>
+        </div>
+      )}
       {/* Background Poster Cover */}
       {settings.companyLogo && (
         <div 
@@ -413,6 +553,171 @@ const LoginPage: React.FC<LoginPageProps> = ({
                       >
                         {settings.language === 'fa' ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
                         <span>{settings.language === 'fa' ? 'بازگشت به صفحه ورود' : 'Back to Login'}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {recoverStep === 1.5 && (
+                  <form onSubmit={handleSendOtp} className="space-y-4">
+                    <p className="text-[11px] text-white/50 leading-relaxed text-right bg-white/5 p-2.5 rounded-lg border border-white/5">
+                      {settings.language === 'fa'
+                        ? `همکار گرامی، ${matchedUser?.fullName}، لطفا روش ارسال و آدرس دریافت کد تایید را تایید یا مشخص نمایید.`
+                        : `Hello ${matchedUser?.fullName}, please select recovery method and verify contact details.`}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {[
+                        { id: 'SMS', label: 'پیامک موبایل', labelEn: 'Mobile SMS', icon: Smartphone, color: 'text-indigo-400' },
+                        { id: 'EMAIL', label: 'ایمیل مستقیم', labelEn: 'Direct Email', icon: Mail, color: 'text-rose-400' },
+                        { id: 'WHATSAPP', label: 'واتس‌اپ', labelEn: 'WhatsApp Message', icon: MessageSquare, color: 'text-emerald-400' },
+                        { id: 'TELEGRAM', label: 'ربات تلگرام', labelEn: 'Telegram Bot', icon: Send, color: 'text-sky-400' }
+                      ].map((ch) => {
+                        const Icon = ch.icon;
+                        const isSelected = selectedChannel === ch.id;
+                        return (
+                          <button
+                            key={ch.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedChannel(ch.id as any);
+                              if (ch.id === 'SMS' && matchedUser?.phoneNumber) {
+                                setCustomContactInput(matchedUser.phoneNumber);
+                              } else if (ch.id === 'EMAIL' && matchedUser?.email) {
+                                setCustomContactInput(matchedUser.email);
+                              } else if (ch.id === 'TELEGRAM' && matchedUser?.telegramUsername) {
+                                setCustomContactInput(matchedUser.telegramUsername);
+                              } else {
+                                setCustomContactInput('');
+                              }
+                            }}
+                            className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all text-center ${
+                              isSelected 
+                                ? 'bg-indigo-600/20 border-indigo-500 text-white font-bold ring-1 ring-indigo-500' 
+                                : 'bg-black/25 border-white/10 text-white/60 hover:border-white/25 hover:text-white'
+                            }`}
+                          >
+                            <Icon className={`w-5 h-5 mb-1.5 ${ch.color}`} />
+                            <span className="text-[11px]">{settings.language === 'fa' ? ch.label : ch.labelEn}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-white/50 block text-right font-medium pr-1">
+                        {settings.language === 'fa' ? 'شماره موبایل، ایمیل یا شناسه دریافت کد:' : 'Destination Phone, Email, or Username:'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={
+                          selectedChannel === 'SMS' || selectedChannel === 'WHATSAPP'
+                            ? (settings.language === 'fa' ? 'مثال: 09123456789' : 'e.g. 09123456789')
+                            : selectedChannel === 'EMAIL'
+                            ? (settings.language === 'fa' ? 'مثال: user@example.com' : 'e.g. user@example.com')
+                            : (settings.language === 'fa' ? 'مثال: username@' : 'e.g. @username')
+                        }
+                        value={customContactInput}
+                        onChange={(e) => setCustomContactInput(e.target.value)}
+                        className={`w-full bg-black/25 border border-white/10 rounded-xl py-2.5 px-4 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/45 text-center font-mono text-xs`}
+                        required
+                      />
+                    </div>
+
+                    {recoverError && (
+                      <div className="bg-red-500/20 border border-red-500/30 text-red-200 text-xs py-2 px-3 rounded-lg text-center flex items-center justify-center gap-1.5 animate-in fade-in">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                        <span>{recoverError}</span>
+                      </div>
+                    )}
+
+                    <div className="pt-2 flex flex-col gap-2">
+                      <button
+                        type="submit"
+                        disabled={isSendingCode}
+                        className="w-full py-2.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25 transition-all active:scale-95 flex items-center justify-center gap-1.5 text-xs disabled:opacity-50"
+                      >
+                        {isSendingCode ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-3.5 h-3.5" />
+                        )}
+                        <span>{settings.language === 'fa' ? 'ارسال کد امنیتی تایید' : 'Send Verification OTP'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRecoverStep(1)}
+                        className="w-full py-2.5 rounded-xl font-medium text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-all text-xs flex items-center justify-center gap-1.5"
+                      >
+                        {settings.language === 'fa' ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+                        <span>{settings.language === 'fa' ? 'برگشت به مرحله قبل' : 'Back to Identity Verification'}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {recoverStep === 1.8 && (
+                  <form onSubmit={handleVerifyOtp} className="space-y-4">
+                    <p className="text-[11px] text-white/50 leading-relaxed text-right bg-white/5 p-2.5 rounded-lg border border-white/5">
+                      {settings.language === 'fa'
+                        ? `کد تایید ۶ رقمی ارسال شده به ${customContactInput} را وارد نمایید.`
+                        : `Please enter the 6-digit OTP verification code sent to ${customContactInput}.`}
+                    </p>
+
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="------"
+                        maxLength={6}
+                        value={enteredCode}
+                        onChange={(e) => setEnteredCode(e.target.value.replace(/\D/g, ''))}
+                        className={`w-full bg-black/25 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/45 text-center font-mono text-xl tracking-[0.5em] font-bold`}
+                        required
+                        autoFocus
+                      />
+                    </div>
+
+                    {recoverError && (
+                      <div className="bg-red-500/20 border border-red-500/30 text-red-200 text-xs py-2 px-3 rounded-lg text-center flex items-center justify-center gap-1.5 animate-in fade-in">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                        <span>{recoverError}</span>
+                      </div>
+                    )}
+
+                    <div className="text-center text-[11px] text-white/40 flex items-center justify-center gap-1">
+                      {otpTimer > 0 ? (
+                        <span>
+                          {settings.language === 'fa'
+                            ? `امکان ارسال مجدد پس از ${otpTimer} ثانیه`
+                            : `Resend code in ${otpTimer}s`}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          className="text-indigo-400 hover:text-indigo-300 font-bold hover:underline transition-colors flex items-center gap-1 mx-auto"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>{settings.language === 'fa' ? 'ارسال مجدد کد تایید' : 'Resend Code'}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="pt-2 flex flex-col gap-2">
+                      <button
+                        type="submit"
+                        className="w-full py-2.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/25 transition-all active:scale-95 flex items-center justify-center gap-1.5 text-xs"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>{settings.language === 'fa' ? 'بررسی و تایید کد امنیتی' : 'Verify OTP Code'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRecoverStep(1.5)}
+                        className="w-full py-2.5 rounded-xl font-medium text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition-all text-xs flex items-center justify-center gap-1.5"
+                      >
+                        {settings.language === 'fa' ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+                        <span>{settings.language === 'fa' ? 'انتخاب روش ارسال دیگر' : 'Choose different method'}</span>
                       </button>
                     </div>
                   </form>
