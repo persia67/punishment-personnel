@@ -1,8 +1,15 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Example: sendNotification: (message) => ipcRenderer.send('notify', message)
-  platform: process.platform
+  platform: process.platform,
+  checkForUpdates: () => ipcRenderer.send('check-for-updates'),
+  startDownload: () => ipcRenderer.send('start-download'),
+  quitAndInstall: () => ipcRenderer.send('quit-and-install'),
+  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (event, info) => callback(info)),
+  onUpdateNotAvailable: (callback) => ipcRenderer.on('update-not-available', (event, info) => callback(info)),
+  onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, progress) => callback(progress)),
+  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (event, info) => callback(info)),
+  onUpdateError: (callback) => ipcRenderer.on('update-error', (event, error) => callback(error))
 });
 
 window.addEventListener('DOMContentLoaded', () => {

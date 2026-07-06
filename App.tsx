@@ -78,6 +78,46 @@ const App: React.FC = () => {
   const [workerOfMonth, setWorkerOfMonth] = useState<WorkerOfMonthResult | null>(null);
   const [selectingWorker, setSelectingWorker] = useState(false);
   
+  // Electron auto-updater states
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'>('idle');
+  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [downloadProgress, setDownloadProgress] = useState<any>(null);
+  const [updateErrorMsg, setUpdateErrorMsg] = useState<string>('');
+
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    if (!api) return;
+
+    api.onUpdateAvailable((info: any) => {
+      setUpdateInfo(info);
+      setUpdateStatus('available');
+    });
+
+    api.onUpdateNotAvailable(() => {
+      setUpdateStatus('idle');
+    });
+
+    api.onDownloadProgress((progress: any) => {
+      setDownloadProgress(progress);
+      setUpdateStatus('downloading');
+    });
+
+    api.onUpdateDownloaded((info: any) => {
+      setUpdateInfo(info);
+      setUpdateStatus('downloaded');
+    });
+
+    api.onUpdateError((err: string) => {
+      console.error('Update error:', err);
+      setUpdateErrorMsg(err);
+      setUpdateStatus('error');
+    });
+
+    // Initial check for updates if running in Electron
+    setUpdateStatus('checking');
+    api.checkForUpdates();
+  }, []);
+  
   // Network & Sync helpers
   const pushDataToServerState = async (
     vList?: Violation[],
@@ -1413,6 +1453,80 @@ const App: React.FC = () => {
           onUpdateAvatar={handleUpdateAvatar}
           settings={settings}
         />
+      )}
+
+      {/* Electron Auto-Updater Banner */}
+      {updateStatus !== 'idle' && (window as any).electronAPI && (
+        <div className="fixed bottom-6 left-6 z-50 max-w-sm w-full bg-slate-900/95 backdrop-blur-xl border border-indigo-500/40 rounded-2xl shadow-2xl p-4 text-white text-xs animate-in slide-in-from-bottom duration-300">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                <RefreshCw className={`w-4 h-4 ${updateStatus === 'downloading' || updateStatus === 'checking' ? 'animate-spin' : ''}`} />
+              </div>
+              <div className="text-right" dir="rtl">
+                <h4 className="font-bold text-xs text-gray-100">
+                  {settings.language === 'fa' ? 'به‌روزرسانی نرم‌افزار' : 'Software Update'}
+                </h4>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {updateStatus === 'checking' && (settings.language === 'fa' ? 'در حال بررسی نسخه‌های جدید...' : 'Checking for updates...')}
+                  {updateStatus === 'available' && (settings.language === 'fa' ? `نسخه جدید ${updateInfo?.version || ''} در دسترس است` : `New version ${updateInfo?.version || ''} available`)}
+                  {updateStatus === 'downloading' && (settings.language === 'fa' ? `در حال دانلود... (${Math.round(downloadProgress?.percent || 0)}%)` : `Downloading... (${Math.round(downloadProgress?.percent || 0)}%)`)}
+                  {updateStatus === 'downloaded' && (settings.language === 'fa' ? 'دانلود کامل شد. آماده نصب است.' : 'Download complete. Ready to install.')}
+                  {updateStatus === 'error' && (settings.language === 'fa' ? 'خطا در فرآیند به‌روزرسانی' : 'Error during update process')}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setUpdateStatus('idle')} 
+              className="text-white/40 hover:text-white transition-colors p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {updateStatus === 'downloading' && (
+            <div className="w-full bg-white/10 rounded-full h-1.5 mt-2 mb-3 overflow-hidden">
+              <div 
+                className="bg-indigo-500 h-1.5 rounded-full transition-all duration-300" 
+                style={{ width: `${downloadProgress?.percent || 0}%` }}
+              />
+            </div>
+          )}
+
+          {updateStatus === 'available' && (
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => {
+                  setUpdateStatus('downloading');
+                  (window as any).electronAPI.startDownload();
+                }}
+                className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-colors text-center text-[11px]"
+              >
+                {settings.language === 'fa' ? 'به‌روزرسانی و دانلود نسخه جدید' : 'Download Update'}
+              </button>
+            </div>
+          )}
+
+          {updateStatus === 'downloaded' && (
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => {
+                  (window as any).electronAPI.quitAndInstall();
+                }}
+                className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors text-center text-[11px] flex items-center justify-center gap-1.5"
+              >
+                <CheckIcon className="w-3.5 h-3.5" />
+                <span>{settings.language === 'fa' ? 'راه‌اندازی مجدد و نصب' : 'Restart & Install'}</span>
+              </button>
+            </div>
+          )}
+
+          {updateStatus === 'error' && (
+            <p className="text-[9px] text-red-400 mt-2 line-clamp-1 truncate text-left" title={updateErrorMsg}>
+              {updateErrorMsg}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
