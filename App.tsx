@@ -902,7 +902,7 @@ const App: React.FC = () => {
               </div>
               <div className="text-right">
                 <span className="block font-black text-xs md:text-sm text-gray-800">
-                  {settings.language === 'fa' ? 'سامانه ثبت و گزارش تخلفات ایمنی' : 'Safety Violations Center'}
+                  {settings.language === 'fa' ? 'سامانه ثبت و گزارش تخلفات' : 'Violations Center'}
                 </span>
                 <span className="block text-[10px] md:text-xs text-gray-500 font-medium">
                   {violations.filter(v => !v.isArchived).length}{' '}
