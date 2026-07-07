@@ -893,10 +893,17 @@ const App: React.FC = () => {
          {/* Dynamic Mode Segment Directory - Fresh, Premium & Distinctive */}
         <div className="p-1.5 rounded-2xl bg-white border border-gray-200 shadow-xs grid grid-cols-1 md:grid-cols-2 gap-2 mb-6">
           {/* Card 1 Switch: Safety Violations Portal */}
-          <button 
-            type="button"
+          <div 
+            role="button"
+            tabIndex={0}
             onClick={() => setSystemMode('VIOLATION')}
-            className={`flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 outline-none ${
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setSystemMode('VIOLATION');
+              }
+            }}
+            className={`flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 outline-none cursor-pointer ${
               systemMode === 'VIOLATION' 
                 ? 'bg-red-50/70 text-red-605 border border-red-200/50 shadow-xs ring-2 ring-red-500/10' 
                 : 'hover:bg-gray-50 text-gray-500 border border-transparent'
@@ -942,13 +949,20 @@ const App: React.FC = () => {
                 <Plus className="w-3.5 h-3.5 font-bold" />
               </button>
             </div>
-          </button>
+          </div>
 
           {/* Card 2 Switch: HSE Positive Rewards Portal */}
-          <button 
-            type="button"
+          <div 
+            role="button"
+            tabIndex={0}
             onClick={() => setSystemMode('REWARD')}
-            className={`flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 outline-none ${
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setSystemMode('REWARD');
+              }
+            }}
+            className={`flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 outline-none cursor-pointer ${
               systemMode === 'REWARD' 
                 ? `${themeStyles.accentBg} text-gray-800 border ${themeStyles.borderLight} shadow-xs ring-2 ${themeStyles.ring}/10` 
                 : 'hover:bg-gray-50 text-gray-500 border border-transparent'
@@ -994,7 +1008,7 @@ const App: React.FC = () => {
                 <Plus className="w-3.5 h-3.5 font-bold" />
               </button>
             </div>
-          </button>
+          </div>
         </div>
 
         {/* Console banner card with dynamic styling based on active mode & theme */}
