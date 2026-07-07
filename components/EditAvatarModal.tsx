@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, Save, Camera, Link as LinkIcon, Check, Upload } from 'lucide-react';
 import { User, AppSettings } from '../types';
 
@@ -21,13 +21,13 @@ const PRESET_AVATARS = [
   { id: 'av_tech', label: 'Engineer', emoji: '⚙️', gradient: 'from-rose-500 to-orange-500', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
 ];
 
-export const EditAvatarModal: React.FC<EditAvatarModalProps> = ({
+export function EditAvatarModal({
   isOpen,
   onClose,
   currentUser,
   onUpdateAvatar,
   settings,
-}) => {
+}: EditAvatarModalProps) {
   const isFa = settings.language === 'fa';
   const [customUrl, setCustomUrl] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(currentUser.avatar || '');
@@ -242,4 +242,4 @@ export const EditAvatarModal: React.FC<EditAvatarModalProps> = ({
       </div>
     </div>
   );
-};
+}
