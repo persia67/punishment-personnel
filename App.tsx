@@ -878,6 +878,14 @@ const App: React.FC = () => {
                  <LogOut className="w-3.5 h-3.5" />
                  <span>{settings.language === 'fa' ? 'خروج' : 'Logout'}</span>
                </button>
+               <button
+                 onClick={() => setIsSettingsOpen(true)}
+                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-800/40 hover:bg-indigo-800/60 text-indigo-100 hover:text-white border border-indigo-700/40 text-xs font-bold transition-all active:scale-95"
+                 title={settings.language === 'fa' ? 'تنظیمات سیستم' : 'System Settings'}
+               >
+                 <Settings className="w-3.5 h-3.5" />
+                 <span>{settings.language === 'fa' ? 'تنظیمات' : 'Settings'}</span>
+               </button>
              </div>
            </div>
          )}
@@ -911,7 +919,7 @@ const App: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
               {systemMode === 'VIOLATION' ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold bg-red-600 text-white shadow-xs animate-pulse">
                   <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
@@ -922,6 +930,17 @@ const App: React.FC = () => {
                   {settings.language === 'fa' ? 'انتخاب جهت پایش' : 'View'}
                 </span>
               )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsModalOpen(true);
+                }}
+                className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors flex items-center justify-center shadow-xs active:scale-95"
+                title={settings.language === 'fa' ? 'ثبت سریع تخلف جدید' : 'Quick Register Violation'}
+              >
+                <Plus className="w-3.5 h-3.5 font-bold" />
+              </button>
             </div>
           </button>
 
@@ -952,7 +971,7 @@ const App: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
               {systemMode === 'REWARD' ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold bg-white border border-gray-200 text-gray-700 shadow-xs">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -963,6 +982,17 @@ const App: React.FC = () => {
                   {settings.language === 'fa' ? 'انتخاب جهت پایش' : 'View'}
                 </span>
               )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsRewardModalOpen(true);
+                }}
+                className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 transition-colors flex items-center justify-center shadow-xs active:scale-95"
+                title={settings.language === 'fa' ? 'ثبت سریع تشویق جدید' : 'Quick Register Reward'}
+              >
+                <Plus className="w-3.5 h-3.5 font-bold" />
+              </button>
             </div>
           </button>
         </div>
