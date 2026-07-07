@@ -110,11 +110,11 @@ const App: React.FC = () => {
     api.onUpdateError((err: string) => {
       console.error('Update error:', err);
       setUpdateErrorMsg(err);
-      setUpdateStatus('error');
+      setUpdateStatus('idle');
     });
 
-    // Initial check for updates if running in Electron
-    setUpdateStatus('checking');
+    // Initial check for updates if running in Electron (silent in background)
+    setUpdateStatus('idle');
     api.checkForUpdates();
   }, []);
   
