@@ -1,7 +1,7 @@
 {
   "name": "hse-safewatch-reward-ai",
   "private": true,
-  "version": "3.2.1",
+  "version": "3.2.0",
   "main": "electron/main.js",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "npm run build && electron-builder",
+    "electron:build": "npm run build && electron-builder --publish never",
     "android:sync": "npm run build && npx cap sync",
     "android:open": "npx cap open android"
   },
