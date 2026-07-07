@@ -263,9 +263,9 @@
   ],
   "settings": {
     "language": "fa",
-    "themeColor": "violet",
+    "themeColor": "slate",
     "companyLogo": "./app_icon_1781090095655.png",
-    "companyName": "سامانه جامع پایش HSE SafeWatch",
+    "companyName": "سامانه جامع پایش Intelligent monitoring system",
     "customApiKey": "",
     "aiProvider": "GEMINI",
     "ollamaUrl": "http://localhost:11434",

@@ -397,7 +397,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: 'fa',
   themeColor: 'blue',
   companyLogo: './app_icon_1781090095655.png',
-  companyName: 'سامانه جامع پایش و انگیزش سازمانی SafeWatch',
+  companyName: 'سامانه جامع پایش و انگیزش سازمانی Intelligent monitoring system',
   customApiKey: '',
   aiProvider: 'GEMINI',
   ollamaUrl: 'http://localhost:11434',

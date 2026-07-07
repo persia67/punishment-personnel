@@ -763,7 +763,7 @@ const App: React.FC = () => {
              {settings.companyLogo ? (
                <img 
                  src={settings.companyLogo} 
-                 alt="SafeWatch AI Logo" 
+                 alt="Intelligent monitoring system Logo" 
                  className="w-12 h-12 md:w-16 md:h-16 rounded-xl object-contain shadow-md hover:scale-105 transition-transform bg-gray-100/50 border border-gray-200/60 p-0.5" 
                  referrerPolicy="no-referrer"
                />

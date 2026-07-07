@@ -1,4 +1,4 @@
-name: Build SafeWatch AI
+name: Build Intelligent monitoring system
 
 on:
   push:
@@ -93,7 +93,7 @@ jobs:
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: SafeWatch-Android-APK
+          name: Intelligent-monitoring-system-Android-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
   build-windows:
@@ -124,7 +124,7 @@ jobs:
       - name: Upload Windows Setup
         uses: actions/upload-artifact@v4
         with:
-          name: SafeWatch-Windows-Setup
+          name: Intelligent-monitoring-system-Windows-Setup
           path: |
             release/*.exe
             release/latest.yml
@@ -142,13 +142,13 @@ jobs:
       - name: Download Android Artifact
         uses: actions/download-artifact@v4
         with:
-          name: SafeWatch-Android-APK
+          name: Intelligent-monitoring-system-Android-APK
           path: artifacts/android
 
       - name: Download Windows Artifact
         uses: actions/download-artifact@v4
         with:
-          name: SafeWatch-Windows-Setup
+          name: Intelligent-monitoring-system-Windows-Setup
           path: artifacts/windows
 
       - name: Prepare Assets
@@ -157,7 +157,7 @@ jobs:
           
           # Copy Android APK with version tag
           if [ -f "artifacts/android/app-debug.apk" ]; then
-            cp "artifacts/android/app-debug.apk" "release-assets/SafeWatch-Android-v${{ needs.prepare-version.outputs.new_version }}.apk"
+            cp "artifacts/android/app-debug.apk" "release-assets/Intelligent-monitoring-system-Android-v${{ needs.prepare-version.outputs.new_version }}.apk"
             echo "Android APK successfully copied with version tag."
           else
             echo "Android compilation artifact not found!"
@@ -179,12 +179,12 @@ jobs:
           gh --version
           
           # Create Release Notes describing version bump
-          echo "### 🚀 SafeWatch AI Release v${{ needs.prepare-version.outputs.new_version }}" > release-notes.md
-          echo "Automated cross-compiled release of the **SafeWatch AI** system for Windows Desktop and Android Mobile." >> release-notes.md
+          echo "### 🚀 Intelligent monitoring system Release v${{ needs.prepare-version.outputs.new_version }}" > release-notes.md
+          echo "Automated cross-compiled release of the **Intelligent monitoring system** system for Windows Desktop and Android Mobile." >> release-notes.md
           echo "" >> release-notes.md
           echo "---" >> release-notes.md
           echo "### 📥 Direct Downloads" >> release-notes.md
-          echo "* **[Android Mobile App (.apk)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/SafeWatch-Android-v${{ needs.prepare-version.outputs.new_version }}.apk)**" >> release-notes.md
+          echo "* **[Android Mobile App (.apk)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/Intelligent-monitoring-system-Android-v${{ needs.prepare-version.outputs.new_version }}.apk)**" >> release-notes.md
           
           # Look for Windows exe name to build exact download links
           shopt -s nullglob
@@ -199,7 +199,7 @@ jobs:
           
           # Create uniquely versioned tag and release
           gh release create "v${{ needs.prepare-version.outputs.new_version }}" \
-            --title "SafeWatch AI - v${{ needs.prepare-version.outputs.new_version }}" \
+            --title "Intelligent monitoring system - v${{ needs.prepare-version.outputs.new_version }}" \
             --notes-file release-notes.md \
             --prerelease=false || true
             

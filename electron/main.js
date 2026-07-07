@@ -22,7 +22,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       sandbox: false // Often helps with renderer issues in production
     },
-    title: "SafeWatch AI - Smart Safety & Reward Management",
+    title: "Intelligent monitoring system - Smart Safety & Reward Management",
     icon: path.join(__dirname, '../public/favicon.ico'),
     autoHideMenuBar: true
   });
