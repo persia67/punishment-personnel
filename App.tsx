@@ -757,7 +757,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen pb-safe bg-gray-50 flex flex-col font-sans transition-all duration-300" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">
            <div className="flex items-center gap-2 md:gap-3">
              {settings.companyLogo ? (
@@ -800,7 +800,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8 flex-grow w-full space-y-6 font-sans">
+       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8 flex-grow w-full space-y-6 font-sans print:hidden">
          {/* Welcome & Session Profile Banner */}
          {user && (
            <div className="bg-gradient-to-r from-indigo-900 to-slate-800 text-white rounded-3xl p-5 md:p-6 shadow-md border border-indigo-950 flex flex-col md:flex-row items-center justify-between gap-5 transition-all relative overflow-hidden" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>

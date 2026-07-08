@@ -259,35 +259,91 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-55 p-4 overflow-y-auto animate-in fade-in duration-200" dir={isFa ? 'rtl' : 'ltr'}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-55 p-4 overflow-y-auto animate-in fade-in duration-200 print-modal-backdrop" dir={isFa ? 'rtl' : 'ltr'}>
       
       {/* Dynamic style block to enable clean paper printing natively */}
       <style>{`
         @media print {
-          /* Hide everything else */
-          #root, .fixed.inset-0:not(.report-print-wrapper) {
+          /* Hide non-print elements */
+          header, main, footer, .print-hidden, .print\\:hidden {
             display: none !important;
           }
-          /* Style only our printable area */
-          .report-print-wrapper {
+
+          /* Reset html & body elements to allow full page print */
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+            background: white !important;
+          }
+
+          /* Strip backdrop fixed layout constraints */
+          .print-modal-backdrop {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
             height: auto !important;
-            background: white !important;
+            min-height: 0 !important;
+            background: transparent !important;
             padding: 0 !important;
             margin: 0 !important;
+            overflow: visible !important;
+            display: block !important;
+          }
+
+          /* Strip modal container constraints */
+          .print-modal-container {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            overflow: visible !important;
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* Strip flex split row layout */
+          .print-content-split {
+            display: block !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          /* Strip preview panel scroll and padding */
+          .print-preview-panel {
+            background: transparent !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            display: block !important;
+            height: auto !important;
+          }
+
+          /* Style our main report-print-wrapper to act as the full page flow */
+          .report-print-wrapper {
+            position: static !important; /* Let it flow natively */
+            width: 100% !important;
+            min-width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            padding: 10mm !important; /* Elegant page margin */
+            margin: 0 !important;
+            border: none !important;
             box-shadow: none !important;
             display: block !important;
-            visibility: visible !important;
-            z-index: 9999999 !important;
+            background: white !important;
           }
+
           .report-print-wrapper * {
             color: black !important;
-            border-color: #6b7280 !important; /* Higher contrast border */
+            border-color: #6b7280 !important; /* High contrast print borders */
           }
-          /* Avoid background stripping on print in Chrome */
+
+          /* Maintain color fills during print */
           .print-badge-red {
             background-color: #fee2e2 !important;
             color: #991b1b !important;
@@ -311,16 +367,17 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
+
           .no-print {
             display: none !important;
           }
         }
       `}</style>
 
-      <div className="bg-slate-100 rounded-3xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-250">
+      <div className="bg-slate-100 rounded-3xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-250 print-modal-container">
         
         {/* Modal Header */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shadow-md shrink-0">
+        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shadow-md shrink-0 print:hidden">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-600 rounded-xl">
               <Printer className="w-5 h-5 text-white" />
@@ -339,10 +396,10 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
         </div>
 
         {/* Content Split: Left controls, Right preview */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden print-content-split">
           
           {/* Controls Panel */}
-          <div className="w-full md:w-80 bg-white border-b md:border-b-0 md:border-e border-gray-200 p-5 flex flex-col gap-4 overflow-y-auto shrink-0">
+          <div className="w-full md:w-80 bg-white border-b md:border-b-0 md:border-e border-gray-200 p-5 flex flex-col gap-4 overflow-y-auto shrink-0 print:hidden">
             
             {/* Filter Type Toggle */}
             <div className="space-y-1.5">
@@ -452,17 +509,17 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
           </div>
 
           {/* Document Preview Panel */}
-          <div className="flex-1 bg-slate-200 p-4 md:p-8 overflow-y-auto flex justify-center">
+          <div className="flex-1 bg-slate-200 p-4 md:p-8 overflow-auto flex justify-start md:justify-center print-preview-panel">
             
             {/* Live Preview Paper Wrapper (Formatted as A4 portrait) */}
             <div 
               id="report-print-content" 
-              className="report-print-wrapper bg-white w-full max-w-[210mm] min-h-[297mm] shadow-xl rounded-2xl p-6 md:p-10 border border-gray-300 flex flex-col justify-between text-black font-sans select-text relative"
+              className="report-print-wrapper bg-white w-[210mm] min-w-[210mm] min-h-[297mm] shadow-xl rounded-2xl p-6 md:p-10 border border-gray-300 flex flex-col justify-between text-black font-sans select-text relative shrink-0"
               dir="rtl"
             >
               
               {/* Outer border trim for printable official look */}
-              <div className="absolute inset-4 border border-slate-200 pointer-events-none rounded-xl"></div>
+              <div className="absolute inset-4 border border-slate-200 pointer-events-none rounded-xl print:hidden"></div>
               
               <div className="relative z-10 space-y-6">
                 
@@ -471,7 +528,7 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   
                   {/* Right Header: Logo & Company */}
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-indigo-650 bg-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0 font-extrabold text-sm border border-indigo-700">
+                    <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0 font-extrabold text-sm border border-indigo-700">
                       HSE
                     </div>
                     <div className="text-right">
