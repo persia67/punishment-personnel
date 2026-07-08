@@ -206,7 +206,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const t = TRANSLATIONS[settings.language];
   const isDeveloper = currentUser.role === 'DEVELOPER';
   const canManageUsers = isDeveloper; // Restrict creating a new user strictly to DEVELOPER mode
-  const canManageCodes = isDeveloper || currentUser.role === 'HR_MANAGER' || currentUser.role === 'ADMIN_STAFF';
+  const canManageCodes = isDeveloper || 
+    currentUser.role === 'HR_MANAGER' || 
+    currentUser.role === 'ADMIN_STAFF' || 
+    currentUser.role === 'PLANT_MANAGER' || 
+    currentUser.role === 'TRAINING_MANAGER';
   const isUnitManager = isDeveloper || 
     currentUser.role === 'HSE_MANAGER' || 
     currentUser.role === 'SECURITY_MANAGER' || 
@@ -977,8 +981,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                  </span>
                                  <span>
                                      {settings.language === 'fa' 
-                                         ? 'همکار گرامی، طبق سیاست‌های امنیتی سیستم، امکان تعریف کدهای جدید آیین‌نامه یا حذف آن‌ها تنها برای «مدیر سیستم (دولوپر)» و «مدیر منابع انسانی» مجاز می‌باشد.' 
-                                         : 'According to system security policies, defining new regulatory codes or deleting them is strictly restricted to SysAdmin (Developer) and HR Manager.'}
+                                         ? 'همکار گرامی، طبق سیاست‌های امنیتی سیستم، امکان تعریف کدهای جدید آیین‌نامه یا حذف آن‌ها تنها برای مدیر سیستم، منابع انسانی، مدیر آموزش، مدیر کارخانه و کادر اداری مجاز می‌باشد.' 
+                                         : 'According to system security policies, defining new regulatory codes or deleting them is restricted to SysAdmin, HR, Training, Plant Managers, and Admin Staff.'}
                                  </span>
                              </div>
                          </div>

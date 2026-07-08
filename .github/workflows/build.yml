@@ -186,13 +186,16 @@ jobs:
           echo "### 📥 Direct Downloads" >> release-notes.md
           echo "* **[Android Mobile App (.apk)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/Intelligent-monitoring-system-Android-v${{ needs.prepare-version.outputs.new_version }}.apk)**" >> release-notes.md
           
-          # Look for Windows exe name to build exact download links
+          # Look for Windows exact setup & portable binaries
           shopt -s nullglob
-          win_files=(release-assets/*.exe)
-          if [ ${#win_files[@]} -gt 0 ]; then
-            exe_name=$(basename "${win_files[0]}")
-            echo "* **[Windows Desktop Installer (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/$exe_name)**" >> release-notes.md
-          fi
+          for win_file in release-assets/*.exe; do
+            exe_name=$(basename "$win_file")
+            if [[ "$exe_name" == *"Portable"* ]]; then
+              echo "* **[Windows Portable Version (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/$exe_name)**" >> release-notes.md
+            else
+              echo "* **[Windows Desktop Installer (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/$exe_name)**" >> release-notes.md
+            fi
+          done
           
           echo "" >> release-notes.md
           echo "*This release supports in-app auto-updates for existing desktop installations.*" >> release-notes.md

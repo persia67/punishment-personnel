@@ -1,7 +1,7 @@
 {
   "name": "hse-safewatch-reward-ai",
   "private": true,
-  "version": "3.2.1",
+  "version": "3.2.0",
   "main": "electron/main.js",
   "repository": {
     "type": "git",
@@ -73,12 +73,17 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/favicon.ico",
       "publisherName": "Intelligent monitoring system Team",
-      "requestedExecutionLevel": "asInvoker",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": false,
@@ -90,7 +95,11 @@
       "installerIcon": "public/favicon.ico",
       "uninstallerIcon": "public/favicon.ico",
       "installerHeaderIcon": "public/favicon.ico",
-      "installerHeader": "public/favicon.ico"
+      "installerHeader": "public/favicon.ico",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
     },
     "linux": {
       "target": "AppImage",

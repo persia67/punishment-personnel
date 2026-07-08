@@ -259,7 +259,7 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-55 p-4 overflow-y-auto animate-in fade-in duration-200 print-modal-backdrop" dir={isFa ? 'rtl' : 'ltr'}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[90] p-4 overflow-y-auto animate-in fade-in duration-200 print-modal-backdrop" dir={isFa ? 'rtl' : 'ltr'}>
       
       {/* Dynamic style block to enable clean paper printing natively */}
       <style>{`
@@ -514,7 +514,7 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
             {/* Live Preview Paper Wrapper (Formatted as A4 portrait) */}
             <div 
               id="report-print-content" 
-              className="report-print-wrapper bg-white w-[210mm] min-w-[210mm] min-h-[297mm] shadow-xl rounded-2xl p-6 md:p-10 border border-gray-300 flex flex-col justify-between text-black font-sans select-text relative shrink-0"
+              className="report-print-wrapper bg-white w-full max-w-[210mm] min-h-[297mm] shadow-xl rounded-2xl p-6 md:p-10 border border-gray-300 flex flex-col justify-between text-black font-sans select-text relative shrink"
               dir="rtl"
             >
               
