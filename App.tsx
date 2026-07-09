@@ -157,39 +157,139 @@ const App: React.FC = () => {
       setSyncStatus('syncing');
       const data = await fetchCentralData();
       if (data) {
-        // Automatically bootstrap fresh blank network servers with our default/saved collections
-        if (forceBootstrap && (!data.users || data.users.length === 0)) {
-          console.log('Bootstrapping fresh central Express database with local backup...');
-          await syncCentralData({
-            violations,
-            rewards,
-            users,
-            employees,
-            violationCodes,
-            rewardCodes,
-            settings
-          });
-          setSyncStatus('synced');
-          const now = new Date().toLocaleTimeString();
-          setLastSyncTime(now);
-          return;
+        const mergeLists = <T extends { id: string }>(localList: T[], serverList: T[]): T[] => {
+          const merged = [...serverList];
+          const serverIds = new Set(serverList.map(item => item.id));
+          for (const localItem of localList) {
+            if (localItem && localItem.id && !serverIds.has(localItem.id)) {
+              merged.push(localItem);
+            }
+          }
+          return merged;
+        };
+
+        let localViolations = violations;
+        let localRewards = rewards;
+        let localEmployees = employees;
+        let localUsers = users;
+        let localViolationCodes = violationCodes;
+        let localRewardCodes = rewardCodes;
+        let localSettings = settings;
+
+        if (forceBootstrap) {
+          const savedV = localStorage.getItem('sg_violations');
+          if (savedV) {
+            try { localViolations = JSON.parse(savedV); } catch {}
+          }
+          const savedR = localStorage.getItem('sg_rewards');
+          if (savedR) {
+            try { localRewards = JSON.parse(savedR); } catch {}
+          }
+          const savedE = localStorage.getItem('sg_employees');
+          if (savedE) {
+            try { localEmployees = JSON.parse(savedE); } catch {}
+          }
+          const savedU = localStorage.getItem('sg_users');
+          if (savedU) {
+            try { localUsers = JSON.parse(savedU); } catch {}
+          }
+          const savedVC = localStorage.getItem('sg_violationCodes');
+          if (savedVC) {
+            try { localViolationCodes = JSON.parse(savedVC); } catch {}
+          }
+          const savedRC = localStorage.getItem('sg_rewardCodes');
+          if (savedRC) {
+            try { localRewardCodes = JSON.parse(savedRC); } catch {}
+          }
+          const savedS = localStorage.getItem('sg_settings');
+          if (savedS) {
+            try { localSettings = JSON.parse(savedS); } catch {}
+          }
+        }
+
+        const isServerBlank = (data.violations || []).length === 0 && 
+                             (data.rewards || []).length === 0 && 
+                             (data.employees || []).length === 0;
+
+        let mergedViolations = data.violations || [];
+        let mergedRewards = data.rewards || [];
+        let mergedEmployees = data.employees || [];
+        let mergedUsers = data.users || [];
+        let mergedViolationCodes = data.violationCodes || [];
+        let mergedRewardCodes = data.rewardCodes || [];
+        let mergedSettings = data.settings || localSettings;
+
+        if (forceBootstrap && isServerBlank) {
+          // Only merge and populate central server from local cache if the database is completely blank/new
+          mergedViolations = mergeLists(localViolations, data.violations || []);
+          mergedRewards = mergeLists(localRewards, data.rewards || []);
+          
+          const mergedEmpList = [...(data.employees || [])];
+          const serverEmpIds = new Set((data.employees || []).map(e => e.personnelId));
+          for (const localEmp of localEmployees) {
+            if (localEmp && localEmp.personnelId && !serverEmpIds.has(localEmp.personnelId)) {
+              mergedEmpList.push(localEmp);
+            }
+          }
+          mergedEmployees = mergedEmpList;
+          
+          mergedUsers = mergeLists(localUsers, data.users || []);
+          mergedViolationCodes = mergeLists(localViolationCodes, data.violationCodes || []);
+          mergedRewardCodes = mergeLists(localRewardCodes, data.rewardCodes || []);
+
+          const hasNewLocalViolations = localViolations.length > 0;
+          const hasNewLocalRewards = localRewards.length > 0;
+          const hasNewLocalEmployees = localEmployees.length > 0;
+
+          if (hasNewLocalViolations || hasNewLocalRewards || hasNewLocalEmployees) {
+            console.log('Populating blank central server database with local cache...');
+            await syncCentralData({
+              violations: mergedViolations,
+              rewards: mergedRewards,
+              users: mergedUsers,
+              employees: mergedEmployees,
+              violationCodes: mergedViolationCodes,
+              rewardCodes: mergedRewardCodes,
+              settings: mergedSettings
+            });
+          }
+        } else {
+          // The central server database is the absolute source of truth
+          mergedViolations = data.violations || [];
+          mergedRewards = data.rewards || [];
+          mergedEmployees = data.employees || [];
+          mergedUsers = data.users || [];
+          mergedViolationCodes = data.violationCodes || [];
+          mergedRewardCodes = data.rewardCodes || [];
+          mergedSettings = data.settings || localSettings;
         }
 
         setSyncStatus('synced');
-        if (data.violations) setViolations(data.violations);
-        if (data.rewards) setRewards(data.rewards);
-        if (data.users && data.users.length > 0) setUsers(data.users);
-        if (data.employees) setEmployees(data.employees);
-        if (data.violationCodes && data.violationCodes.length > 0) setViolationCodes(data.violationCodes);
-        if (data.rewardCodes && data.rewardCodes.length > 0) setRewardCodes(data.rewardCodes);
-        if (data.settings) setSettings(data.settings);
+        
+        // Prevent state update and re-renders if the data hasn't actually changed
+        setViolations(prev => JSON.stringify(prev) === JSON.stringify(mergedViolations) ? prev : mergedViolations);
+        setRewards(prev => JSON.stringify(prev) === JSON.stringify(mergedRewards) ? prev : mergedRewards);
+        if (mergedUsers.length > 0) {
+          setUsers(prev => JSON.stringify(prev) === JSON.stringify(mergedUsers) ? prev : mergedUsers);
+        }
+        setEmployees(prev => JSON.stringify(prev) === JSON.stringify(mergedEmployees) ? prev : mergedEmployees);
+        if (mergedViolationCodes.length > 0) {
+          setViolationCodes(prev => JSON.stringify(prev) === JSON.stringify(mergedViolationCodes) ? prev : mergedViolationCodes);
+        }
+        if (mergedRewardCodes.length > 0) {
+          setRewardCodes(prev => JSON.stringify(prev) === JSON.stringify(mergedRewardCodes) ? prev : mergedRewardCodes);
+        }
+        if (mergedSettings) {
+          setSettings(prev => JSON.stringify(prev) === JSON.stringify(mergedSettings) ? prev : mergedSettings);
+        }
 
         const now = new Date().toLocaleTimeString();
         setLastSyncTime(now);
       } else {
         setSyncStatus('error');
       }
-    } catch {
+    } catch (err) {
+      console.error('Error during data pull/merge:', err);
       setSyncStatus('error');
     }
   };
@@ -278,6 +378,11 @@ const App: React.FC = () => {
     }, 10000);
     return () => clearInterval(interval);
   }, [violations, rewards, users, employees, violationCodes, rewardCodes, settings]);
+
+  // Synchronize immediately on login, logout, or switching roles to avoid stale cache or delayed visibility
+  useEffect(() => {
+    pullDataFromServerState(false);
+  }, [user]);
 
   // Sync to local storage
   useEffect(() => { localStorage.setItem('sg_violations', JSON.stringify(violations)); }, [violations]);
@@ -1032,26 +1137,24 @@ const App: React.FC = () => {
                   {systemMode === 'VIOLATION' ? t.mode_violation : t.mode_reward}
                 </span>
                 {/* Server Status Indicators */}
-                {getServerUrl() && (
-                  <>
-                    {(syncStatus === 'synced' && isOnline) ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-emerald-100 text-emerald-600 shadow-xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        {settings.language === 'fa' ? 'سرور متصل' : 'Intranet Connected'}
-                      </span>
-                    ) : syncStatus === 'syncing' ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-blue-100 text-blue-600 shadow-xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
-                        {settings.language === 'fa' ? 'در حال همگام‌سازی...' : 'Syncing...'}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-amber-200 text-amber-700 shadow-xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                        {settings.language === 'fa' ? 'آفلاین (نسخه محلی و امن)' : 'Offline (Local Replica)'}
-                      </span>
-                    )}
-                  </>
-                )}
+                <>
+                  {(syncStatus === 'synced' && isOnline) ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-emerald-100 text-emerald-600 shadow-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      {settings.language === 'fa' ? 'سرور متصل' : 'Intranet Connected'}
+                    </span>
+                  ) : syncStatus === 'syncing' ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-blue-100 text-blue-600 shadow-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                      {settings.language === 'fa' ? 'در حال همگام‌سازی...' : 'Syncing...'}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-amber-200 text-amber-700 shadow-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      {settings.language === 'fa' ? 'آفلاین (نسخه محلی و امن)' : 'Offline (Local Replica)'}
+                    </span>
+                  )}
+                </>
               </div>
               
               <h2 className="text-base md:text-lg font-black text-gray-900 leading-tight">

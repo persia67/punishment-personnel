@@ -58,10 +58,42 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
     r: userRewards.filter(r => r.departmentSource === dept)
   });
 
-  const hseData = byDept('HSE');
-  const secData = byDept('SECURITY');
-  const trnData = byDept('TRAINING');
-  const admData = byDept('ADMIN');
+  // Find all unique department sources in this person's records dynamically
+  const uniqueDeptSources = Array.from(new Set([
+    ...userViolations.map(v => v.departmentSource),
+    ...userRewards.map(r => r.departmentSource)
+  ])).filter(Boolean);
+
+  const getDeptDisplayName = (dept: string) => {
+    const key = `dept_${dept}`;
+    return (t as any)[key] || dept;
+  };
+
+  const getDeptColorClass = (dept: string) => {
+    switch (dept) {
+      case 'HSE': return 'bg-orange-100 text-orange-800';
+      case 'SECURITY': return 'bg-slate-200 text-slate-800';
+      case 'TRAINING': return 'bg-blue-100 text-blue-800';
+      case 'ADMIN': 
+      case 'HR':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-indigo-100 text-indigo-800';
+    }
+  };
+
+  const getDeptIcon = (dept: string) => {
+    switch (dept) {
+      case 'HSE': return <Shield className="w-4 h-4" />;
+      case 'SECURITY': return <AlertTriangle className="w-4 h-4" />;
+      case 'TRAINING': return <GraduationCap className="w-4 h-4" />;
+      case 'ADMIN':
+      case 'HR':
+        return <Briefcase className="w-4 h-4" />;
+      default:
+        return <Briefcase className="w-4 h-4" />;
+    }
+  };
 
   const renderSection = (title: string, icon: React.ReactNode, data: {v: Violation[], r: Reward[]}, colorClass: string) => {
     if (data.v.length === 0 && data.r.length === 0) return null;
@@ -203,10 +235,15 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
 
             {/* Department Sections */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderSection(t.dept_HSE, <Shield className="w-4 h-4" />, hseData, "bg-orange-100 text-orange-800")}
-                {renderSection(t.dept_SECURITY, <AlertTriangle className="w-4 h-4" />, secData, "bg-slate-200 text-slate-800")}
-                {renderSection(t.dept_TRAINING, <GraduationCap className="w-4 h-4" />, trnData, "bg-blue-100 text-blue-800")}
-                {renderSection(t.dept_ADMIN, <Briefcase className="w-4 h-4" />, admData, "bg-purple-100 text-purple-800")}
+                {uniqueDeptSources.map(dept => {
+                    const data = byDept(dept);
+                    return renderSection(
+                        getDeptDisplayName(dept),
+                        getDeptIcon(dept),
+                        data,
+                        getDeptColorClass(dept)
+                    );
+                })}
             </div>
 
             {userViolations.length === 0 && userRewards.length === 0 && (

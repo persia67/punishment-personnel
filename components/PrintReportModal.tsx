@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Printer, Download, Calendar, Award, AlertTriangle, FileText, CheckCircle, TrendingUp, TrendingDown, Building, Layers } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import { AppSettings, Violation, Reward, Employee } from '../types';
 import { TRANSLATIONS } from '../constants';
 
@@ -240,22 +241,20 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Lazy load the html2pdf.js package
-    import('html2pdf.js').then((html2pdfModule) => {
-      const html2pdf = html2pdfModule.default;
+    try {
       html2pdf().set(opt).from(element).save().then(() => {
         setIsDownloading(false);
-      }).catch((err) => {
+      }).catch((err: any) => {
         console.error('PDF generation error:', err);
         setIsDownloading(false);
         alert(isFa ? 'خطا در تولید فایل PDF. لطفا دکمه چاپ را برای خروجی جایگزین امتحان کنید.' : 'Failed to generate PDF. Please try the Print button instead.');
       });
-    }).catch((err) => {
-      console.error('html2pdf dynamic load failure:', err);
+    } catch (err) {
+      console.error('html2pdf execution failure:', err);
       setIsDownloading(false);
       // Fallback
       window.print();
-    });
+    }
   };
 
   return (
@@ -401,6 +400,19 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
           {/* Controls Panel */}
           <div className="w-full md:w-80 bg-white border-b md:border-b-0 md:border-e border-gray-200 p-5 flex flex-col gap-4 overflow-y-auto shrink-0 print:hidden">
             
+            {/* Browser Sandbox/Iframe warning */}
+            <div className="bg-amber-50/75 border border-amber-200 rounded-2xl p-3 text-[10px] leading-relaxed text-amber-800 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-600 animate-pulse" />
+                <span>{isFa ? 'راهنمای چاپ در محیط وب' : 'Web Printing Guide'}</span>
+              </div>
+              <p>
+                {isFa 
+                  ? 'اگر از بخش پیش‌نمایش یا داخل ویرایشگر استفاده می‌کنید، مرورگر ممکن است دکمه‌های پرینت و خروجی PDF را بلاک کند. در این صورت، ابتدا برنامه را با استفاده از دکمه گوشه بالا سمت راست در تب جدید باز کنید و سپس پرینت بگیرید.'
+                  : 'If you are viewing this app within a frame, browser security might block Print/PDF actions. To ensure success, open the application in a new browser tab first, then execute.'}
+              </p>
+            </div>
+
             {/* Filter Type Toggle */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{tx.filterType}</label>
