@@ -1,5 +1,40 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { Violation, Reward, WorkerOfMonthResult, AppSettings } from "../types";
+
+const cleanAndParseJson = (text: string): any => {
+  if (!text) return {};
+  let cleaned = text.trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // If it fails, let's try to extract the first valid JSON block
+    const match = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (match) {
+      try {
+        return JSON.parse(match[1].trim());
+      } catch (err) {
+        cleaned = match[1].trim();
+      }
+    }
+    
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
+      } catch (err) {}
+    }
+    
+    const firstBracket = cleaned.indexOf('[');
+    const lastBracket = cleaned.lastIndexOf(']');
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+      try {
+        return JSON.parse(cleaned.substring(firstBracket, lastBracket + 1));
+      } catch (err) {}
+    }
+    throw e;
+  }
+};
 
 const getSettings = (): AppSettings | null => {
   try {
@@ -361,7 +396,7 @@ export const selectWorkerOfMonth = async (rewards: Reward[], violations: Violati
       const model = settings?.ollamaModel || 'llama3';
       console.log(`[AI] Requesting Worker from Ollama at ${url}`);
       const rawText = await callLocalOllama(prompt, url, model, true);
-      return JSON.parse(rawText || "{}");
+      return cleanAndParseJson(rawText || "{}");
     }
 
     if (provider === 'LOCAL_HF') {
@@ -369,7 +404,7 @@ export const selectWorkerOfMonth = async (rewards: Reward[], violations: Violati
       const model = settings?.localHfModel || 'model';
       console.log(`[AI] Requesting Worker from Hugging Face OpenAI Endpoint at ${url}`);
       const rawText = await callLocalHf(prompt, url, model, true);
-      return JSON.parse(rawText || "{}");
+      return cleanAndParseJson(rawText || "{}");
     }
 
     // Default: Gemini
@@ -386,10 +421,20 @@ export const selectWorkerOfMonth = async (rewards: Reward[], violations: Violati
       model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
-        responseMimeType: "application/json"
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            winnerId: { type: Type.STRING },
+            winnerName: { type: Type.STRING },
+            reasoning: { type: Type.STRING },
+            period: { type: Type.STRING }
+          },
+          required: ["winnerId", "winnerName", "reasoning", "period"]
+        }
       }
     });
-    return JSON.parse(response.text || "{}");
+    return cleanAndParseJson(response.text || "{}");
   } catch (error) {
     console.error("[AI] Worker AI analysis failed or timed out:", error);
     if (autoFailover) {
