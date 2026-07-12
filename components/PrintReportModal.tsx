@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, Printer, Download, Calendar, Award, AlertTriangle, FileText, CheckCircle, TrendingUp, TrendingDown, Building, Layers } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { AppSettings, Violation, Reward, Employee } from '../types';
@@ -102,8 +102,6 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
   rewards,
   employees
 }) => {
-  if (!isOpen) return null;
-
   const isFa = settings.language === 'fa';
   const t = TRANSLATIONS[settings.language];
   const tx = LOCAL_TX[settings.language];
@@ -134,12 +132,12 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
   }, [violations, rewards]);
 
   // Set initial selected department
-  useMemo(() => {
+  useEffect(() => {
     const defaultList = filterType === 'EMPLOYEE_DEPT' ? employeeDepts : sourceDepts;
     if (defaultList.length > 0 && !defaultList.includes(selectedDept)) {
       setSelectedDept(defaultList[0]);
     }
-  }, [filterType, employeeDepts, sourceDepts]);
+  }, [filterType, employeeDepts, sourceDepts, selectedDept]);
 
   // Filter approved violations & rewards
   const filteredData = useMemo(() => {
@@ -256,6 +254,8 @@ const PrintReportModal: React.FC<PrintReportModalProps> = ({
       window.print();
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[90] p-4 overflow-y-auto animate-in fade-in duration-200 print-modal-backdrop" dir={isFa ? 'rtl' : 'ltr'}>

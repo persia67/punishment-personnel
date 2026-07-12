@@ -151,6 +151,14 @@ app.post('/api/sms/send', async (req, res) => {
   const { name, date, reason, type } = placeholders || { name: 'پرسنل', date: '-', reason: '-', type: 'اخطار' };
   const provider = config.provider;
 
+  // Sanitize phone number for maximum compatibility with local SMS providers
+  let recipient = recipientPhone ? String(recipientPhone).replace(/[^\d+]/g, '') : '';
+  if (recipient.startsWith('+98')) {
+    recipient = '0' + recipient.substring(3);
+  } else if (recipient.startsWith('98') && recipient.length === 12) {
+    recipient = '0' + recipient.substring(2);
+  }
+
   if (provider === 'SIMULATOR') {
     // Simulator mode completes immediately with a mock success message
     return res.json({ 
@@ -169,8 +177,9 @@ app.post('/api/sms/send', async (req, res) => {
       const apiKey = config.apiKey;
       const template = type === 'اخطار' ? config.warningTemplate : config.rewardTemplate;
       
-      // Check if template/pattern is a number to use lookup, or if standard sending is used
-      const isPattern = /^\d+$/.test(template || '');
+      // Check if template/pattern is a pattern code to use lookup, or if standard sending is used
+      // Pattern code has no spaces and no curly braces {}
+      const isPattern = !/\s/.test(template || '') && !/{/.test(template || '');
 
       if (isPattern) {
         // Verification Lookup API (Fast & Pattern-based bypassing blacklists)
@@ -178,13 +187,13 @@ app.post('/api/sms/send', async (req, res) => {
         const encodedReason = encodeURIComponent(reason.substring(0, 20).replace(/\s+/g, '_'));
         const encodedDate = encodeURIComponent(date.replace(/\//g, '-'));
 
-        url = `https://api.kavenegar.com/v1/${apiKey}/verify/lookup.json?receptor=${recipientPhone}&token=${encodedName}&token2=${encodedReason}&token3=${encodedDate}&template=${template}`;
+        url = `https://api.kavenegar.com/v1/${apiKey}/verify/lookup.json?receptor=${recipient}&token=${encodedName}&token2=${encodedReason}&token3=${encodedDate}&template=${template}`;
         options = { method: 'GET' };
       } else {
         // Standard SMS sending API
         url = `https://api.kavenegar.com/v1/${apiKey}/sms/send.json`;
         const params = new URLSearchParams();
-        params.append('receptor', recipientPhone);
+        params.append('receptor', recipient);
         params.append('sender', config.senderLine || '');
         params.append('message', message);
         
@@ -209,7 +218,7 @@ app.post('/api/sms/send', async (req, res) => {
         body: JSON.stringify({
           pattern_code: templateCode,
           originator: config.senderLine || '+983000505',
-          recipient: recipientPhone,
+          recipient: recipient,
           values: {
             name: name,
             date: date,
@@ -228,10 +237,10 @@ app.post('/api/sms/send', async (req, res) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: config.senderLine, // Often they use username/pass in payload or senderLine for login
-          password: config.apiKey,
+          username: config.senderLine, // username is in senderLine
+          password: config.apiKey,     // password is in apiKey
           text: `${name};${date};${reason}`,
-          to: recipientPhone,
+          to: recipient,
           bodyId: parseInt(bodyId || '0')
         })
       };
@@ -249,7 +258,7 @@ app.post('/api/sms/send', async (req, res) => {
           'x-api-key': config.apiKey
         },
         body: JSON.stringify({
-          mobile: recipientPhone,
+          mobile: recipient,
           templateId: parseInt(templateId || '0'),
           parameters: [
             { name: 'name', value: name },
@@ -263,7 +272,7 @@ app.post('/api/sms/send', async (req, res) => {
     else if (provider === 'CUSTOM') {
       // Fully custom HTTP client
       let customUrl = config.customUrl || '';
-      customUrl = customUrl.replace(/{phone}/g, encodeURIComponent(recipientPhone))
+      customUrl = customUrl.replace(/{phone}/g, encodeURIComponent(recipient))
                             .replace(/{message}/g, encodeURIComponent(message));
 
       let headers: Record<string, string> = {};
@@ -280,7 +289,7 @@ app.post('/api/sms/send', async (req, res) => {
 
       if (method === 'POST' && config.customBodyTemplate) {
         let bodyStr = config.customBodyTemplate;
-        bodyStr = bodyStr.replace(/{phone}/g, recipientPhone)
+        bodyStr = bodyStr.replace(/{phone}/g, recipient)
                           .replace(/{message}/g, message)
                           .replace(/{name}/g, name)
                           .replace(/{date}/g, date)
@@ -308,6 +317,26 @@ app.post('/api/sms/send', async (req, res) => {
     const data = await response.json().catch(() => null);
 
     if (response.ok) {
+      // Check for Kavenegar internal error codes inside 200 OK responses
+      if (provider === 'KAVENEGAR' && data && data.return && data.return.status !== 200) {
+        return res.status(400).json({
+          success: false,
+          provider,
+          message: `خطای سامانه کاوه‌نگار: ${data.return.message} (کد ${data.return.status})`,
+          response: data
+        });
+      }
+
+      // Check for SMS.ir internal error codes (status 1 is successful, others indicate failures)
+      if (provider === 'SMSIR' && data && typeof data.status === 'number' && data.status !== 1) {
+        return res.status(400).json({
+          success: false,
+          provider,
+          message: `خطای سامانه Sms.ir: ${data.message || 'ارسال ناموفق'}`,
+          response: data
+        });
+      }
+
       return res.json({
         success: true,
         provider,
@@ -315,10 +344,18 @@ app.post('/api/sms/send', async (req, res) => {
         response: data
       });
     } else {
+      let errorMsg = `درگاه پیامک خطای کد ${response.status} را بازگرداند.`;
+      if (data) {
+        if (provider === 'FARAZSMS' && data.message) {
+          errorMsg = `خطای فراز اس‌ام‌اس: ${data.message}`;
+        } else if (data.message) {
+          errorMsg = `خطای درگاه: ${data.message}`;
+        }
+      }
       return res.status(response.status).json({
         success: false,
         provider,
-        message: `درگاه پیامک خطای کد ${response.status} را بازگرداند.`,
+        message: errorMsg,
         response: data
       });
     }

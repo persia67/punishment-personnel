@@ -28,7 +28,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen, onClose, settings, onUpdateSettings, users, onUpdateUsers, employees, onUpdateEmployees, currentUser,
   violationCodes, onUpdateViolationCodes, rewardCodes, onUpdateRewardCodes, onRestoreFullBackup
 }) => {
-  const [activeTab, setActiveTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'AI' | 'SMS'>('APPEARANCE');
+  const [activeTab, setActiveTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'SMS'>('APPEARANCE');
   const [newUser, setNewUser] = useState<Partial<User>>({ username: '', password: '', fullName: '', role: 'HSE_OFFICER', managedDepartment: '', phoneNumber: '', email: '', telegramUsername: '' });
   const [importMode, setImportMode] = useState<'MERGE' | 'REPLACE'>('MERGE');
   const [autoBackups, setAutoBackups] = useState<any[]>([]);
@@ -618,15 +618,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
             )}
 
-            {(isDeveloper || currentUser.role === 'HSE_MANAGER' || currentUser.role === 'PLANT_MANAGER') && (
-                <button 
-                    onClick={() => setActiveTab('AI')}
-                    className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl transition-all whitespace-nowrap ${activeTab === 'AI' ? 'bg-white shadow-md text-indigo-600 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
-                >
-                    <Bot className="w-4 h-4 md:w-5 md:h-5" />
-                    <span className="text-xs md:text-sm">{t.aiSettings}</span>
-                </button>
-            )}
+
             
             {(isDeveloper || currentUser.role === 'HSE_MANAGER' || currentUser.role === 'PLANT_MANAGER') && (
                 <button 
@@ -638,7 +630,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
             )}
 
-            {(isDeveloper || currentUser.role === 'HSE_MANAGER' || currentUser.role === 'PLANT_MANAGER') && (
+            {(isDeveloper || currentUser.role === 'HSE_MANAGER' || currentUser.role === 'PLANT_MANAGER' || currentUser.role === 'HR_MANAGER') && (
                 <button 
                     onClick={() => setActiveTab('SMS')}
                     className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl transition-all whitespace-nowrap ${activeTab === 'SMS' ? 'bg-white shadow-md text-indigo-600 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
@@ -657,7 +649,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     {activeTab === 'USERS' && t.users}
                     {activeTab === 'DATA' && t.dataManagement}
                     {activeTab === 'CODES' && t.codingSystem}
-                    {activeTab === 'AI' && t.aiSettings}
                      {activeTab === 'SMS' && (settings.language === 'fa' ? 'تنظیمات اتصال پیامک و لاگ‌ها' : 'SMS Gateway & Notification Logs')}
                 </h3>
                 <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -1024,185 +1015,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
             )}
             
-            {activeTab === 'AI' && (
-                <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                     {/* AI Provider Selector */}
-                     <div className="bg-white border border-gray-150 p-4 md:p-5 rounded-2xl shadow-sm space-y-4">
-                        <label className="block text-sm font-bold text-gray-700">
-                            {settings.language === 'fa' ? 'انتخاب موتور هوش مصنوعی' : 'Select AI Engine'}
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                onClick={() => onUpdateSettings({ ...settings, aiProvider: 'GEMINI' })}
-                                className={`p-4 rounded-xl border text-right sm:text-center transition-all flex flex-col items-start sm:items-center justify-center gap-1.5 ${settings.aiProvider === 'GEMINI' || !settings.aiProvider ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20' : 'border-gray-200 hover:bg-gray-50'}`}
-                            >
-                                <span className="font-bold text-xs md:text-sm text-gray-900">
-                                    {settings.language === 'fa' ? 'گوگل جِمینای کلود (آنلاین)' : 'Google Gemini Cloud (Online)'}
-                                </span>
-                                <span className="text-[10px] text-gray-500">
-                                    {settings.language === 'fa' ? 'نیاز به دسترسی اینترنت' : 'Requires internet access'}
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => onUpdateSettings({ ...settings, aiProvider: 'OLLAMA' })}
-                                className={`p-4 rounded-xl border text-right sm:text-center transition-all flex flex-col items-start sm:items-center justify-center gap-1.5 ${settings.aiProvider === 'OLLAMA' ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20' : 'border-gray-200 hover:bg-gray-50'}`}
-                            >
-                                <span className="font-bold text-xs md:text-sm text-gray-900">
-                                    {settings.language === 'fa' ? 'سرویس محلی Ollama (آفلاین)' : 'Local Ollama Service (Offline)'}
-                                </span>
-                                <span className="text-[10px] text-gray-500">
-                                    {settings.language === 'fa' ? 'اجرا روی سیستم عامل شما' : 'Runs on your operating system'}
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => onUpdateSettings({ ...settings, aiProvider: 'LOCAL_HF' })}
-                                className={`p-4 rounded-xl border text-right sm:text-center transition-all flex flex-col items-start sm:items-center justify-center gap-1.5 ${settings.aiProvider === 'LOCAL_HF' ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20' : 'border-gray-200 hover:bg-gray-50'}`}
-                            >
-                                <span className="font-bold text-xs md:text-sm text-gray-900">
-                                    {settings.language === 'fa' ? 'سرویس محلی الگوهای hugging face' : 'Local Hugging Face Server'}
-                                </span>
-                                <span className="text-[10px] text-gray-500">
-                                    {settings.language === 'fa' ? 'فایلهای دانلود شده روی سیستم' : 'Downloaded model files on OS'}
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => onUpdateSettings({ ...settings, aiProvider: 'SIMULATOR' })}
-                                className={`p-4 rounded-xl border text-right sm:text-center transition-all flex flex-col items-start sm:items-center justify-center gap-1.5 ${settings.aiProvider === 'SIMULATOR' ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20' : 'border-gray-200 hover:bg-gray-50'}`}
-                            >
-                                <span className="font-bold text-xs md:text-sm text-gray-900">
-                                    {settings.language === 'fa' ? 'شبیه‌ساز هوش مصنوعی (۱۰۰٪ آفلاین)' : 'AI Simulator (100% Offline)'}
-                                </span>
-                                <span className="text-[10px] text-emerald-600 font-medium">
-                                    {settings.language === 'fa' ? 'بدون نیاز به هیچ پیش‌نیازی' : 'No setup or internet needed'}
-                                </span>
-                            </button>
-                        </div>
-                     </div>
-
-                     {/* Cloud Gemini Configuration */}
-                     {(settings.aiProvider === 'GEMINI' || !settings.aiProvider) && (
-                         <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 md:p-6 rounded-2xl border border-indigo-100">
-                            <div className="flex items-start gap-3 mb-4">
-                                <div className="p-2 bg-white rounded-lg shadow-sm text-indigo-600">
-                                    <Bot className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-gray-800">{t.apiKeyLabel}</h4>
-                                    <p className="text-xs text-gray-500 mt-1">{t.apiKeyDesc}</p>
-                                </div>
-                            </div>
-                            
-                            <div className="space-y-2">
-                                 <input 
-                                    type="password" 
-                                    value={settings.customApiKey || ''}
-                                    onChange={(e) => onUpdateSettings({ ...settings, customApiKey: e.target.value })}
-                                    placeholder={t.apiKeyPlaceholder}
-                                    className="w-full px-4 py-3 rounded-xl border border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-sm"
-                                 />
-                                 <p className="text-[10px] text-gray-400">
-                                     Note: This key is stored locally in your browser and used for AI requests.
-                                 </p>
-                            </div>
-                         </div>
-                     )}
-
-                     {/* Ollama Offline Configuration */}
-                     {settings.aiProvider === 'OLLAMA' && (
-                         <div className="bg-gradient-to-br from-slate-50 to-indigo-50/40 p-4 md:p-6 rounded-2xl border border-slate-200 space-y-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-white border border-gray-200 rounded-lg text-slate-800 font-bold text-xs">Ollama</div>
-                                <h4 className="font-bold text-gray-800 text-sm">{settings.language === 'fa' ? 'تنظیمات اتصال محلی به برنامه اولاما' : 'Local Ollama Setup parameters'}</h4>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs text-gray-500 mb-1">{settings.language === 'fa' ? 'آدرس لوکال هاست اولاما' : 'Localhost Ollama URL'}</label>
-                                    <input 
-                                        type="text" 
-                                        value={settings.ollamaUrl || 'http://localhost:11434'}
-                                        onChange={(e) => onUpdateSettings({ ...settings, ollamaUrl: e.target.value })}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 bg-white text-xs font-mono"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-gray-500 mb-1">{settings.language === 'fa' ? 'نام مدل فعال (مثلا llama3 یا deepseek)' : 'Model Name (e.g. llama3)'}</label>
-                                    <input 
-                                        type="text" 
-                                        value={settings.ollamaModel || 'llama3'}
-                                        onChange={(e) => onUpdateSettings({ ...settings, ollamaModel: e.target.value })}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 bg-white text-xs font-mono"
-                                    />
-                                </div>
-                            </div>
-                            <p className="text-[10px] text-gray-400">
-                                {settings.language === 'fa' ? 'نکته: نرم‌افزار اولاما باید روی سیستم شما در حال اجرا باشد و پورت مربوطه باز باشد.' : 'Note: Ollama must be active and listening on your local workspace/local machine OS.'}
-                            </p>
-                         </div>
-                     )}
-
-                     {/* Hugging Face / API compat Configuration */}
-                     {settings.aiProvider === 'LOCAL_HF' && (
-                         <div className="bg-gradient-to-br from-slate-50 to-indigo-50/40 p-4 md:p-6 rounded-2xl border border-slate-200 space-y-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-lg text-xs font-bold">HF</div>
-                                <h4 className="font-bold text-gray-800 text-sm">{settings.language === 'fa' ? 'تنظیمات اتصال به مدلهای هگینگ فیس محلی' : 'Local Hugging Face / API parameters'}</h4>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs text-gray-500 mb-1">{settings.language === 'fa' ? 'آدرس وب‌سرویس لوکال (مانند LM Studio)' : 'Local Endpoint URL (e.g. LM Studio)'}</label>
-                                    <input 
-                                        type="text" 
-                                        value={settings.localHfUrl || 'http://localhost:8000'}
-                                        onChange={(e) => onUpdateSettings({ ...settings, localHfUrl: e.target.value })}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 bg-white text-xs font-mono"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-gray-500 mb-1">{settings.language === 'fa' ? 'نام مدل لود شده' : 'Loaded Local Model Name'}</label>
-                                    <input 
-                                        type="text" 
-                                        value={settings.localHfModel || 'Qwen/Qwen2.5-Copilot-3B'}
-                                        onChange={(e) => onUpdateSettings({ ...settings, localHfModel: e.target.value })}
-                                        className="w-full px-3 py-2 rounded-xl border border-gray-300 bg-white text-xs font-mono"
-                                    />
-                                </div>
-                            </div>
-                            <p className="text-[10px] text-gray-400">
-                                {settings.language === 'fa' ? 'مناسب برای پروژه‌های محلی دانلود شده از Hugging Face که روی وب‌سرور شبیه ساز OpenAI لوکال نظیر LM Studio یا llama.cpp اجرا شده‌اند.' : 'Compatible with local Hugging Face model launchers matching OpenAI API shape on localhost.'}
-                            </p>
-                         </div>
-                     )}
-
-                     {/* Auto Failover Toggle */}
-                     <div className="bg-white border border-gray-150 p-4 md:p-5 rounded-2xl shadow-sm flex items-center justify-between gap-3">
-                        <div className="space-y-0.5">
-                            <span className="block text-xs md:text-sm font-bold text-gray-800">
-                                {settings.language === 'fa' ? 'انتقال خودکار به شبیه‌ساز آفلاین در صورت نداشتن اینترنت' : 'Auto Failover to Offline Simulator'}
-                            </span>
-                            <span className="block text-[11px] text-gray-500 md:max-w-md">
-                                {settings.language === 'fa' 
-                                    ? 'در صورت غیرفعال بودن اینترنت یا خطا در شبکه، هوش مصنوعی محلی بی‌درنگ گزارش‌ها را بدون خطا شبیه‌سازی می‌کند.' 
-                                    : 'If offline or networking fails, the system switches instantly to the high-fidelity local on-device generator to prevent any errors.'}
-                            </span>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                            <input 
-                                type="checkbox" 
-                                checked={settings.autoOfflineFailover !== false}
-                                onChange={(e) => onUpdateSettings({ ...settings, autoOfflineFailover: e.target.checked })}
-                                className="sr-only peer" 
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                        </label>
-                     </div>
-                 </div>
-             )}
-
-             {activeTab === 'DATA' && (
+            {activeTab === 'DATA' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 pb-12">
                      {/* Intranet Server Connection Settings SECTION */}
                      <div className="bg-white border border-gray-150 rounded-2xl p-4 md:p-5 shadow-sm space-y-4">
@@ -1648,12 +1461,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                      onChange={e => setSmsConfigState({ ...smsConfig, isEnabled: e.target.checked })}
                                      className="sr-only peer" 
                                  />
-                                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                 <span className="mr-2 text-xs font-bold text-gray-700 font-sans">
-                                     {smsConfig.isEnabled 
-                                         ? (settings.language === 'fa' ? 'فعال' : 'Enabled') 
-                                         : (settings.language === 'fa' ? 'غیرفعال' : 'Disabled')}
-                                 </span>
+                                 <div className="relative w-16 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-indigo-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:-translate-x-10">
+                                     <span className="absolute left-[8px] top-1/2 -translate-y-1/2 text-[9px] font-bold text-gray-500 font-sans select-none pointer-events-none z-10">
+                                         {smsConfig.isEnabled 
+                                             ? (settings.language === 'fa' ? 'فعال' : 'Enabled') 
+                                             : (settings.language === 'fa' ? 'غیرفعال' : 'Disabled')}
+                                     </span>
+                                 </div>
                              </label>
                          </div>
 
@@ -1677,26 +1491,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
                              <div>
                                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                                     {settings.language === 'fa' ? 'شماره خط فرستنده' : 'Sender Number'}
+                                     {smsConfig.provider === 'MELIPAYAMAK'
+                                          ? (settings.language === 'fa' ? 'نام کاربری ملی پیامک' : 'MeliPayamak Username')
+                                          : (settings.language === 'fa' ? 'شماره خط فرستنده' : 'Sender Number')}
                                  </label>
                                  <input 
                                      type="text"
                                      value={smsConfig.senderLine || ''}
                                      onChange={e => setSmsConfigState({ ...smsConfig, senderLine: e.target.value })}
-                                     placeholder="e.g. 3000505"
+                                     placeholder={smsConfig.provider === 'MELIPAYAMAK' ? 'YourUsername' : 'e.g. 3000505'}
                                      className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-left"
                                  />
                              </div>
 
                              <div className="md:col-span-2">
                                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                                     {settings.language === 'fa' ? 'کلید وب‌سرویس / API Key' : 'API Token / API Key'}
+                                     {smsConfig.provider === 'MELIPAYAMAK'
+                                          ? (settings.language === 'fa' ? 'کلمه عبور ملی پیامک / API Key' : 'MeliPayamak Password / API Key')
+                                          : (settings.language === 'fa' ? 'کلید وب‌سرویس / API Key' : 'API Token / API Key')}
                                  </label>
                                  <input 
                                      type="password"
                                      value={smsConfig.apiKey || ''}
                                      onChange={e => setSmsConfigState({ ...smsConfig, apiKey: e.target.value })}
-                                     placeholder="API key or authentication token from provider"
+                                     placeholder={smsConfig.provider === 'MELIPAYAMAK' ? 'YourPassword' : 'API key or authentication token from provider'}
                                      className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-left"
                                  />
                              </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MOCK_VIOLATIONS, MOCK_REWARDS, getSeverityColor, getStatusColor, isOlderThanSixMonths, APP_VERSION, DEFAULT_USERS, DEFAULT_SETTINGS, TRANSLATIONS, INITIAL_VIOLATION_CODES, INITIAL_REWARD_CODES } from './constants';
 import { Violation, Reward, User, AppSettings, SystemMode, WorkerOfMonthResult, Department, Employee, CodeItem } from './types';
 import DashboardStats from './components/DashboardStats';
@@ -14,10 +14,10 @@ import PersonnelProfileModal from './components/PersonnelProfileModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import OfflineSyncModal from './components/OfflineSyncModal';
 import { EditAvatarModal } from './components/EditAvatarModal';
-import { selectWorkerOfMonth } from './services/geminiService';
+import { WorkerOfMonthModal } from './components/WorkerOfMonthModal';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { sendNotificationSms } from './services/smsService';
-import { Shield, Plus, Search, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2 } from 'lucide-react';
+import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2 } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -68,6 +68,22 @@ const App: React.FC = () => {
   const [violationCodes, setViolationCodes] = useState<CodeItem[]>(INITIAL_VIOLATION_CODES);
   const [rewardCodes, setRewardCodes] = useState<CodeItem[]>(INITIAL_REWARD_CODES);
 
+  const violationsRef = useRef(violations);
+  const rewardsRef = useRef(rewards);
+  const employeesRef = useRef(employees);
+  const usersRef = useRef(users);
+  const violationCodesRef = useRef(violationCodes);
+  const rewardCodesRef = useRef(rewardCodes);
+  const settingsRef = useRef(settings);
+
+  useEffect(() => { violationsRef.current = violations; }, [violations]);
+  useEffect(() => { rewardsRef.current = rewards; }, [rewards]);
+  useEffect(() => { employeesRef.current = employees; }, [employees]);
+  useEffect(() => { usersRef.current = users; }, [users]);
+  useEffect(() => { violationCodesRef.current = violationCodes; }, [violationCodes]);
+  useEffect(() => { rewardCodesRef.current = rewardCodes; }, [rewardCodes]);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
+
   // Profile Modal State
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
 
@@ -77,6 +93,7 @@ const App: React.FC = () => {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [workerOfMonth, setWorkerOfMonth] = useState<WorkerOfMonthResult | null>(null);
   const [selectingWorker, setSelectingWorker] = useState(false);
+  const [isWorkerOfMonthOpen, setIsWorkerOfMonthOpen] = useState(false);
   
   // Electron auto-updater states
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'>('idle');
@@ -152,7 +169,7 @@ const App: React.FC = () => {
     }
   };
 
-  const pullDataFromServerState = async (forceBootstrap = false) => {
+  const pullDataFromServerState = useCallback(async (forceBootstrap = false) => {
     try {
       setSyncStatus('syncing');
       const data = await fetchCentralData();
@@ -168,13 +185,13 @@ const App: React.FC = () => {
           return merged;
         };
 
-        let localViolations = violations;
-        let localRewards = rewards;
-        let localEmployees = employees;
-        let localUsers = users;
-        let localViolationCodes = violationCodes;
-        let localRewardCodes = rewardCodes;
-        let localSettings = settings;
+        let localViolations = violationsRef.current;
+        let localRewards = rewardsRef.current;
+        let localEmployees = employeesRef.current;
+        let localUsers = usersRef.current;
+        let localViolationCodes = violationCodesRef.current;
+        let localRewardCodes = rewardCodesRef.current;
+        let localSettings = settingsRef.current;
 
         if (forceBootstrap) {
           const savedV = localStorage.getItem('sg_violations');
@@ -292,7 +309,7 @@ const App: React.FC = () => {
       console.error('Error during data pull/merge:', err);
       setSyncStatus('error');
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Immediate local cache hydration
@@ -369,7 +386,7 @@ const App: React.FC = () => {
     
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [pullDataFromServerState]);
 
   // Periodic polling interval to pull down fresh records submitted by outer network nodes
   useEffect(() => {
@@ -377,12 +394,12 @@ const App: React.FC = () => {
       pullDataFromServerState(false);
     }, 10000);
     return () => clearInterval(interval);
-  }, [violations, rewards, users, employees, violationCodes, rewardCodes, settings]);
+  }, [pullDataFromServerState]);
 
   // Synchronize immediately on login, logout, or switching roles to avoid stale cache or delayed visibility
   useEffect(() => {
     pullDataFromServerState(false);
-  }, [user]);
+  }, [user, pullDataFromServerState]);
 
   // Sync to local storage
   useEffect(() => { localStorage.setItem('sg_violations', JSON.stringify(violations)); }, [violations]);
@@ -393,14 +410,14 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('sg_settings', JSON.stringify(settings)); }, [settings]);
 
   // Automated snapshot local backup helper
-  const triggerAutoBackup = (
-    v = violations,
-    r = rewards,
-    u = users,
-    e = employees,
-    vc = violationCodes,
-    rc = rewardCodes,
-    s = settings
+  const triggerAutoBackup = useCallback((
+    v: Violation[],
+    r: Reward[],
+    u: User[],
+    e: Employee[],
+    vc: CodeItem[],
+    rc: CodeItem[],
+    s: AppSettings
   ) => {
     try {
       const snapshot = {
@@ -437,7 +454,7 @@ const App: React.FC = () => {
     } catch (err) {
       console.error('[AutoBackup] Failed to save automatic snapshot:', err);
     }
-  };
+  }, []);
 
   // Debounced auto backup on central database state changes
   useEffect(() => {
@@ -450,7 +467,7 @@ const App: React.FC = () => {
       triggerAutoBackup(violations, rewards, users, employees, violationCodes, rewardCodes, settings);
     }, 3000); // 3 seconds stability debounce
     return () => clearTimeout(timer);
-  }, [violations, rewards, users, employees, violationCodes, rewardCodes, settings]);
+  }, [violations, rewards, users, employees, violationCodes, rewardCodes, settings, triggerAutoBackup]);
 
   const handleRestoreFullBackup = (bak: any) => {
     if (bak.violations) {
@@ -803,19 +820,8 @@ const App: React.FC = () => {
       }
       pushDataToServerState(updatedV, updatedR, users, employees, violationCodes, rewardCodes, settings);
   };
-  const handlePickWorkerOfMonth = async () => {
-    try {
-      setSelectingWorker(true);
-      const res = await selectWorkerOfMonth(rewards, violations);
-      setWorkerOfMonth(res);
-    } catch (e: any) {
-      console.error(e);
-      alert(settings.language === 'fa' 
-        ? "خطا در فرآیند تحلیل هوش مصنوعی: لطفا اتصال به شبکه یا تنظیمات سرور هوش مصنوعی را بازبینی کنید." 
-        : "AI selection process failed. Please check your networks or AI server properties.");
-    } finally {
-      setSelectingWorker(false);
-    }
+  const handlePickWorkerOfMonth = () => {
+    setIsWorkerOfMonthOpen(true);
   };
 
   const handleExportCSV = () => {
@@ -1193,15 +1199,14 @@ const App: React.FC = () => {
                 <span>{settings.language === 'fa' ? 'گزارش چاپی واحدها' : 'Print Dept Report'}</span>
               </button>
 
-              {systemMode === 'REWARD' && canViewAll && (
+              {canViewAll && (
                 <button
                   type="button"
-                  disabled={selectingWorker}
                   onClick={handlePickWorkerOfMonth}
                   className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-xs"
                 >
-                  {selectingWorker ? <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" /> : <Sparkles className="w-4 h-4 text-indigo-600" />}
-                  <span>{settings.language === 'fa' ? 'کارمند نمونه ماه (با هوش مصنوعی)' : 'AI Pick Worker of Month'}</span>
+                  <Trophy className="w-4 h-4 text-amber-600" />
+                  <span>{settings.language === 'fa' ? 'محاسبه کارمند نمونه (سیستم امتیازی)' : 'Worker of the Month (Scoring)'}</span>
                 </button>
               )}
 
@@ -1580,6 +1585,15 @@ const App: React.FC = () => {
         rewards={rewards}
         employees={employees}
         onMergeSuccess={handleOfflineMergeSuccess}
+      />
+
+      <WorkerOfMonthModal
+        isOpen={isWorkerOfMonthOpen}
+        onClose={() => setIsWorkerOfMonthOpen(false)}
+        settings={settings}
+        violations={violations}
+        rewards={rewards}
+        employees={employees}
       />
 
       {user && (

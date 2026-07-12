@@ -190,10 +190,12 @@ jobs:
           shopt -s nullglob
           for win_file in release-assets/*.exe; do
             exe_name=$(basename "$win_file")
+            # URL encode spaces to %20 to avoid broken links in Markdown
+            encoded_name="${exe_name// /%20}"
             if [[ "$exe_name" == *"Portable"* ]]; then
-              echo "* **[Windows Portable Version (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/$exe_name)**" >> release-notes.md
+              echo "* **[Windows Portable Version (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/${encoded_name})**" >> release-notes.md
             else
-              echo "* **[Windows Desktop Installer (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/$exe_name)**" >> release-notes.md
+              echo "* **[Windows Desktop Installer (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/${encoded_name})**" >> release-notes.md
             fi
           done
           
