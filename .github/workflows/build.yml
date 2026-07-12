@@ -7,42 +7,20 @@ on:
 
 jobs:
   prepare-version:
-    name: Bump Version & Sync Git
+    name: Read Version from package.json
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
-      new_version: ${{ steps.bump.outputs.new_version }}
+      new_version: ${{ steps.get-version.outputs.version }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Bump Version
-         # Runs our custom bumper script which analyzes commit message for major/minor/patch bump
-        id: bump
-        run: node electron/bump-version.js
-
-      - name: Commit and Push Version Bump
+      - name: Get version from package.json
+        id: get-version
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          
-          # Only commit and push if package.json has changed
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(release): bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
-            git push origin HEAD:main || echo "Push failed, continuing with in-memory bump."
-          else
-            echo "No version changes detected."
-          fi
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current package.json version is $VERSION"
 
   build-all:
     name: Build Web & Android
@@ -54,8 +32,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          ref: main # Force checkout of main branch to get the bumped version
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -104,8 +80,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          ref: main # Force checkout of main branch to get the bumped version
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
