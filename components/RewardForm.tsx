@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Reward, User, RewardType, Department, Employee, CodeItem } from '../types';
 import { X, Camera, UserCheck, Medal, Star, ShieldCheck, HardHat, Zap, Briefcase, Search } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
+import { DEPARTMENTS_LIST } from './ManualEmployeeForm';
 
 interface RewardFormProps {
   onClose: () => void;
@@ -48,30 +49,48 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
   const [selectedCode, setSelectedCode] = useState<number | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Smart Search States
+  const [empSearchTerm, setEmpSearchTerm] = useState('');
+  const [showEmpResults, setShowEmpResults] = useState(false);
+  const [customDeptText, setCustomDeptText] = useState('');
+
+  const matchedEmployees = React.useMemo(() => {
+    if (!empSearchTerm.trim()) return [];
+    const term = empSearchTerm.toLowerCase().trim();
+    return employees.filter(emp => 
+      emp.fullName.toLowerCase().includes(term) ||
+      emp.personnelId.toLowerCase().includes(term) ||
+      emp.department.toLowerCase().includes(term)
+    );
+  }, [empSearchTerm, employees]);
+
+  const handleSelectEmployee = (emp: Employee) => {
+    const isStandard = DEPARTMENTS_LIST.includes(emp.department);
+    setFormData(prev => ({
+      ...prev,
+      personnelId: emp.personnelId,
+      employeeName: emp.fullName,
+      department: isStandard ? emp.department : 'سایر (ورود دستی)'
+    }));
+    setEmpSearchTerm(`${emp.fullName} (${emp.personnelId})`);
+    setShowEmpResults(false);
+    if (!isStandard) {
+      setCustomDeptText(emp.department);
+    }
+  };
+
   useEffect(() => {
       setFormData(prev => ({ ...prev, departmentSource: sourceDept }));
       setSelectedCode(null);
   }, [sourceDept]);
 
-  const handlePersonnelIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value;
-      setFormData(prev => ({ ...prev, personnelId: val }));
-      
-      // Auto-Fill Logic
-      const foundEmployee = employees.find(emp => emp.personnelId === val);
-      if (foundEmployee) {
-          setFormData(prev => ({
-              ...prev,
-              personnelId: val,
-              employeeName: foundEmployee.fullName,
-              department: foundEmployee.department
-          }));
-      }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.employeeName || !formData.personnelId || !formData.department || !selectedCode) {
+    const finalDepartment = formData.department === 'سایر (ورود دستی)' 
+      ? customDeptText.trim() 
+      : (formData.department || '').trim();
+
+    if (!formData.employeeName || !formData.personnelId || !finalDepartment || !selectedCode) {
         alert(t.requiredFields);
         return;
     }
@@ -81,9 +100,9 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
 
     const newReward: Reward = {
       id: `R-${Math.floor(Math.random() * 10000)}`,
-      employeeName: formData.employeeName!,
-      personnelId: formData.personnelId!,
-      department: formData.department!,
+      employeeName: formData.employeeName!.trim(),
+      personnelId: formData.personnelId!.trim(),
+      department: finalDepartment,
       departmentSource: sourceDept,
       reporterName: formData.reporterName!, 
       date: formData.date || '1403/02/01',
@@ -186,39 +205,119 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
              />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div className="relative">
-              <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">{t.personnelId} *</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 border border-emerald-100 bg-emerald-50/20 p-4 rounded-2xl">
+            {/* Smart Search Field */}
+            <div className="md:col-span-2 relative">
+              <label className="block text-xs md:text-sm font-bold text-gray-755 mb-1.5 flex items-center gap-1">
+                <Search className="w-4 h-4 text-emerald-600" />
+                {lang === 'fa' ? 'جستجوی هوشمند پرسنل (بر اساس نام، کد پرسنلی یا واحد)' : 'Smart Search Personnel (Name, ID, or Dept)'}
+              </label>
               <div className="relative">
                 <input
-                    required
-                    type="text"
-                    value={formData.personnelId || ''}
-                    className="w-full px-3 py-2.5 pl-9 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                    onChange={handlePersonnelIdChange}
+                  type="text"
+                  placeholder={lang === 'fa' ? '🔍 نام، کد پرسنلی یا واحد فرد را بنویسید... (مثال: علی عباسی یا ۱۰0۳)' : 'Search by Name, Personnel ID, or Department...'}
+                  value={empSearchTerm}
+                  onChange={e => {
+                    setEmpSearchTerm(e.target.value);
+                    setShowEmpResults(true);
+                  }}
+                  onFocus={() => setShowEmpResults(true)}
+                  className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
                 />
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3.5 md:top-3" />
               </div>
+              
+              {showEmpResults && empSearchTerm.trim() && (
+                <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-gray-100">
+                  {matchedEmployees.length === 0 ? (
+                    <div className="p-3 text-xs text-gray-500 text-center">
+                      {lang === 'fa' ? 'نتیجه‌ای یافت نشد. می‌توانید اطلاعات زیر را مستقیماً وارد کنید.' : 'No matches. You can type info directly below.'}
+                    </div>
+                  ) : (
+                    matchedEmployees.map(emp => (
+                      <button
+                        type="button"
+                        key={emp.id}
+                        onClick={() => handleSelectEmployee(emp)}
+                        className="w-full text-right px-4 py-2.5 hover:bg-emerald-50/50 transition-colors flex items-center justify-between text-xs md:text-sm"
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-bold text-gray-900">{emp.fullName}</span>
+                          <span className="text-[11px] text-gray-500 font-mono">
+                            {lang === 'fa' ? 'کد پرسنلی:' : 'ID:'} {emp.personnelId}
+                          </span>
+                        </div>
+                        <span className="px-2 py-0.5 bg-slate-100 rounded text-[11px] font-bold text-slate-700">
+                          {emp.department}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
+
+            <div>
+              <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">{t.personnelId} *</label>
+              <input
+                required
+                type="text"
+                value={formData.personnelId || ''}
+                className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-mono"
+                onChange={e => {
+                  const val = e.target.value;
+                  setFormData(prev => ({ ...prev, personnelId: val }));
+                  const foundEmployee = employees.find(emp => emp.personnelId === val);
+                  if (foundEmployee) {
+                    const isStandard = DEPARTMENTS_LIST.includes(foundEmployee.department);
+                    setFormData(prev => ({
+                      ...prev,
+                      employeeName: foundEmployee.fullName,
+                      department: isStandard ? foundEmployee.department : 'سایر (ورود دستی)'
+                    }));
+                    if (!isStandard) {
+                      setCustomDeptText(foundEmployee.department);
+                    }
+                  }
+                }}
+              />
+            </div>
+            
             <div>
               <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">{t.fullName} *</label>
               <input
                 required
                 type="text"
                 value={formData.employeeName || ''}
-                className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50"
+                className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
                 onChange={e => setFormData({...formData, employeeName: e.target.value})}
               />
             </div>
-            <div>
+            
+            <div className="flex flex-col">
               <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">{t.department} *</label>
-              <input
+              <select
                 required
-                type="text"
                 value={formData.department || ''}
-                className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50"
-                onChange={e => setFormData({...formData, department: e.target.value})}
-              />
+                onChange={e => {
+                  setFormData({...formData, department: e.target.value});
+                }}
+                className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+              >
+                <option value="">{lang === 'fa' ? 'انتخاب واحد کاری...' : 'Select Department...'}</option>
+                {DEPARTMENTS_LIST.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+              {formData.department === 'سایر (ورود دستی)' && (
+                <input
+                  type="text"
+                  required
+                  placeholder={lang === 'fa' ? 'نام واحد کاری دستی را بنویسید...' : 'Write custom department name...'}
+                  value={customDeptText}
+                  onChange={e => setCustomDeptText(e.target.value)}
+                  className="mt-1.5 w-full px-3 py-2.5 text-base md:text-sm border border-red-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              )}
             </div>
             <div>
               <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">{t.date}</label>

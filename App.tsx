@@ -11,6 +11,7 @@ import SettingsModal from './components/SettingsModal';
 import CodeLegendModal from './components/CodeLegendModal';
 import PrintReportModal from './components/PrintReportModal';
 import PersonnelProfileModal from './components/PersonnelProfileModal';
+import { DEPARTMENTS_LIST } from './components/ManualEmployeeForm';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import OfflineSyncModal from './components/OfflineSyncModal';
 import { EditAvatarModal } from './components/EditAvatarModal';
@@ -43,6 +44,7 @@ const App: React.FC = () => {
   const [deleteModal, setDeleteModal] = useState<{isOpen: boolean; id: string | null; type: 'VIOLATION' | 'REWARD'}>({ isOpen: false, id: null, type: 'VIOLATION' });
   const [searchTerm, setSearchTerm] = useState('');
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
+  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<'SCORE' | 'DEPARTMENT' | 'LAST_NAME' | 'NONE'>('NONE');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC');
 
@@ -334,8 +336,8 @@ const App: React.FC = () => {
     const savedSettings = localStorage.getItem('sg_settings');
     if (savedSettings) {
       const parsed = JSON.parse(savedSettings);
-      if (parsed.companyLogo && parsed.companyLogo.includes('app_icon_1781090095655.png')) {
-        parsed.companyLogo = './app_icon_1781090095655.png';
+      if (parsed.companyLogo && (parsed.companyLogo.includes('app_icon_1781090095655.png') || parsed.companyLogo.includes('app_icon_new_1783848679437.png'))) {
+        parsed.companyLogo = './app_icon_fixed.jpg';
       }
       setSettings(parsed);
     }
@@ -377,8 +379,8 @@ const App: React.FC = () => {
         const s = localStorage.getItem('sg_settings');
         if(s) {
             const parsed = JSON.parse(s);
-            if (parsed.companyLogo && parsed.companyLogo.includes('app_icon_1781090095655.png')) {
-                parsed.companyLogo = './app_icon_1781090095655.png';
+            if (parsed.companyLogo && (parsed.companyLogo.includes('app_icon_1781090095655.png') || parsed.companyLogo.includes('app_icon_new_1783848679437.png'))) {
+                parsed.companyLogo = './app_icon_fixed.jpg';
             }
             setSettings(parsed);
         }
@@ -663,15 +665,27 @@ const App: React.FC = () => {
   // Filter Data based on Role/Department
   const filterData = <T extends Violation | Reward>(data: T[]) => {
     return data.filter(item => {
-      // 1. Department Filter
+      // 1. Department Source Role Filter
       const isMyDept = canViewAll || item.departmentSource === userDept;
       if (!isMyDept) return false;
 
-      // 2. Search Filter
-      const matchesSearch = item.employeeName.includes(searchTerm) || item.personnelId.includes(searchTerm);
-      if (!matchesSearch) return false;
+      // 2. Department Dropdown Filter (Selected on main page)
+      if (selectedDeptFilter !== 'ALL') {
+        const itemDept = (item.department || '').trim();
+        if (itemDept !== selectedDeptFilter) return false;
+      }
 
-      // 3. Status/Tab Filter
+      // 3. Case-insensitive Search Filter (Checks Name, ID, and Department)
+      const term = searchTerm.toLowerCase().trim();
+      if (term) {
+        const matchesSearch = 
+          item.employeeName.toLowerCase().includes(term) || 
+          item.personnelId.toLowerCase().includes(term) ||
+          (item.department && item.department.toLowerCase().includes(term));
+        if (!matchesSearch) return false;
+      }
+
+      // 4. Status/Tab Filter
       if (activeTab === 'ARCHIVE') {
         if (!item.isArchived) return false;
       } else {
@@ -683,6 +697,23 @@ const App: React.FC = () => {
       return true;
     });
   };
+
+  // Memoized matched employees for main page search to allow opening empty profiles
+  const matchedEmployeesForMainSearch = React.useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term && selectedDeptFilter === 'ALL') return [];
+
+    return employees.filter(emp => {
+      const matchesSearch = !term ||
+        emp.fullName.toLowerCase().includes(term) ||
+        emp.personnelId.toLowerCase().includes(term) ||
+        emp.department.toLowerCase().includes(term);
+
+      const matchesDept = selectedDeptFilter === 'ALL' || emp.department === selectedDeptFilter;
+
+      return matchesSearch && matchesDept;
+    });
+  }, [searchTerm, selectedDeptFilter, employees]);
 
   const itemsToDisplay = systemMode === 'VIOLATION' ? filterData(violations) : filterData(rewards);
 
@@ -723,11 +754,28 @@ const App: React.FC = () => {
   const handleSync = async () => {
     await pullDataFromServerState(false);
   };
+
+  const recordOfflineEntry = (dept: string) => {
+    if (!dept) return;
+    try {
+      const saved = localStorage.getItem('sg_last_offline_import_dates');
+      const dates = saved ? JSON.parse(saved) : {};
+      dates[dept] = new Date().toISOString();
+      localStorage.setItem('sg_last_offline_import_dates', JSON.stringify(dates));
+    } catch (e) {
+      console.error('Error recording offline entry date:', e);
+    }
+  };
+
   const handleAddViolation = (v: Violation) => {
     const updated = [v, ...violations];
     setViolations(updated);
     setIsModalOpen(false);
     pushDataToServerState(updated, rewards, users, employees, violationCodes, rewardCodes, settings);
+
+    if (v.departmentSource) {
+      recordOfflineEntry(v.departmentSource);
+    }
 
     // Auto dispatch SMS notification to employee if auto-approved on creation
     if (v.isApproved) {
@@ -743,6 +791,10 @@ const App: React.FC = () => {
     setRewards(updated);
     setIsRewardModalOpen(false);
     pushDataToServerState(violations, updated, users, employees, violationCodes, rewardCodes, settings);
+
+    if (r.departmentSource) {
+      recordOfflineEntry(r.departmentSource);
+    }
 
     // Auto dispatch SMS notification to employee if auto-approved on creation
     if (r.isApproved) {
@@ -1242,7 +1294,21 @@ const App: React.FC = () => {
                         onChange={(e) => setSearchTerm(e.target.value)} 
                     />
                  </div>
-                 {/* Status Dropdown Filter */}
+                  {/* Department Dropdown Filter */}
+                  <div className="relative shrink-0">
+                     <select
+                       value={selectedDeptFilter}
+                       onChange={(e) => setSelectedDeptFilter(e.target.value)}
+                       className={`w-full sm:w-48 py-2.5 px-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} text-[13px] md:text-sm font-semibold shadow-sm text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors`}
+                     >
+                       <option value="ALL">{settings.language === 'fa' ? 'همه واحدهای کاری' : 'All Departments'}</option>
+                       {DEPARTMENTS_LIST.map(dept => (
+                         <option key={dept} value={dept}>{dept}</option>
+                       ))}
+                     </select>
+                  </div>
+
+                  {/* Status Dropdown Filter */}
                  <div className="relative shrink-0">
                     <select
                       value={approvalStatusFilter}
@@ -1323,6 +1389,71 @@ const App: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Matched Personnel Panel */}
+        {(searchTerm.trim() || selectedDeptFilter !== 'ALL') && matchedEmployeesForMainSearch.length > 0 && (
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl mb-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs md:text-sm font-black text-gray-700 flex items-center gap-1.5">
+                <UserIcon className="w-4.5 h-4.5 text-indigo-500" />
+                {settings.language === 'fa' 
+                  ? `پرونده‌های پرسنلی یافت شده (${matchedEmployeesForMainSearch.length} نفر):` 
+                  : `Matched Personnel Profiles (${matchedEmployeesForMainSearch.length}):`}
+              </span>
+              <span className="text-[10px] text-gray-400 font-medium">
+                {settings.language === 'fa' ? 'جهت مشاهده سوابق و جزئیات پرونده کلیک کنید.' : 'Click to view complete file & history.'}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+              {matchedEmployeesForMainSearch.map(emp => {
+                const empViolations = violations.filter(v => v.personnelId === emp.personnelId && v.isApproved);
+                const empRewards = rewards.filter(r => r.personnelId === emp.personnelId && r.isApproved);
+                const isProfileIncomplete = 
+                  !emp.department || emp.department.trim() === '' || 
+                  !emp.nationalId || !emp.phoneNumber || !emp.jobTitle || !emp.hireDate;
+
+                return (
+                  <button
+                    type="button"
+                    key={emp.id}
+                    onClick={() => setSelectedPersonnelId(emp.personnelId)}
+                    className="text-right p-3 bg-white hover:bg-indigo-50/50 border border-gray-150 hover:border-indigo-300 rounded-xl transition-all shadow-xs flex flex-col justify-between hover:-translate-y-0.5 active:translate-y-0 group cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between w-full mb-1">
+                      <div>
+                        <span className="font-extrabold text-xs md:text-sm text-gray-900 group-hover:text-indigo-600 transition-colors block">
+                          {emp.fullName}
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-bold block mt-0.5">
+                          {emp.jobTitle || (settings.language === 'fa' ? 'بدون سمت مشخص' : 'No custom title')}
+                        </span>
+                      </div>
+                      <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-lg font-mono font-bold shrink-0">
+                        {emp.personnelId}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full mt-2.5 pt-2 border-t border-gray-100 text-[10px]">
+                      <span className="bg-indigo-50 text-indigo-750 px-1.5 py-0.5 rounded-md font-bold max-w-[120px] truncate" title={emp.department}>
+                        {emp.department || '—'}
+                      </span>
+                      <div className="flex items-center gap-1 font-bold">
+                        <span className="text-red-500">🚫 {empViolations.length}</span>
+                        <span className="text-emerald-500">🏆 {empRewards.length}</span>
+                        {isProfileIncomplete && (
+                          <span className="text-amber-500 font-black ml-1" title={settings.language === 'fa' ? 'پرونده دارای نقص اطلاعات است' : 'Profile has incomplete information'}>
+                            ⚠
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Data Table / Cards Container */}
         <div className="space-y-4">

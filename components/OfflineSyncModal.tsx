@@ -76,7 +76,7 @@ const FA_TRANSLATIONS = {
   filterStatus: 'فیلتر وضعیت تایید پرونده:',
   allMonths: 'همه دوره‌ها (کل تاریخچه)',
   allDepts: 'همه واحدها (کل سازمان)',
-  allStatuses: 'همه موارد (مواد موقت و تایید شده)',
+  allStatuses: 'همه موارد (موارد موقت و تایید شده)',
   pendingOnly: 'فقط موارد در انتظار تایید',
   approvedOnly: 'فقط موارد تایید شده نهایی',
   violationCount: 'تعداد تخلفات منطبق:',
@@ -191,6 +191,9 @@ export default function OfflineSyncModal({
   // Toast / Status Message
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // Track last offline entry / import dates per department
+  const [lastOfflineImports, setLastOfflineImports] = useState<Record<string, string>>({});
+
   useEffect(() => {
     // Load Sync logs
     const saved = localStorage.getItem('sg_offline_sync_logs');
@@ -201,7 +204,17 @@ export default function OfflineSyncModal({
         console.error('Error parsing offline sync logs:', e);
       }
     }
-  }, []);
+
+    // Load last offline import dates
+    const savedDates = localStorage.getItem('sg_last_offline_import_dates');
+    if (savedDates) {
+      try {
+        setLastOfflineImports(JSON.parse(savedDates));
+      } catch (e) {
+        console.error('Error parsing last offline import dates:', e);
+      }
+    }
+  }, [isOpen]);
 
   const saveLogs = (updated: SyncLogEntry[]) => {
     setSyncLogs(updated);
@@ -269,17 +282,12 @@ export default function OfflineSyncModal({
       filteredRewards = filteredRewards.filter(r => r.isApproved);
     }
 
-    // Find all employees associated with these filtered records to bundle them in the sync file
-    const requiredEmpIds = new Set<string>();
-    filteredViolations.forEach(v => requiredEmpIds.add(v.personnelId));
-    filteredRewards.forEach(r => requiredEmpIds.add(r.personnelId));
-
-    const filteredEmployees = employees.filter(e => requiredEmpIds.has(e.personnelId));
-
+    // For backup and data transfer, we bundle the ENTIRE personnel database
+    // to ensure all employee profiles entered up to this moment are shared/backed up.
     return {
       violations: filteredViolations,
       rewards: filteredRewards,
-      employees: filteredEmployees
+      employees: employees
     };
   };
 
@@ -520,6 +528,38 @@ export default function OfflineSyncModal({
       const mergedV = Array.from(finalViolationsMap.values());
       const mergedR = Array.from(finalRewardsMap.values());
       const mergedE = Array.from(finalEmployeesMap.values());
+
+      // Detect departments from imported data
+      const importedDepts = new Set<string>();
+      (importedFile.violations || []).forEach(v => {
+        if (v.departmentSource) importedDepts.add(v.departmentSource);
+      });
+      (importedFile.rewards || []).forEach(r => {
+        if (r.departmentSource) importedDepts.add(r.departmentSource);
+      });
+
+      if (importedFile.filterDept && importedFile.filterDept !== 'ALL') {
+        importedDepts.add(importedFile.filterDept);
+      }
+
+      // If no specific dept was found, default to all of them
+      if (importedDepts.size === 0) {
+        importedDepts.add('HSE');
+        importedDepts.add('SECURITY');
+        importedDepts.add('ADMIN');
+        importedDepts.add('HR');
+        importedDepts.add('TRAINING');
+      }
+
+      const savedDatesStr = localStorage.getItem('sg_last_offline_import_dates');
+      const importDates = savedDatesStr ? JSON.parse(savedDatesStr) : {};
+      const nowStr = new Date().toISOString();
+      importedDepts.forEach(dept => {
+        importDates[dept] = nowStr;
+      });
+
+      localStorage.setItem('sg_last_offline_import_dates', JSON.stringify(importDates));
+      setLastOfflineImports(importDates);
 
       // Save to local storage
       localStorage.setItem('sg_violations', JSON.stringify(mergedV));
@@ -859,6 +899,36 @@ export default function OfflineSyncModal({
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Last Offline Import Dates per Department */}
+          <div className="bg-slate-50/70 border border-slate-200/60 rounded-2xl p-5 shadow-xs space-y-4">
+            <h4 className="font-black text-gray-800 text-xs md:text-sm flex items-center gap-2 border-b border-gray-200 pb-2">
+              <Clock className="w-4.5 h-4.5 text-indigo-600" />
+              {isFa ? 'آخرین تاریخ ثبت یا ورود گزارش‌های آفلاین به تفکیک واحدها' : 'Last Offline Import & Entry Dates per Department'}
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
+              {[
+                { id: 'HSE', label: 'HSE', color: 'bg-orange-50 text-orange-700 border-orange-100' },
+                { id: 'SECURITY', label: isFa ? 'انتظامات و حراست' : 'Security', color: 'bg-slate-100 text-slate-700 border-slate-200' },
+                { id: 'ADMIN', label: isFa ? 'اداری و پشتیبانی' : 'Admin', color: 'bg-blue-50 text-blue-700 border-blue-100' },
+                { id: 'HR', label: isFa ? 'منابع انسانی' : 'HR', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+                { id: 'TRAINING', label: isFa ? 'آموزش' : 'Training', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' }
+              ].map(dept => {
+                const dateVal = lastOfflineImports[dept.id];
+                const dateStr = dateVal 
+                  ? new Date(dateVal).toLocaleString(isFa ? 'fa-IR' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                  : (isFa ? 'بدون داده (ثبت نشده)' : 'No data');
+                return (
+                  <div key={dept.id} className="p-3.5 rounded-xl border border-gray-150 flex flex-col justify-between gap-2 bg-white shadow-xs">
+                    <span className="text-[11px] font-bold text-gray-800 leading-tight block">{dept.label}</span>
+                    <span className={`text-[10px] font-black px-1.5 py-1 rounded-lg ${dept.color} border text-center block max-w-full font-mono truncate`} title={dateStr}>
+                      {dateStr}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

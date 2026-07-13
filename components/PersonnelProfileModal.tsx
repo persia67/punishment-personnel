@@ -22,6 +22,26 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
   // Search in primary employee registry
   const registeredEmployee = employees.find(emp => emp.personnelId === personnelId);
 
+  // Check which details are missing
+  const incompleteFields: string[] = [];
+  if (registeredEmployee) {
+    if (!registeredEmployee.department || registeredEmployee.department.trim() === '') {
+      incompleteFields.push(settings.language === 'fa' ? 'واحد سازمانی' : 'Department');
+    }
+    if (!registeredEmployee.nationalId || registeredEmployee.nationalId.trim() === '') {
+      incompleteFields.push(settings.language === 'fa' ? 'کد ملی' : 'National ID');
+    }
+    if (!registeredEmployee.phoneNumber || registeredEmployee.phoneNumber.trim() === '') {
+      incompleteFields.push(settings.language === 'fa' ? 'شماره همراه پیامک' : 'SMS Phone Number');
+    }
+    if (!registeredEmployee.jobTitle || registeredEmployee.jobTitle.trim() === '') {
+      incompleteFields.push(settings.language === 'fa' ? 'سمت شغلی' : 'Job Title');
+    }
+    if (!registeredEmployee.hireDate || registeredEmployee.hireDate.trim() === '') {
+      incompleteFields.push(settings.language === 'fa' ? 'تاریخ شروع به کار' : 'Hire Date');
+    }
+  }
+
   // Aggregate Data
   const userViolations = violations.filter(v => v.personnelId === personnelId);
   const userRewards = rewards.filter(r => r.personnelId === personnelId);
@@ -95,10 +115,10 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
     }
   };
 
-  const renderSection = (title: string, icon: React.ReactNode, data: {v: Violation[], r: Reward[]}, colorClass: string) => {
+  const renderSection = (title: string, icon: React.ReactNode, data: {v: Violation[], r: Reward[]}, colorClass: string, key: string) => {
     if (data.v.length === 0 && data.r.length === 0) return null;
     return (
-      <div className={`mb-4 rounded-xl border border-gray-200 overflow-hidden shadow-sm`}>
+      <div key={key} className={`mb-4 rounded-xl border border-gray-200 overflow-hidden shadow-sm`}>
         <div className={`px-4 py-2.5 ${colorClass} flex justify-between items-center`}>
             <div className="flex items-center gap-2 font-bold text-sm md:text-base">
                 {icon} {title}
@@ -200,6 +220,22 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
         {/* Dashboard Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
             
+            {incompleteFields.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl mb-6 flex items-start gap-3 text-xs md:text-sm shadow-xs animate-in fade-in slide-in-from-top-4 duration-300">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                    <span>{settings.language === 'fa' ? '⚠️ نقص اطلاعات پرونده پرسنلی' : '⚠️ Incomplete Personnel Profile'}</span>
+                  </div>
+                  <div className="opacity-95 leading-relaxed font-semibold">
+                    {settings.language === 'fa' 
+                      ? `این پرونده با اطلاعات ناقص در سیستم ثبت شده است. فیلدهای مفقود یا خالی: ${incompleteFields.join('، ')}`
+                      : `This employee profile is recorded with missing values. Missing fields: ${incompleteFields.join(', ')}`}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Score Card */}
             <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row gap-6 items-center justify-between">
                  <div className="flex flex-col items-center justify-center w-full md:w-auto">
@@ -241,7 +277,8 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
                         getDeptDisplayName(dept),
                         getDeptIcon(dept),
                         data,
-                        getDeptColorClass(dept)
+                        getDeptColorClass(dept),
+                        dept
                     );
                 })}
             </div>

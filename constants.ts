@@ -396,7 +396,7 @@ export const DEFAULT_USERS: User[] = [
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'fa',
   themeColor: 'blue',
-  companyLogo: './app_icon_1781090095655.png',
+  companyLogo: './app_icon_fixed.jpg',
   companyName: 'Intelligent monitoring system سامانه جامع پایش',
   customApiKey: '',
   aiProvider: 'GEMINI',

@@ -11,6 +11,11 @@ autoUpdater.autoDownload = false; // Allow user to manually click "Download" in 
 let mainWindow = null;
 
 function createWindow() {
+  const isDev = !app.isPackaged;
+  const iconPath = isDev
+    ? path.join(__dirname, '../public/favicon.ico')
+    : path.join(__dirname, '../dist/favicon.ico');
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 900,
@@ -23,12 +28,10 @@ function createWindow() {
       sandbox: false // Often helps with renderer issues in production
     },
     title: "Intelligent monitoring system - Smart Safety & Reward Management",
-    icon: path.join(__dirname, '../public/favicon.ico'),
+    icon: iconPath,
     autoHideMenuBar: true
   });
 
-  const isDev = !app.isPackaged;
-  
   if (isDev) {
       mainWindow.loadURL('http://localhost:3000');
       // mainWindow.webContents.openDevTools(); 

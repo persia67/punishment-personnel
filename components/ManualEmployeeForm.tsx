@@ -2,6 +2,26 @@ import React, { useState } from 'react';
 import { UserPlus } from 'lucide-react';
 import { Employee, AppSettings } from '../types';
 
+export const DEPARTMENTS_LIST = [
+  'برق',
+  'الکترونیک',
+  'انفورماتیک',
+  'اداری',
+  'آموزش',
+  'مالی',
+  'فروش',
+  'تولید',
+  'تاسیسات',
+  'تعمیرات',
+  'لیفتراک',
+  'کالیبراسیون',
+  'انبار',
+  'بازرسی',
+  'مشاوران شرکت',
+  'ایمنی و بهداشت',
+  'سایر (ورود دستی)'
+];
+
 interface ManualEmployeeFormProps {
   settings: AppSettings;
   employees: Employee[];
@@ -23,13 +43,15 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
     phoneNumber: ''
   });
 
+  const [customDept, setCustomDept] = useState('');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!empFormData.personnelId || !empFormData.fullName || !empFormData.department) {
+    if (!empFormData.personnelId || !empFormData.fullName) {
       alert(
         settings.language === 'fa'
-          ? 'لطفا کد پرسنلی، نام پرسنل و واحد را وارد کنید.'
-          : 'Please enter Personnel ID, Name, and Department.'
+          ? 'لطفا کد پرسنلی و نام پرسنل را وارد کنید.'
+          : 'Please enter Personnel ID and Name.'
       );
       return;
     }
@@ -46,12 +68,16 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
       return;
     }
 
+    const finalDept = empFormData.department === 'سایر (ورود دستی)' 
+      ? customDept.trim() 
+      : empFormData.department.trim();
+
     const newEmp: Employee = {
       id: Date.now().toString() + Math.random().toString().slice(2, 6),
       personnelId: trimmedPId,
       fullName: empFormData.fullName.trim(),
       nationalId: empFormData.nationalId.trim() || undefined,
-      department: empFormData.department.trim(),
+      department: finalDept || '',
       hireDate: empFormData.hireDate.trim() || undefined,
       jobTitle: empFormData.jobTitle.trim() || undefined,
       phoneNumber: empFormData.phoneNumber.trim() || undefined
@@ -69,12 +95,26 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
       jobTitle: '',
       phoneNumber: ''
     });
+    setCustomDept('');
 
-    alert(
-      settings.language === 'fa'
-        ? 'پرسنل جدید با موفقیت ثبت شد.'
-        : 'Personnel successfully logged.'
-    );
+    const isProfileIncomplete = 
+      !newEmp.department || newEmp.department.trim() === '' || 
+      !newEmp.nationalId || newEmp.nationalId.trim() === '' || 
+      !newEmp.phoneNumber || newEmp.phoneNumber.trim() === '' || 
+      !newEmp.jobTitle || newEmp.jobTitle.trim() === '' || 
+      !newEmp.hireDate || newEmp.hireDate.trim() === '';
+
+    let successMsg = settings.language === 'fa'
+      ? 'پرسنل جدید با موفقیت ثبت شد.'
+      : 'Personnel successfully logged.';
+
+    if (isProfileIncomplete) {
+      successMsg += settings.language === 'fa'
+        ? '\n\n⚠️ توجه: این پرونده به صورت ناقص تشکیل شد! برخی اطلاعات (مانند واحد، شماره همراه، سمت، کد ملی یا تاریخ استخدام) مفقود یا خالی است و نیاز به تکمیل دارد.'
+        : '\n\n⚠️ Warning: This profile was logged with incomplete details! Some fields (like department, phone number, job title, national ID, or hire date) are missing and need to be completed.';
+    }
+
+    alert(successMsg);
   };
 
   return (
@@ -132,21 +172,30 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
             spellCheck={false}
           />
         </div>
-        <div>
+        <div className="flex flex-col">
           <label className="block text-[10px] text-gray-500 mb-1">
-            {settings.language === 'fa' ? 'بخش / واحد (اجباری)' : 'Department (Required)'}
+            {settings.language === 'fa' ? 'بخش / واحد (اختیاری)' : 'Department (Optional)'}
           </label>
-          <input
-            type="text"
-            placeholder="e.g. تولید, انبار, HSE"
+          <select
             value={empFormData.department}
             onChange={e => setEmpFormData({ ...empFormData, department: e.target.value })}
             className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            required
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-          />
+          >
+            <option value="">{settings.language === 'fa' ? 'انتخاب واحد کاری...' : 'Select Department...'}</option>
+            {DEPARTMENTS_LIST.map(dept => (
+              <option key={dept} value={dept}>{dept}</option>
+            ))}
+          </select>
+          {empFormData.department === 'سایر (ورود دستی)' && (
+            <input
+              type="text"
+              required
+              placeholder={settings.language === 'fa' ? 'نام واحد کاری دستی...' : 'Custom Dept...'}
+              value={customDept}
+              onChange={e => setCustomDept(e.target.value)}
+              className="mt-1.5 w-full px-3 py-1.5 border border-red-200 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          )}
         </div>
         <div>
           <label className="block text-[10px] text-gray-500 mb-1">
