@@ -58,6 +58,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
   const [empSearchTerm, setEmpSearchTerm] = useState('');
   const [showEmpResults, setShowEmpResults] = useState(false);
   const [customDeptText, setCustomDeptText] = useState('');
+  const [isManualDept, setIsManualDept] = useState(false);
 
   const matchedEmployees = React.useMemo(() => {
     if (!empSearchTerm.trim()) return [];
@@ -75,10 +76,11 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
       ...prev,
       personnelId: emp.personnelId,
       employeeName: emp.fullName,
-      department: isStandard ? emp.department : 'سایر (ورود دستی)'
+      department: emp.department
     }));
     setEmpSearchTerm(`${emp.fullName} (${emp.personnelId})`);
     setShowEmpResults(false);
+    setIsManualDept(!isStandard);
     if (!isStandard) {
       setCustomDeptText(emp.department);
     }

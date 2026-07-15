@@ -11,14 +11,15 @@ import SettingsModal from './components/SettingsModal';
 import CodeLegendModal from './components/CodeLegendModal';
 import PrintReportModal from './components/PrintReportModal';
 import PersonnelProfileModal from './components/PersonnelProfileModal';
-import { DEPARTMENTS_LIST } from './components/ManualEmployeeForm';
+import { EditEmployeeModal } from './components/EditEmployeeModal';
+import { ManualEmployeeForm, DEPARTMENTS_LIST } from './components/ManualEmployeeForm';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import OfflineSyncModal from './components/OfflineSyncModal';
 import { EditAvatarModal } from './components/EditAvatarModal';
 import { WorkerOfMonthModal } from './components/WorkerOfMonthModal';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { sendNotificationSms } from './services/smsService';
-import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2 } from 'lucide-react';
+import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -28,8 +29,14 @@ const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loginError, setLoginError] = useState<string>('');
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'SMS' | 'PROFILE'>('APPEARANCE');
+  const [currentViewPage, setCurrentViewPage] = useState<'DASHBOARD' | 'PERSONNEL' | 'INBOX'>('DASHBOARD');
+  const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [personnelSearchQuery, setPersonnelSearchQuery] = useState('');
+  const [personnelDeptFilter, setPersonnelDeptFilter] = useState('ALL');
   const [violations, setViolations] = useState<Violation[]>(MOCK_VIOLATIONS);
   const [rewards, setRewards] = useState<Reward[]>(MOCK_REWARDS);
   const [systemMode, setSystemMode] = useState<SystemMode>('VIOLATION');
@@ -38,11 +45,47 @@ const App: React.FC = () => {
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false); 
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isPrintReportOpen, setIsPrintReportOpen] = useState(false);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isOfflineSyncOpen, setIsOfflineSyncOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isEditAvatarOpen, setIsEditAvatarOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{isOpen: boolean; id: string | null; type: 'VIOLATION' | 'REWARD'}>({ isOpen: false, id: null, type: 'VIOLATION' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [localSearch, setLocalSearch] = useState('');
+  const [showMainSearchDropdown, setShowMainSearchDropdown] = useState(false);
+  const mainSearchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (searchTerm === '') {
+      setLocalSearch('');
+    } else if (localSearch === '' && searchTerm) {
+      setLocalSearch(searchTerm);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mainSearchContainerRef.current && !mainSearchContainerRef.current.contains(event.target as Node)) {
+        setShowMainSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const dropdownMatchedEmployees = React.useMemo(() => {
+    const query = localSearch.toLowerCase().trim();
+    if (!query) return [];
+    return employees.filter(emp => {
+      return (
+        emp.fullName.toLowerCase().includes(query) ||
+        emp.personnelId.toLowerCase().includes(query) ||
+        (emp.department && emp.department.toLowerCase().includes(query))
+      );
+    }).slice(0, 8);
+  }, [localSearch, employees]);
   const [approvalStatusFilter, setApprovalStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<'SCORE' | 'DEPARTMENT' | 'LAST_NAME' | 'NONE'>('NONE');
@@ -580,6 +623,72 @@ const App: React.FC = () => {
       pushDataToServerState(violations, rewards, users, newEmployees, violationCodes, rewardCodes, settings);
   };
 
+  const handleUpdateEmployee = (updatedEmp: Employee) => {
+    // 1. Update employees list
+    const updatedEmployeesList = employees.map(emp => emp.id === updatedEmp.id ? updatedEmp : emp);
+    updateEmployees(updatedEmployeesList);
+
+    // 2. Cascade changes to violations and rewards
+    const oldEmp = employees.find(emp => emp.id === updatedEmp.id);
+    if (oldEmp) {
+      let violationsChanged = false;
+      let rewardsChanged = false;
+      
+      const oldPersonnelId = oldEmp.personnelId;
+      const newPersonnelId = updatedEmp.personnelId;
+      const newFullName = updatedEmp.fullName;
+      const newDepartment = updatedEmp.department;
+
+      const updatedViolations = violations.map(v => {
+        if (v.personnelId === oldPersonnelId) {
+          violationsChanged = true;
+          return {
+            ...v,
+            personnelId: newPersonnelId,
+            employeeName: newFullName,
+            department: newDepartment
+          };
+        }
+        return v;
+      });
+
+      const updatedRewards = rewards.map(r => {
+        if (r.personnelId === oldPersonnelId) {
+          rewardsChanged = true;
+          return {
+            ...r,
+            personnelId: newPersonnelId,
+            employeeName: newFullName,
+            department: newDepartment
+          };
+        }
+        return r;
+      });
+
+      if (violationsChanged) {
+        setViolations(updatedViolations);
+        localStorage.setItem('sg_violations', JSON.stringify(updatedViolations));
+      }
+      if (rewardsChanged) {
+        setRewards(updatedRewards);
+        localStorage.setItem('sg_rewards', JSON.stringify(updatedRewards));
+      }
+
+      // Sync with central database if any items changed
+      if (violationsChanged || rewardsChanged) {
+        pushDataToServerState(
+          updatedViolations,
+          updatedRewards,
+          users,
+          updatedEmployeesList,
+          violationCodes,
+          rewardCodes,
+          settings
+        );
+      }
+    }
+  };
+
   const handleUpdateSettings = (s: AppSettings) => {
     setSettings(s);
     pushDataToServerState(violations, rewards, users, employees, violationCodes, rewardCodes, s);
@@ -1053,7 +1162,64 @@ const App: React.FC = () => {
            </div>
          )}
 
-         {/* Dynamic Mode Segment Directory - Fresh, Premium & Distinctive */}
+         {/* Main App Page Navigation Tabs */}
+          <div className="flex border-b border-gray-200 gap-1.5 md:gap-4 mb-2 print:hidden overflow-x-auto no-scrollbar pb-1" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
+            <button
+              onClick={() => setCurrentViewPage('DASHBOARD')}
+              className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs md:text-sm transition-all whitespace-nowrap active:scale-95 ${
+                currentViewPage === 'DASHBOARD'
+                  ? 'border-indigo-600 text-indigo-700 font-black'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>{settings.language === 'fa' ? 'پیشخوان تخلفات و تشویق‌ها' : 'Compliance Dashboard'}</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentViewPage('PERSONNEL')}
+              className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs md:text-sm transition-all whitespace-nowrap active:scale-95 ${
+                currentViewPage === 'PERSONNEL'
+                  ? 'border-indigo-600 text-indigo-700 font-black'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <UserIcon className="w-4 h-4" />
+              <span>{settings.language === 'fa' ? 'پایگاه پرونده‌های پرسنلی' : 'Personnel Directory'}</span>
+            </button>
+
+            {canApprove && (
+              <button
+                onClick={() => setCurrentViewPage('INBOX')}
+                className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs md:text-sm transition-all whitespace-nowrap relative active:scale-95 ${
+                  currentViewPage === 'INBOX'
+                    ? 'border-indigo-600 text-indigo-700 font-black'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Inbox className="w-4 h-4" />
+                <span>{settings.language === 'fa' ? 'صندوق ورودی مدیریت' : 'Manager Inbox'}</span>
+                {/* Show badge for total pending approval cases that the current user can approve */}
+                {(() => {
+                  const pendingViolations = violations.filter(v => !v.isApproved && getCanApproveItem(v));
+                  const pendingRewards = rewards.filter(r => !r.isApproved && getCanApproveItem(r));
+                  const totalPendingCount = pendingViolations.length + pendingRewards.length;
+                  if (totalPendingCount > 0) {
+                    return (
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-bold leading-none text-white bg-red-600 rounded-full animate-bounce mr-1.5 ml-1.5">
+                        {totalPendingCount}
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
+              </button>
+            )}
+          </div>
+
+          {currentViewPage === 'DASHBOARD' && (
+            <>
+              {/* Dynamic Mode Segment Directory - Fresh, Premium & Distinctive */}
         <div className="p-1.5 rounded-2xl bg-white border border-gray-200 shadow-xs grid grid-cols-1 md:grid-cols-2 gap-2 mb-6">
           {/* Card 1 Switch: Safety Violations Portal */}
           <div 
@@ -1284,15 +1450,85 @@ const App: React.FC = () => {
         {/* Action Bar */}
         <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-4">
              <div className="flex flex-col sm:flex-row gap-3 flex-1 max-w-2xl">
-                 <div className="relative flex-grow">
+                 <div ref={mainSearchContainerRef} className="relative flex-grow">
                     <Search className={`absolute ${settings.language === 'fa' ? 'right-3' : 'left-3'} top-3.5 h-4 w-4 text-gray-400`} />
                     <input 
                         type="text" 
                         placeholder={t.search} 
-                        className={`w-full py-2.5 ${settings.language === 'fa' ? 'pr-9 pl-4' : 'pl-9 pr-4'} text-base md:text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} bg-white shadow-sm`} 
-                        value={searchTerm} 
-                        onChange={(e) => setSearchTerm(e.target.value)} 
+                        className={`w-full py-2.5 ${settings.language === 'fa' ? 'pr-9 pl-10' : 'pl-9 pr-10'} text-base md:text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} bg-white shadow-sm`} 
+                        value={localSearch} 
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setLocalSearch(val);
+                            setShowMainSearchDropdown(true);
+                            if (val.trim() === '') {
+                                setSearchTerm('');
+                            }
+                        }}
+                        onFocus={() => setShowMainSearchDropdown(true)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                setSearchTerm(localSearch);
+                                setShowMainSearchDropdown(false);
+                            }
+                        }}
                     />
+                    {localSearch && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setLocalSearch('');
+                                setSearchTerm('');
+                                setShowMainSearchDropdown(false);
+                            }}
+                            className={`absolute ${settings.language === 'fa' ? 'left-3' : 'right-3'} top-3 p-0.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors`}
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    )}
+
+                    {/* Autocomplete Dropdown List */}
+                    {showMainSearchDropdown && localSearch.trim() !== '' && (
+                        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-gray-100 animate-in fade-in slide-in-from-top-1 duration-150">
+                            {dropdownMatchedEmployees.length === 0 ? (
+                                <div className="p-3 text-xs text-gray-500 text-center">
+                                    {settings.language === 'fa' 
+                                        ? 'هیچ پرسنلی با این مشخصات یافت نشد (Enter برای جستجوی آزاد)' 
+                                        : 'No personnel found (Press Enter for open search)'}
+                                </div>
+                            ) : (
+                                <div className="p-1.5 space-y-0.5">
+                                    <div className={`px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider ${settings.language === 'fa' ? 'text-right' : 'text-left'}`}>
+                                        {settings.language === 'fa' ? 'پرسنل انطباقی یافت شده' : 'Matching Employees'}
+                                    </div>
+                                    {dropdownMatchedEmployees.map(emp => (
+                                        <button
+                                            type="button"
+                                            key={emp.id}
+                                            onClick={() => {
+                                                setLocalSearch(`${emp.fullName} (${emp.personnelId})`);
+                                                setSearchTerm(emp.personnelId);
+                                                setShowMainSearchDropdown(false);
+                                            }}
+                                            className={`w-full px-2.5 py-2 hover:bg-gray-50 rounded-lg transition-colors flex items-center justify-between text-xs md:text-sm group ${settings.language === 'fa' ? 'flex-row' : 'flex-row-reverse'}`}
+                                        >
+                                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold shrink-0">
+                                                {emp.department}
+                                            </span>
+                                            <div className={`flex flex-col gap-0.5 ${settings.language === 'fa' ? 'items-end' : 'items-start'}`}>
+                                                <span className="font-extrabold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                                                    {emp.fullName}
+                                                 </span>
+                                                <span className="text-[10px] text-gray-400 font-mono">
+                                                    {settings.language === 'fa' ? 'کد پرسنلی:' : 'ID:'} {emp.personnelId}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                  </div>
                   {/* Department Dropdown Filter */}
                   <div className="relative shrink-0">
@@ -1664,7 +1900,417 @@ const App: React.FC = () => {
               )}
           </div>
         </div>
+            </>
+          )}
+
+          {/* PERSONNEL DIRECTORY PAGE */}
+          {currentViewPage === 'PERSONNEL' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {/* Page Header */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 md:p-6 rounded-2xl border border-gray-200 shadow-xs">
+                <div>
+                  <h2 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-2">
+                    <Users className="w-5.5 h-5.5 text-indigo-600" />
+                    <span>{settings.language === 'fa' ? 'بانک جامع پرونده‌های الکترونیکی پرسنلی' : 'Personnel Electronic Database'}</span>
+                  </h2>
+                  <p className="text-xs md:text-sm text-gray-500 mt-1.5 leading-relaxed">
+                    {settings.language === 'fa' 
+                      ? 'سوابق کامل، ارزیابی هوشمند امتیازات رفتار ایمنی (HSE)، وضعیت ریسک و کلیه اخطارها و تقدیرهای صادر شده پرسنل کارخانه.'
+                      : 'Access complete employee compliance folders, point history, and HSE hazard levels in a unified directory.'}
+                  </p>
+                </div>
+                {/* Add Employee Button for Admins */}
+                {['PLANT_MANAGER', 'HR_MANAGER', 'DEVELOPER', 'HSE_MANAGER', 'ADMIN_STAFF'].includes(user?.role || '') && (
+                  <button
+                    onClick={() => setIsAddEmployeeOpen(true)}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 whitespace-nowrap cursor-pointer animate-in fade-in"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{settings.language === 'fa' ? 'ثبت پرسنل جدید' : 'Add New Employee'}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Search & Filter Bar */}
+              <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className={`absolute ${settings.language === 'fa' ? 'right-3' : 'left-3'} top-3 h-4 w-4 text-gray-400`} />
+                  <input 
+                    type="text" 
+                    placeholder={settings.language === 'fa' ? 'جستجوی نام یا کد پرسنلی...' : 'Search name or personnel ID...'} 
+                    className={`w-full py-2 ${settings.language === 'fa' ? 'pr-9 pl-4' : 'pl-9 pr-4'} text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} bg-white shadow-inner`} 
+                    value={personnelSearchQuery} 
+                    onChange={(e) => setPersonnelSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="relative w-full sm:w-48">
+                  <select
+                    value={personnelDeptFilter}
+                    onChange={(e) => setPersonnelDeptFilter(e.target.value)}
+                    className={`w-full py-2 px-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} text-xs md:text-sm font-semibold shadow-sm text-gray-700 cursor-pointer`}
+                  >
+                    <option value="ALL">{settings.language === 'fa' ? 'همه واحدها' : 'All Departments'}</option>
+                    {DEPARTMENTS_LIST.map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Personnel Grid */}
+              {(() => {
+                const filteredEmployees = employees.filter(emp => {
+                  const query = personnelSearchQuery.toLowerCase().trim();
+                  const matchesSearch = !query ||
+                    emp.fullName.toLowerCase().includes(query) ||
+                    emp.personnelId.toLowerCase().includes(query) ||
+                    (emp.department && emp.department.toLowerCase().includes(query));
+                  const matchesDept = personnelDeptFilter === 'ALL' || emp.department === personnelDeptFilter;
+                  return matchesSearch && matchesDept;
+                });
+
+                if (filteredEmployees.length === 0) {
+                  return (
+                    <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-xs">
+                      <UserIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <h3 className="text-sm font-bold text-gray-700">
+                        {settings.language === 'fa' ? 'پرسنلی با این مشخصات یافت نشد' : 'No personnel records match selection'}
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {settings.language === 'fa' ? 'می‌توانید پرسنل جدید را از دکمه ثبت پرسنل ثبت کنید.' : 'Add new employees or adjust your search filters.'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredEmployees.map(emp => {
+                      // Calculate employee's total score starting at 100 base
+                      const empViolations = violations.filter(v => v.personnelId === emp.personnelId && v.isApproved && !v.isArchived);
+                      const empRewards = rewards.filter(r => r.personnelId === emp.personnelId && r.isApproved && !r.isArchived);
+                      const totalDeductions = empViolations.reduce((sum, v) => sum + (v.score || 0), 0); // Negative values
+                      const totalAdditions = empRewards.reduce((sum, r) => sum + (r.score || 0), 0); // Positive values
+                      const totalScore = Math.max(0, 100 + totalDeductions + totalAdditions);
+
+                      // Determine status label & color
+                      let scoreColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                      let scoreStatus = settings.language === 'fa' ? 'عالی (نمونه)' : 'Excellent';
+                      
+                      if (totalScore < 60) {
+                        scoreColor = 'bg-red-50 text-red-700 border-red-200';
+                        scoreStatus = settings.language === 'fa' ? 'بحرانی (تعلیق/اخراج)' : 'Critical';
+                      } else if (totalScore < 80) {
+                        scoreColor = 'bg-orange-50 text-orange-700 border-orange-200';
+                        scoreStatus = settings.language === 'fa' ? 'خطر (کمیته انضباطی)' : 'Danger';
+                      } else if (totalScore < 100) {
+                        scoreColor = 'bg-amber-50 text-amber-700 border-amber-200';
+                        scoreStatus = settings.language === 'fa' ? 'هشدار' : 'Warning';
+                      } else if (totalScore <= 110) {
+                        scoreColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+                        scoreStatus = settings.language === 'fa' ? 'خوب' : 'Good';
+                      }
+
+                      return (
+                        <div
+                          key={emp.id}
+                          className="bg-white border border-gray-200 hover:border-indigo-300 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all hover:-translate-y-0.5 flex flex-col justify-between group relative overflow-hidden"
+                        >
+                          {/* Background decorative accent based on safety score */}
+                          <div className={`absolute top-0 right-0 left-0 h-1.5 ${
+                            totalScore >= 100 ? 'bg-emerald-500' : totalScore >= 80 ? 'bg-amber-500' : 'bg-red-500'
+                          }`} />
+
+                          <div className="space-y-4 pt-2">
+                            {/* Personnel Info Header */}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-11 h-11 rounded-xl font-bold text-sm flex items-center justify-center transition-transform group-hover:scale-105 ${themeStyles.lightBg} ${themeStyles.lightText}`}>
+                                  {emp.fullName.charAt(0)}
+                                </div>
+                                <div>
+                                  <h4 className="font-extrabold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-tight">
+                                    {emp.fullName}
+                                  </h4>
+                                  <span className="text-[10px] text-gray-400 font-bold block mt-1">
+                                    {emp.jobTitle || (settings.language === 'fa' ? 'پست سازمانی ثبت نشده' : 'No custom title')}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="bg-gray-100 border border-gray-200 text-gray-600 text-[10px] px-2.5 py-0.5 rounded-lg font-mono font-bold shrink-0">
+                                {emp.personnelId}
+                              </span>
+                            </div>
+
+                            {/* Rating / Score Indicator */}
+                            <div className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold ${scoreColor}`}>
+                              <span>{settings.language === 'fa' ? 'امتیاز رفتار ایمنی:' : 'Safety Point Score:'}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black font-mono">{totalScore}</span>
+                                <span className="text-[9px] px-1.5 py-0.5 bg-white rounded-md border border-inherit font-semibold">{scoreStatus}</span>
+                              </div>
+                            </div>
+
+                            {/* Department & Stats Row */}
+                            <div className="grid grid-cols-2 gap-2 text-center text-[10px] border-t border-b border-gray-100 py-3">
+                              <div className="border-l border-gray-100 last:border-0 px-1">
+                                <span className="block text-gray-400 font-bold">{settings.language === 'fa' ? 'دپارتمان' : 'Department'}</span>
+                                <span className="block font-black text-gray-700 truncate mt-1 text-xs" title={emp.department}>
+                                  {emp.department || '—'}
+                                </span>
+                              </div>
+                              <div className="px-1">
+                                <span className="block text-gray-400 font-bold">{settings.language === 'fa' ? 'خلاصه پرونده' : 'Dossier Log'}</span>
+                                <span className="block font-black text-xs mt-1 space-x-1 whitespace-nowrap">
+                                  <span className="text-red-500 font-bold">🚫 {empViolations.length} {settings.language === 'fa' ? 'تخلف' : 'Non-comp'}</span>
+                                  <span className="text-gray-300">|</span>
+                                  <span className="text-emerald-500 font-bold">🏆 {empRewards.length} {settings.language === 'fa' ? 'امتیاز' : 'Reward'}</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Main Action Buttons */}
+                          <div className="flex gap-2 mt-4">
+                            <button
+                              onClick={() => setSelectedPersonnelId(emp.personnelId)}
+                              className="flex-1 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 cursor-pointer"
+                            >
+                              <BookOpen className="w-4 h-4" />
+                              <span>{settings.language === 'fa' ? 'مشاهده پرونده' : 'View Dossier'}</span>
+                            </button>
+                            {['PLANT_MANAGER', 'HR_MANAGER', 'DEVELOPER', 'HSE_MANAGER', 'ADMIN_STAFF'].includes(user?.role || '') && (
+                              <button
+                                onClick={() => setEditingEmployee(emp)}
+                                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-250 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                title={settings.language === 'fa' ? 'ویرایش مشخصات پرسنلی' : 'Edit Personnel'}
+                              >
+                                <Edit className="w-4 h-4 text-slate-500" />
+                                <span>{settings.language === 'fa' ? 'ویرایش' : 'Edit'}</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* MANAGER APPROVAL INBOX PAGE */}
+          {currentViewPage === 'INBOX' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {/* Page Header */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 md:p-6 rounded-2xl border border-gray-200 shadow-xs">
+                <div>
+                  <h2 className="text-lg md:text-xl font-black text-gray-900 flex items-center gap-2">
+                    <Inbox className="w-5.5 h-5.5 text-indigo-600 animate-pulse" />
+                    <span>{settings.language === 'fa' ? 'کارتابل تأیید و صندوق ورودی مدیریت' : 'Manager Approval Inbox'}</span>
+                  </h2>
+                  <p className="text-xs md:text-sm text-gray-500 mt-1.5 leading-relaxed">
+                    {settings.language === 'fa' 
+                      ? 'بررسی، تأیید و اعمال نهایی عدم انطباق‌ها و پاداش‌های ثبت شده توسط ناظران HSE، انتظامات و آموزش بر روی پرونده‌های پرسنل.'
+                      : 'Review, approve, and apply pending safety infractions and incentive rewards submitted by site inspectors.'}
+                  </p>
+                </div>
+                <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2 font-bold text-xs text-indigo-800 flex items-center gap-1.5 shadow-inner">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
+                  <span>
+                    {settings.language === 'fa' 
+                      ? `نقش شما: ${(TRANSLATIONS as any)[settings.language][`role_${user.role.toLowerCase()}`] || user.role}` 
+                      : `Active Role: ${user.role}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Pending Items List */}
+              {(() => {
+                const pendingViolations = violations.filter(v => !v.isApproved && getCanApproveItem(v)).map(v => ({ ...v, itemType: 'VIOLATION' as const }));
+                const pendingRewards = rewards.filter(r => !r.isApproved && getCanApproveItem(r)).map(r => ({ ...r, itemType: 'REWARD' as const }));
+                const allPending = [...pendingViolations, ...pendingRewards].sort((a, b) => {
+                  return new Date(b.date).getTime() - new Date(a.date).getTime();
+                });
+
+                if (allPending.length === 0) {
+                  return (
+                    <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-xs animate-in fade-in">
+                      <CheckIcon className="w-12 h-12 text-emerald-500 mx-auto mb-3 p-2 bg-emerald-50 rounded-full" />
+                      <h3 className="text-sm font-bold text-gray-700">
+                        {settings.language === 'fa' ? 'صندوق ورودی شما خالی است!' : 'Your inbox is clear!'}
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {settings.language === 'fa' ? 'هیچ مورد نیازمند تایید در کارتابل شما وجود ندارد.' : 'All logged infractions and rewards have been processed.'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {allPending.map(item => {
+                      const isViolation = item.itemType === 'VIOLATION';
+                      const code = isViolation ? (item as any).violationCode : (item as any).rewardCode;
+                      const score = item.score;
+                      
+                      return (
+                        <div 
+                          key={item.id}
+                          className={`bg-white border rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col md:flex-row justify-between md:items-center gap-5 ${
+                            isViolation ? 'border-red-150 hover:border-red-300' : 'border-emerald-150 hover:border-emerald-300'
+                          }`}
+                        >
+                          {/* Visual marker */}
+                          <div className={`absolute top-0 right-0 bottom-0 w-1.5 ${
+                            isViolation ? 'bg-red-500' : 'bg-emerald-500'
+                          }`} />
+
+                          {/* Core Info Details */}
+                          <div className="space-y-3 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                isViolation ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              }`}>
+                                {isViolation ? '🚫 اخطار تخلف' : '🏆 امتیاز تشویقی'}
+                              </span>
+                              <span className="text-[10px] text-gray-400 font-mono font-semibold">
+                                {settings.language === 'fa' ? 'شناسه مورد:' : 'Log ID:'} {item.id}
+                              </span>
+                              <span className="text-gray-300">•</span>
+                              <span className="text-[10px] text-gray-500 font-bold">
+                                {settings.language === 'fa' ? 'گزارش‌دهنده:' : 'Submitted by:'} {item.reporterName} ({item.departmentSource})
+                              </span>
+                              <span className="text-gray-300">•</span>
+                              <span className="text-[10px] text-gray-500 font-mono font-bold">
+                                {item.date}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${themeStyles.lightBg} ${themeStyles.lightText}`}>
+                                {item.employeeName.charAt(0)}
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-black text-gray-900 leading-tight">
+                                  {item.employeeName}
+                                  <span className="text-xs text-gray-400 font-bold mr-2">
+                                    ({settings.language === 'fa' ? 'کد پرسنلی:' : 'ID:'} {item.personnelId})
+                                  </span>
+                                </h4>
+                                <p className="text-[11px] text-gray-500 font-semibold mt-1">
+                                  {settings.language === 'fa' ? 'دپارتمان کاری:' : 'Working Unit:'} {item.department}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="bg-gray-50/70 border border-gray-150 rounded-xl p-3 text-xs text-gray-600 leading-relaxed space-y-1.5">
+                              <div>
+                                <strong className="text-gray-700">{settings.language === 'fa' ? 'شرح موضوع:' : 'Description:'}</strong>{' '}
+                                {getDisplayLabel(code, isViolation ? 'VIOLATION' : 'REWARD')} ({code})
+                              </div>
+                              {item.description && (
+                                <p className="text-gray-500 italic">
+                                  {item.description}
+                                </p>
+                              )}
+                              {isViolation && (item as any).penaltyActions && (item as any).penaltyActions.length > 0 && (
+                                <div className="text-[11px] text-red-600">
+                                  <strong>{settings.language === 'fa' ? 'اقدامات تنبیهی پیشنهادی:' : 'Proposed Penalty:'}</strong>{' '}
+                                  {(item as any).penaltyActions.join('، ')}
+                                </div>
+                              )}
+                              {!isViolation && (item as any).rewardsGiven && (item as any).rewardsGiven.length > 0 && (
+                                <div className="text-[11px] text-emerald-700">
+                                  <strong>{settings.language === 'fa' ? 'پاداش تشویقی پیشنهادی:' : 'Proposed Reward:'}</strong>{' '}
+                                  {(item as any).rewardsGiven.join('، ')}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Score badge & Actions desk */}
+                          <div className="flex flex-col sm:flex-row md:flex-col items-stretch md:items-end justify-between md:justify-center gap-3 shrink-0 md:border-l md:border-gray-100 md:pl-5">
+                            <div className="text-center md:text-right">
+                              <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">
+                                {settings.language === 'fa' ? 'تاثیر امتیاز' : 'Score Change'}
+                              </span>
+                              <span className={`text-lg font-black font-mono ${
+                                isViolation ? 'text-red-650' : 'text-emerald-650'
+                              }`} dir="ltr">
+                                {isViolation ? score : `+${score}`}
+                              </span>
+                            </div>
+
+                            <div className="flex gap-2 w-full md:w-auto">
+                              {/* View Dossier */}
+                              <button 
+                                onClick={() => setSelectedPersonnelId(item.personnelId)}
+                                className="px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                                title={settings.language === 'fa' ? 'مشاهده کامل پرونده' : 'View File'}
+                              >
+                                {settings.language === 'fa' ? 'سوابق' : 'Dossier'}
+                              </button>
+
+                              {/* Reject Submission */}
+                              {getCanDeleteItem(item) && (
+                                  <button 
+                                    onClick={() => setDeleteModal({ isOpen: true, id: item.id, type: isViolation ? 'VIOLATION' : 'REWARD' })}
+                                    className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-150 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                                    title={settings.language === 'fa' ? 'رد گزارش و حذف' : 'Reject'}
+                                  >
+                                    {settings.language === 'fa' ? 'رد کردن' : 'Reject'}
+                                  </button>
+                              )}
+
+                              {/* Approve Submission */}
+                              <button 
+                                onClick={() => handleApprove(item.id, isViolation ? 'VIOLATION' : 'REWARD')}
+                                className="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
+                                title={settings.language === 'fa' ? 'تایید و اعمال نهایی در پرونده پرسنل' : 'Approve'}
+                              >
+                                <Check className="w-4 h-4 font-bold" />
+                                <span>{settings.language === 'fa' ? 'تایید نهایی' : 'Approve'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
       </main>
+
+      {/* Manual Add Employee Overlay Modal */}
+      {isAddEmployeeOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-gray-200 max-w-2xl w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+              <h3 className="text-sm font-black text-gray-900 flex items-center gap-1.5">
+                <Users className="w-5 h-5 text-indigo-600" />
+                <span>{settings.language === 'fa' ? 'افزودن پرسنل جدید به سیستم' : 'Register New Employee'}</span>
+              </h3>
+              <button 
+                onClick={() => setIsAddEmployeeOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <ManualEmployeeForm 
+              settings={settings}
+              employees={employees}
+              onAddEmployee={(newEmp) => {
+                updateEmployees([...employees, newEmp]);
+                setIsAddEmployeeOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {isModalOpen && <ViolationForm currentUser={user} existingViolations={violations} employees={employees} onClose={() => setIsModalOpen(false)} onSubmit={handleAddViolation} codes={violationCodes} />}
@@ -1679,6 +2325,15 @@ const App: React.FC = () => {
         rewards={rewards}
         settings={settings}
         employees={employees}
+      />
+      
+      <EditEmployeeModal
+        isOpen={!!editingEmployee}
+        onClose={() => setEditingEmployee(null)}
+        employee={editingEmployee}
+        employees={employees}
+        settings={settings}
+        onUpdateEmployee={handleUpdateEmployee}
       />
       
       <DeleteModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, id: null, type: 'VIOLATION' })} onConfirm={handleDelete} />

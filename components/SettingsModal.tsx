@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, User, ThemeColor, Language, Role, Employee, CodeItem, SmsConfig, SmsLog } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save, ShieldAlert, Share2, Edit } from 'lucide-react';
+import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save, ShieldAlert, Share2, Edit, User as UserIcon, Camera } from 'lucide-react';
 // @ts-ignore
 import * as XLSX from 'xlsx';
 import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
@@ -17,18 +17,26 @@ interface SettingsModalProps {
   employees: Employee[];
   onUpdateEmployees: (newEmployees: Employee[]) => void;
   currentUser: User;
+  onUpdateCurrentUser?: (newCurrentUser: User) => void;
   violationCodes: CodeItem[];
   onUpdateViolationCodes: (codes: CodeItem[]) => void;
   rewardCodes: CodeItem[];
   onUpdateRewardCodes: (codes: CodeItem[]) => void;
   onRestoreFullBackup?: (backup: any) => void;
+  defaultTab?: 'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'SMS' | 'PROFILE';
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ 
-  isOpen, onClose, settings, onUpdateSettings, users, onUpdateUsers, employees, onUpdateEmployees, currentUser,
-  violationCodes, onUpdateViolationCodes, rewardCodes, onUpdateRewardCodes, onRestoreFullBackup
+  isOpen, onClose, settings, onUpdateSettings, users, onUpdateUsers, employees, onUpdateEmployees, currentUser, onUpdateCurrentUser,
+  violationCodes, onUpdateViolationCodes, rewardCodes, onUpdateRewardCodes, onRestoreFullBackup, defaultTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'SMS'>('APPEARANCE');
+  const [activeTab, setActiveTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'SMS' | 'PROFILE'>('APPEARANCE');
+
+  useEffect(() => {
+    if (isOpen && defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [isOpen, defaultTab]);
   const [newUser, setNewUser] = useState<Partial<User>>({ username: '', password: '', fullName: '', role: 'HSE_OFFICER', managedDepartment: '', phoneNumber: '', email: '', telegramUsername: '' });
   const [importMode, setImportMode] = useState<'MERGE' | 'REPLACE'>('MERGE');
   const [importMethod, setImportMethod] = useState<'EXCEL_FILE' | 'TEXT_PASTE'>('EXCEL_FILE');
@@ -61,6 +69,136 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [empSearch, setEmpSearch] = useState('');
   const empFormData = { personnelId: '', fullName: '', nationalId: '', department: '', hireDate: '', jobTitle: '', phoneNumber: '' };
   const setEmpFormData = (val: any) => {};
+
+  // Profile tab state variables
+  const [profileFullName, setProfileFullName] = useState(currentUser?.fullName || '');
+  const [profileAvatar, setProfileAvatar] = useState(currentUser?.avatar || '');
+  const [profileCustomAvatarUrl, setProfileCustomAvatarUrl] = useState('');
+  
+  const [passCurrent, setPassCurrent] = useState('');
+  const [passNew, setPassNew] = useState('');
+  const [passConfirm, setPassConfirm] = useState('');
+  
+  const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [passMsg, setPassMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const PRESET_AVATARS = [
+    { id: 'av_hse', label: 'HSE / Safety', emoji: '🧑‍🚒', gradient: 'from-orange-500 to-red-600', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
+    { id: 'av_sec', label: 'Security / Patrol', emoji: '👮', gradient: 'from-slate-600 to-slate-850', url: 'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?w=150&auto=format&fit=crop&q=80' },
+    { id: 'av_trn', label: 'Training / Mentor', emoji: '🎓', gradient: 'from-amber-400 to-yellow-600', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' },
+    { id: 'av_hr', label: 'HR / Talent', emoji: '👔', gradient: 'from-blue-500 to-indigo-600', url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' },
+    { id: 'av_adm', label: 'Admin / Support', emoji: '💼', gradient: 'from-cyan-500 to-sky-600', url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80' },
+    { id: 'av_dev', label: 'SysAdmin / Developer', emoji: '🧑‍💻', gradient: 'from-emerald-500 to-teal-600', url: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=150&auto=format&fit=crop&q=80' },
+    { id: 'av_mgr', label: 'Plant Manager', emoji: '👑', gradient: 'from-violet-500 to-purple-600', url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80' },
+    { id: 'av_tech', label: 'Engineer', emoji: '⚙️', gradient: 'from-rose-500 to-orange-500', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
+  ];
+
+  // Synchronize fields when currentUser changes or modal is loaded with profile active
+  useEffect(() => {
+    if (currentUser) {
+      setProfileFullName(currentUser.fullName || '');
+      setProfileAvatar(currentUser.avatar || '');
+    }
+    setProfileMsg(null);
+    setPassMsg(null);
+  }, [currentUser, isOpen]);
+
+  const handleProfileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert(settings.language === 'fa' 
+          ? 'حجم فایل انتخاب شده نباید بیشتر از ۲ مگابایت باشد.' 
+          : 'File size should not exceed 2MB.'
+        );
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setProfileAvatar(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileMsg(null);
+    if (!profileFullName.trim()) {
+      setProfileMsg({
+        type: 'error',
+        text: settings.language === 'fa' ? 'نام کامل نمی‌تواند خالی باشد.' : 'Full name cannot be empty.'
+      });
+      return;
+    }
+
+    const updatedUser: User = {
+      ...currentUser,
+      fullName: profileFullName.trim(),
+      avatar: profileAvatar,
+    };
+
+    if (onUpdateCurrentUser) {
+      onUpdateCurrentUser(updatedUser);
+      setProfileMsg({
+        type: 'success',
+        text: settings.language === 'fa' ? 'پروفایل شما با موفقیت بروزرسانی شد.' : 'Your profile has been updated successfully.'
+      });
+    }
+  };
+
+  const validatePasswordStrength = (pwd: string) => {
+    return /[a-z]/.test(pwd) && /[A-Z]/.test(pwd) && /\d/.test(pwd);
+  };
+
+  const handleSavePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassMsg(null);
+
+    if (passCurrent !== currentUser.password) {
+      setPassMsg({
+        type: 'error',
+        text: settings.language === 'fa' ? 'رمز عبور فعلی نادرست است.' : 'Current password is incorrect.'
+      });
+      return;
+    }
+
+    if (!validatePasswordStrength(passNew)) {
+      setPassMsg({
+        type: 'error',
+        text: settings.language === 'fa' 
+          ? 'رمز عبور جدید باید حداقل دارای یک حرف بزرگ، یک حرف کوچک و یک عدد باشد.' 
+          : 'New password must contain at least one uppercase letter, one lowercase letter, and one number.'
+      });
+      return;
+    }
+
+    if (passNew !== passConfirm) {
+      setPassMsg({
+        type: 'error',
+        text: settings.language === 'fa' ? 'رمز عبور جدید با تاییدیه آن مطابقت ندارد.' : 'New password and confirmation do not match.'
+      });
+      return;
+    }
+
+    const updatedUser: User = {
+      ...currentUser,
+      password: passNew,
+    };
+
+    if (onUpdateCurrentUser) {
+      onUpdateCurrentUser(updatedUser);
+      setPassCurrent('');
+      setPassNew('');
+      setPassConfirm('');
+      setPassMsg({
+        type: 'success',
+        text: settings.language === 'fa' ? 'رمز عبور شما با موفقیت تغییر یافت.' : 'Your password has been changed successfully.'
+      });
+    }
+  };
 
   const [editingPersonnelId, setEditingPersonnelId] = useState<string | null>(null);
   const [editingEmpData, setEditingEmpData] = useState<Partial<Employee>>({});
@@ -799,8 +937,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
             )}
 
-
-            
             {(isDeveloper || currentUser.role === 'HSE_MANAGER' || currentUser.role === 'PLANT_MANAGER') && (
                 <button 
                     onClick={() => setActiveTab('DATA')}
@@ -820,6 +956,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <span className="text-xs md:text-sm">{(settings.language === 'fa' ? 'تنظیمات پیامک' : 'SMS Settings')}</span>
                 </button>
             )}
+
+            <button 
+                onClick={() => setActiveTab('PROFILE')}
+                className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl transition-all whitespace-nowrap ${activeTab === 'PROFILE' ? 'bg-white shadow-md text-indigo-600 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+                <UserIcon className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-xs md:text-sm">{settings.language === 'fa' ? 'پروفایل کاربری' : 'User Profile'}</span>
+            </button>
         </div>
 
         {/* Content */}
@@ -830,7 +974,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     {activeTab === 'USERS' && t.users}
                     {activeTab === 'DATA' && t.dataManagement}
                     {activeTab === 'CODES' && t.codingSystem}
-                     {activeTab === 'SMS' && (settings.language === 'fa' ? 'تنظیمات اتصال پیامک و لاگ‌ها' : 'SMS Gateway & Notification Logs')}
+                    {activeTab === 'SMS' && (settings.language === 'fa' ? 'تنظیمات اتصال پیامک و لاگ‌ها' : 'SMS Gateway & Notification Logs')}
+                    {activeTab === 'PROFILE' && (settings.language === 'fa' ? 'تنظیمات پروفایل کاربری' : 'User Profile Settings')}
                 </h3>
                 <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                     <X className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
@@ -2080,6 +2225,251 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
              )}
 
  
+              {activeTab === 'PROFILE' && (
+                  <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-right" dir="rtl">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 font-sans">
+                          {/* Personal Information & Avatar */}
+                          <div className="bg-white border border-gray-150 p-5 md:p-6 rounded-2xl shadow-sm space-y-5">
+                              <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+                                  <UserIcon className="w-5 h-5 text-indigo-600 animate-pulse" />
+                                  <h4 className="font-bold text-sm md:text-base text-gray-805">
+                                      {settings.language === 'fa' ? 'ویرایش مشخصات کاربری' : 'Edit Personal Profile'}
+                                  </h4>
+                              </div>
+
+                              <form onSubmit={handleSaveProfile} className="space-y-4">
+                                  {profileMsg && (
+                                      <div className={`p-3 rounded-xl text-xs font-bold border animate-in fade-in slide-in-from-top-2 duration-300 ${
+                                          profileMsg.type === 'success' 
+                                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                              : 'bg-red-50 text-red-700 border-red-200'
+                                      }`}>
+                                          {profileMsg.text}
+                                      </div>
+                                  )}
+
+                                  <div>
+                                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                                          {settings.language === 'fa' ? 'نام و نام خانوادگی' : 'Full Name'}
+                                      </label>
+                                      <input 
+                                          type="text"
+                                          value={profileFullName}
+                                          onChange={e => setProfileFullName(e.target.value)}
+                                          className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                          placeholder={settings.language === 'fa' ? 'مثال: علی احمدی' : 'e.g. Ali Ahmadi'}
+                                      />
+                                  </div>
+
+                                  <div>
+                                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                                          {settings.language === 'fa' ? 'نام کاربری (غیر قابل تغییر)' : 'Username (Read-only)'}
+                                      </label>
+                                      <input 
+                                          type="text"
+                                          value={currentUser.username}
+                                          disabled
+                                          className="w-full px-3 py-2 border border-gray-200 bg-gray-50 text-gray-550 rounded-lg text-xs font-bold focus:outline-none font-mono text-left cursor-not-allowed"
+                                      />
+                                  </div>
+
+                                  <div>
+                                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                                          {settings.language === 'fa' ? 'نقش کاربری و سطح دسترسی' : 'System Role / Access'}
+                                      </label>
+                                      <input 
+                                          type="text"
+                                          value={(TRANSLATIONS as any)[settings.language][`role_${currentUser.role.toLowerCase()}`] || currentUser.role}
+                                          disabled
+                                          className="w-full px-3 py-2 border border-gray-200 bg-gray-50 text-gray-550 rounded-lg text-xs font-bold focus:outline-none cursor-not-allowed"
+                                      />
+                                  </div>
+
+                                  {/* Avatar Selection */}
+                                  <div className="space-y-3">
+                                      <label className="block text-xs font-bold text-gray-700">
+                                          {settings.language === 'fa' ? 'انتخاب عکس پروفایل (آواتار)' : 'Choose Profile Picture'}
+                                      </label>
+
+                                      {/* Current Selection Preview */}
+                                      <div className="flex items-center gap-4 p-3 bg-slate-50 border border-slate-150 rounded-xl">
+                                          {profileAvatar ? (
+                                              profileAvatar.startsWith('http') || profileAvatar.startsWith('data:') ? (
+                                                  <img referrerPolicy="no-referrer" src={profileAvatar} alt="Profile Preview" className="w-12 h-12 rounded-full object-cover border border-gray-200" />
+                                              ) : (
+                                                  <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white text-lg font-bold font-mono">
+                                                      {currentUser.username.charAt(0).toUpperCase()}
+                                                  </div>
+                                              )
+                                          ) : (
+                                              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+                                                  <UserIcon className="w-6 h-6" />
+                                              </div>
+                                          )}
+                                          <div>
+                                              <span className="block text-xs font-black text-gray-800">
+                                                  {settings.language === 'fa' ? 'پیش‌نمایش تصویر انتخابی' : 'Selected Avatar Preview'}
+                                              </span>
+                                              <span className="block text-[10px] text-gray-400 font-semibold mt-0.5">
+                                                  {settings.language === 'fa' ? 'تصویر به صورت محلی در مرورگر شما ذخیره می‌گردد' : 'Persisted locally in storage replica'}
+                                              </span>
+                                          </div>
+                                      </div>
+
+                                      {/* Presets Grid */}
+                                      <div className="grid grid-cols-4 gap-2">
+                                          {PRESET_AVATARS.map(av => {
+                                              const isSelected = profileAvatar === av.url;
+                                              return (
+                                                  <button
+                                                      type="button"
+                                                      key={av.id}
+                                                      onClick={() => setProfileAvatar(av.url)}
+                                                      className={`relative aspect-square rounded-xl overflow-hidden border transition-all ${
+                                                          isSelected 
+                                                              ? 'border-indigo-600 ring-2 ring-indigo-650/20 scale-[1.03]' 
+                                                              : 'border-gray-150 hover:border-gray-300'
+                                                      }`}
+                                                      title={av.label}
+                                                  >
+                                                      <img referrerPolicy="no-referrer" src={av.url} alt={av.label} className="w-full h-full object-cover" />
+                                                      <span className="absolute bottom-1 right-1 text-xs bg-black/60 px-1 py-0.5 rounded text-white font-sans leading-none">{av.emoji}</span>
+                                                      {isSelected && (
+                                                          <div className="absolute inset-0 bg-indigo-600/10 flex items-center justify-center animate-in fade-in zoom-in duration-150">
+                                                              <Check className="w-6 h-6 text-indigo-750 bg-white/90 p-1 rounded-full shadow-md" />
+                                                          </div>
+                                                      )}
+                                                  </button>
+                                              );
+                                          })}
+                                      </div>
+
+                                      {/* Custom URL Input */}
+                                      <div className="flex gap-2">
+                                          <input 
+                                              type="text"
+                                              value={profileCustomAvatarUrl}
+                                              onChange={e => setProfileCustomAvatarUrl(e.target.value)}
+                                              className="flex-1 px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-left"
+                                              placeholder="https://example.com/avatar.jpg"
+                                          />
+                                          <button
+                                              type="button"
+                                              onClick={() => {
+                                                  if (profileCustomAvatarUrl.trim()) {
+                                                      setProfileAvatar(profileCustomAvatarUrl.trim());
+                                                      setProfileCustomAvatarUrl('');
+                                                  }
+                                              }}
+                                              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-250 text-gray-700 text-xs font-black rounded-lg transition-colors whitespace-nowrap"
+                                          >
+                                              {settings.language === 'fa' ? 'اعمال آدرس' : 'Apply Link'}
+                                          </button>
+                                      </div>
+
+                                      {/* Image File Upload */}
+                                      <div className="relative">
+                                          <input 
+                                              type="file" 
+                                              id="profile-avatar-file" 
+                                              accept="image/*"
+                                              onChange={handleProfileFileChange}
+                                              className="hidden" 
+                                          />
+                                          <label 
+                                              htmlFor="profile-avatar-file"
+                                              className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-gray-350 hover:border-indigo-550 rounded-xl bg-slate-50/50 hover:bg-indigo-50/10 cursor-pointer transition-colors text-xs font-bold text-gray-600 hover:text-indigo-650"
+                                          >
+                                              <Upload className="w-4 h-4 text-gray-400" />
+                                              <span>{settings.language === 'fa' ? 'آپلود عکس از کامپیوتر' : 'Upload Image File'}</span>
+                                          </label>
+                                      </div>
+                                  </div>
+
+                                  <div className="flex justify-end pt-3">
+                                      <button type="submit" className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 leading-none">
+                                          <Save className="w-4 h-4" />
+                                          <span>{settings.language === 'fa' ? 'ذخیره اطلاعات کاربری' : 'Save Profile Details'}</span>
+                                      </button>
+                                  </div>
+                              </form>
+                          </div>
+
+                          {/* Security & Password Change */}
+                          <div className="bg-white border border-gray-150 p-5 md:p-6 rounded-2xl shadow-sm space-y-5 h-fit">
+                              <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+                                  <Key className="w-5 h-5 text-indigo-600 animate-pulse" />
+                                  <h4 className="font-bold text-sm md:text-base text-gray-805">
+                                      {settings.language === 'fa' ? 'تغییر رمز عبور حساب' : 'Change Account Password'}
+                                  </h4>
+                              </div>
+
+                              <form onSubmit={handleSavePassword} className="space-y-4">
+                                  {passMsg && (
+                                      <div className={`p-3 rounded-xl text-xs font-bold border animate-in fade-in slide-in-from-top-2 duration-300 ${
+                                          passMsg.type === 'success' 
+                                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                              : 'bg-red-50 text-red-700 border-red-200'
+                                      }`}>
+                                          {passMsg.text}
+                                      </div>
+                                  )}
+
+                                  <div>
+                                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                                          {settings.language === 'fa' ? 'رمز عبور فعلی' : 'Current Password'}
+                                      </label>
+                                      <input 
+                                          type="password"
+                                          value={passCurrent}
+                                          onChange={e => setPassCurrent(e.target.value)}
+                                          className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-left"
+                                          required
+                                      />
+                                  </div>
+
+                                  <div>
+                                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                                          {settings.language === 'fa' ? 'رمز عبور جدید' : 'New Password'}
+                                      </label>
+                                      <input 
+                                          type="password"
+                                          value={passNew}
+                                          onChange={e => setPassNew(e.target.value)}
+                                          className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-left"
+                                          required
+                                      />
+                                      <span className="block text-[9px] text-gray-400 font-bold mt-1 leading-normal">
+                                          {settings.language === 'fa' 
+                                              ? '⚠ رمز عبور جدید باید شامل حداقل یک حرف بزرگ، یک حرف کوچک و یک عدد باشد.' 
+                                              : '⚠ Must contain at least one uppercase, lowercase and a number.'}
+                                      </span>
+                                  </div>
+
+                                  <div>
+                                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                                          {settings.language === 'fa' ? 'تکرار رمز عبور جدید' : 'Confirm New Password'}
+                                      </label>
+                                      <input 
+                                          type="password"
+                                          value={passConfirm}
+                                          onChange={e => setPassConfirm(e.target.value)}
+                                          className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-left"
+                                          required
+                                      />
+                                  </div>
+
+                                  <div className="flex justify-end pt-3">
+                                      <button type="submit" className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 leading-none">
+                                          <Key className="w-4 h-4" />
+                                          <span>{settings.language === 'fa' ? 'تغییر رمز عبور' : 'Change Password'}</span>
+                                      </button>
+                                  </div>
+                              </form>
+                          </div>
+                      </div>
+                  </div>
+              )}
          </div>
        </div>
      </div>
