@@ -1082,10 +1082,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 />
                                             </label>
 
-                                            {settings.companyLogo && settings.companyLogo !== './app_icon_fixed.jpg' && (
+                                            {settings.companyLogo && settings.companyLogo !== './app_icon_new_1783848679437.png' && (
                                                 <button 
                                                     type="button"
-                                                    onClick={() => onUpdateSettings({ ...settings, companyLogo: './app_icon_fixed.jpg' })}
+                                                    onClick={() => onUpdateSettings({ ...settings, companyLogo: './app_icon_new_1783848679437.png' })}
                                                     className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 active:scale-95"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />

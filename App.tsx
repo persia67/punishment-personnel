@@ -379,8 +379,8 @@ const App: React.FC = () => {
     const savedSettings = localStorage.getItem('sg_settings');
     if (savedSettings) {
       const parsed = JSON.parse(savedSettings);
-      if (parsed.companyLogo && (parsed.companyLogo.includes('app_icon_1781090095655.png') || parsed.companyLogo.includes('app_icon_new_1783848679437.png'))) {
-        parsed.companyLogo = './app_icon_fixed.jpg';
+      if (parsed.companyLogo && (parsed.companyLogo.includes('app_icon_1781090095655.png') || parsed.companyLogo === './app_icon_fixed.jpg')) {
+        parsed.companyLogo = './app_icon_new_1783848679437.png';
       }
       setSettings(parsed);
     }
@@ -422,8 +422,8 @@ const App: React.FC = () => {
         const s = localStorage.getItem('sg_settings');
         if(s) {
             const parsed = JSON.parse(s);
-            if (parsed.companyLogo && (parsed.companyLogo.includes('app_icon_1781090095655.png') || parsed.companyLogo.includes('app_icon_new_1783848679437.png'))) {
-                parsed.companyLogo = './app_icon_fixed.jpg';
+            if (parsed.companyLogo && (parsed.companyLogo.includes('app_icon_1781090095655.png') || parsed.companyLogo === './app_icon_fixed.jpg')) {
+                parsed.companyLogo = './app_icon_new_1783848679437.png';
             }
             setSettings(parsed);
         }
