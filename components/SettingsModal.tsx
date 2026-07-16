@@ -715,6 +715,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             'کد پرسنلی': '1001', 
             'نام و نام خانوادگی': 'حمید رافیان', 
             'کد ملی': '1234567890', 
+            'شماره همراه': '09121111111',
             'واحد': 'HSE', 
             'سمت': 'افسر ایمنی',
             'تاریخ شروع به کار': '1401/10/01'
@@ -723,7 +724,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             'کد پرسنلی': '1002', 
             'نام و نام خانوادگی': 'علی رضایی', 
             'کد ملی': '0987654321', 
-            'واحد': 'تولید', 
+            'شماره همراه': '09122222222',
+            'واحد': 'تولید - اسیدشویی', 
             'سمت': 'اپراتور',
             'تاریخ شروع به کار': '1402/05/15'
           }
@@ -1624,11 +1626,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                      <div className="text-[11px] text-gray-500 leading-relaxed bg-white border border-gray-100 p-2.5 rounded-lg font-medium opacity-90">
                                           {settings.language === 'fa' ? (
                                               <>
-                                                  💡 <strong className="text-gray-700">فرم‌بندی فایل اکسل:</strong> کافی است فایل حاوی ستون‌های <strong className="text-indigo-600">کد پرسنلی</strong>، <strong className="text-indigo-600">نام و نام خانوادگی</strong>، <strong className="text-indigo-600">کد ملی</strong>، و <strong className="text-indigo-600">واحد</strong> (یا معادل‌های انگلیسی آنها مانند PersonnelID, FullName, NationalID, Department, HireDate) باشد. بدون نیاز به فیلتر دستی، داده‌ها استخراج و در سامانه قرار می‌گیرند.
+                                                  💡 <strong className="text-gray-700">فرم‌بندی فایل اکسل:</strong> کافی است فایل حاوی ستون‌های <strong className="text-indigo-600">کد پرسنلی</strong>، <strong className="text-indigo-600">نام و نام خانوادگی</strong>، <strong className="text-indigo-600">کد ملی</strong>، <strong className="text-indigo-600">شماره همراه</strong>، و <strong className="text-indigo-600">واحد</strong> (یا معادل‌های انگلیسی آنها مانند PersonnelID, FullName, NationalID, PhoneNumber, Department, HireDate) باشد. بدون نیاز به فیلتر دستی، داده‌ها استخراج و در سامانه قرار می‌گیرند.
                                               </>
                                           ) : (
                                               <>
-                                                  💡 <strong className="text-gray-700">Excel Format Requirements:</strong> The spreadsheet must contain columns for <strong className="text-indigo-500">PersonnelID</strong>, <strong className="text-indigo-500">FullName</strong>, <strong className="text-indigo-500">NationalID</strong>, and <strong className="text-indigo-500">Department</strong>. Column header row detection is automatic.
+                                                  💡 <strong className="text-gray-700">Excel Format Requirements:</strong> The spreadsheet must contain columns for <strong className="text-indigo-500">PersonnelID</strong>, <strong className="text-indigo-500">FullName</strong>, <strong className="text-indigo-500">NationalID</strong>, <strong className="text-indigo-500">PhoneNumber</strong>, and <strong className="text-indigo-500">Department</strong>. Column header row detection is automatic.
                                               </>
                                           )}
                                       </div>
