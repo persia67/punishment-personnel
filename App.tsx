@@ -219,15 +219,30 @@ const App: React.FC = () => {
       setSyncStatus('syncing');
       const data = await fetchCentralData();
       if (data) {
-        const mergeLists = <T extends { id: string }>(localList: T[], serverList: T[]): T[] => {
-          const merged = [...serverList];
-          const serverIds = new Set(serverList.map(item => item.id));
-          for (const localItem of localList) {
-            if (localItem && localItem.id && !serverIds.has(localItem.id)) {
-              merged.push(localItem);
+        const smartMerge = <T extends { id: string }>(localList: T[], serverList: T[]): T[] => {
+          const mergedMap = new Map<string, T>();
+          (serverList || []).forEach(item => {
+            if (item && item.id) mergedMap.set(item.id, item);
+          });
+          (localList || []).forEach(item => {
+            if (item && item.id) {
+              mergedMap.set(item.id, item);
             }
-          }
-          return merged;
+          });
+          return Array.from(mergedMap.values());
+        };
+
+        const smartMergeEmployees = (local: Employee[], server: Employee[]): Employee[] => {
+          const mergedMap = new Map<string, Employee>();
+          (server || []).forEach(emp => {
+            if (emp && emp.personnelId) mergedMap.set(emp.personnelId, emp);
+          });
+          (local || []).forEach(emp => {
+            if (emp && emp.personnelId) {
+              mergedMap.set(emp.personnelId, emp);
+            }
+          });
+          return Array.from(mergedMap.values());
         };
 
         let localViolations = violationsRef.current;
@@ -269,10 +284,6 @@ const App: React.FC = () => {
           }
         }
 
-        const isServerBlank = (data.violations || []).length === 0 && 
-                             (data.rewards || []).length === 0 && 
-                             (data.employees || []).length === 0;
-
         let mergedViolations = data.violations || [];
         let mergedRewards = data.rewards || [];
         let mergedEmployees = data.employees || [];
@@ -281,42 +292,33 @@ const App: React.FC = () => {
         let mergedRewardCodes = data.rewardCodes || [];
         let mergedSettings = data.settings || localSettings;
 
-        if (forceBootstrap && isServerBlank) {
-          // Only merge and populate central server from local cache if the database is completely blank/new
-          mergedViolations = mergeLists(localViolations, data.violations || []);
-          mergedRewards = mergeLists(localRewards, data.rewards || []);
-          
-          const mergedEmpList = [...(data.employees || [])];
-          const serverEmpIds = new Set((data.employees || []).map(e => e.personnelId));
-          for (const localEmp of localEmployees) {
-            if (localEmp && localEmp.personnelId && !serverEmpIds.has(localEmp.personnelId)) {
-              mergedEmpList.push(localEmp);
-            }
-          }
-          mergedEmployees = mergedEmpList;
-          
-          mergedUsers = mergeLists(localUsers, data.users || []);
-          mergedViolationCodes = mergeLists(localViolationCodes, data.violationCodes || []);
-          mergedRewardCodes = mergeLists(localRewardCodes, data.rewardCodes || []);
+        if (forceBootstrap) {
+          // On bootstrap, merge local state (including any edits/changes) with server data,
+          // then synchronize the merged results back to the central server so edits are never lost on container reboots.
+          mergedViolations = smartMerge(localViolations, data.violations || []);
+          mergedRewards = smartMerge(localRewards, data.rewards || []);
+          mergedEmployees = smartMergeEmployees(localEmployees, data.employees || []);
+          mergedUsers = smartMerge(localUsers, data.users || []);
+          mergedViolationCodes = smartMerge(localViolationCodes, data.violationCodes || []);
+          mergedRewardCodes = smartMerge(localRewardCodes, data.rewardCodes || []);
+          mergedSettings = localSettings || data.settings || DEFAULT_SETTINGS;
 
-          const hasNewLocalViolations = localViolations.length > 0;
-          const hasNewLocalRewards = localRewards.length > 0;
-          const hasNewLocalEmployees = localEmployees.length > 0;
-
-          if (hasNewLocalViolations || hasNewLocalRewards || hasNewLocalEmployees) {
-            console.log('Populating blank central server database with local cache...');
-            await syncCentralData({
-              violations: mergedViolations,
-              rewards: mergedRewards,
-              users: mergedUsers,
-              employees: mergedEmployees,
-              violationCodes: mergedViolationCodes,
-              rewardCodes: mergedRewardCodes,
-              settings: mergedSettings
-            });
-          }
+          console.log('Synchronizing bootstrapped local & server data...', {
+            employeesCount: mergedEmployees.length,
+            violationsCount: mergedViolations.length
+          });
+          
+          await syncCentralData({
+            violations: mergedViolations,
+            rewards: mergedRewards,
+            users: mergedUsers,
+            employees: mergedEmployees,
+            violationCodes: mergedViolationCodes,
+            rewardCodes: mergedRewardCodes,
+            settings: mergedSettings
+          });
         } else {
-          // The central server database is the absolute source of truth
+          // On normal subsequent updates, treat server as the source of truth
           mergedViolations = data.violations || [];
           mergedRewards = data.rewards || [];
           mergedEmployees = data.employees || [];
@@ -449,6 +451,7 @@ const App: React.FC = () => {
   // Sync to local storage
   useEffect(() => { localStorage.setItem('sg_violations', JSON.stringify(violations)); }, [violations]);
   useEffect(() => { localStorage.setItem('sg_rewards', JSON.stringify(rewards)); }, [rewards]);
+  useEffect(() => { localStorage.setItem('sg_employees', JSON.stringify(employees)); }, [employees]);
   useEffect(() => { localStorage.setItem('sg_users', JSON.stringify(users)); }, [users]);
   useEffect(() => { localStorage.setItem('sg_violationCodes', JSON.stringify(violationCodes)); }, [violationCodes]);
   useEffect(() => { localStorage.setItem('sg_rewardCodes', JSON.stringify(rewardCodes)); }, [rewardCodes]);
