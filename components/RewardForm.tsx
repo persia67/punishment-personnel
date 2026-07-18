@@ -3,6 +3,7 @@ import { Reward, User, RewardType, Department, Employee, CodeItem } from '../typ
 import { X, Camera, UserCheck, Medal, Star, ShieldCheck, HardHat, Zap, Briefcase, Search } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { DEPARTMENTS_LIST } from './ManualEmployeeForm';
+import { useSessionStorage, clearSessionStorageKeys } from '../hooks/useSessionStorage';
 
 interface RewardFormProps {
   onClose: () => void;
@@ -28,7 +29,7 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
       return 'HSE'; // Default
   };
 
-  const [sourceDept, setSourceDept] = useState<string>(getInitialDept());
+  const [sourceDept, setSourceDept] = useSessionStorage<string>('reward_sourceDept', getInitialDept());
 
   const availableCodes = codes.filter(c => c.department === sourceDept);
 
@@ -37,7 +38,7 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
       ...codes.map(c => c.department)
   ]));
 
-  const [formData, setFormData] = useState<Partial<Reward>>({
+  const [formData, setFormData] = useSessionStorage<Partial<Reward>>('reward_formData', {
     rewardType: 'SafetyPrinciples',
     date: new Date().toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-US'),
     rewardsGiven: [],
@@ -46,7 +47,7 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
     departmentSource: sourceDept
   });
 
-  const [selectedCode, setSelectedCode] = useState<number | null>(null);
+  const [selectedCode, setSelectedCode] = useSessionStorage<number | null>('reward_selectedCode', null);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,9 +62,9 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
   };
 
   // Smart Search States
-  const [empSearchTerm, setEmpSearchTerm] = useState('');
+  const [empSearchTerm, setEmpSearchTerm] = useSessionStorage<string>('reward_empSearchTerm', '');
   const [showEmpResults, setShowEmpResults] = useState(false);
-  const [customDeptText, setCustomDeptText] = useState('');
+  const [customDeptText, setCustomDeptText] = useSessionStorage<string>('reward_customDeptText', '');
 
   const matchedEmployees = React.useMemo(() => {
     if (!empSearchTerm.trim()) return [];
@@ -93,6 +94,7 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
   useEffect(() => {
       setFormData(prev => ({ ...prev, departmentSource: sourceDept }));
       setSelectedCode(null);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceDept]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -127,6 +129,13 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
     };
 
     onSubmit(newReward);
+    clearSessionStorageKeys([
+      'reward_sourceDept',
+      'reward_formData',
+      'reward_selectedCode',
+      'reward_empSearchTerm',
+      'reward_customDeptText'
+    ]);
     setIsSuccess(true);
   };
 

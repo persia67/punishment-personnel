@@ -3,6 +3,7 @@ import { Violation, Severity, User, Department, Employee, CodeItem } from '../ty
 import { X, Camera, AlertOctagon, CheckSquare, Square, UserCheck, Search, Filter } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { DEPARTMENTS_LIST } from './ManualEmployeeForm';
+import { useSessionStorage, clearSessionStorageKeys } from '../hooks/useSessionStorage';
 
 interface ViolationFormProps {
   existingViolations: Violation[];
@@ -29,7 +30,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
       return 'HSE'; // Default for global users
   };
 
-  const [sourceDept, setSourceDept] = useState<string>(getInitialDept());
+  const [sourceDept, setSourceDept] = useSessionStorage<string>('violation_sourceDept', getInitialDept());
 
   // Filter available codes based on the selected Department
   const availableCodes = codes.filter(c => c.department === sourceDept);
@@ -40,7 +41,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
       ...codes.map(c => c.department)
   ]));
 
-  const [formData, setFormData] = useState<Partial<Violation>>({
+  const [formData, setFormData] = useSessionStorage<Partial<Violation>>('violation_formData', {
     severity: Severity.MEDIUM,
     status: 'Pending',
     date: new Date().toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-US'),
@@ -51,7 +52,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
     departmentSource: sourceDept
   });
 
-  const [selectedCode, setSelectedCode] = useState<number | null>(null);
+  const [selectedCode, setSelectedCode] = useSessionStorage<number | null>('violation_selectedCode', null);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,10 +67,10 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
   };
 
   // Smart Search States
-  const [empSearchTerm, setEmpSearchTerm] = useState('');
+  const [empSearchTerm, setEmpSearchTerm] = useSessionStorage<string>('violation_empSearchTerm', '');
   const [showEmpResults, setShowEmpResults] = useState(false);
-  const [customDeptText, setCustomDeptText] = useState('');
-  const [isManualDept, setIsManualDept] = useState(false);
+  const [customDeptText, setCustomDeptText] = useSessionStorage<string>('violation_customDeptText', '');
+  const [isManualDept, setIsManualDept] = useSessionStorage<boolean>('violation_isManualDept', false);
 
   const matchedEmployees = React.useMemo(() => {
     if (!empSearchTerm.trim()) return [];
@@ -101,6 +102,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
   useEffect(() => {
       setFormData(prev => ({ ...prev, departmentSource: sourceDept }));
       setSelectedCode(null); // Reset selection when switching dept
+      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceDept]);
 
   // Auto-calculate stage
@@ -110,6 +112,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
       const newStage = Math.min(historyCount + 1, 3);
       setFormData(prev => ({ ...prev, violationStage: newStage }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.personnelId, existingViolations]);
 
   const handleCodeSelect = (codeId: number) => {
@@ -151,6 +154,14 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
     };
 
     onSubmit(newViolation);
+    clearSessionStorageKeys([
+      'violation_sourceDept',
+      'violation_formData',
+      'violation_selectedCode',
+      'violation_empSearchTerm',
+      'violation_customDeptText',
+      'violation_isManualDept'
+    ]);
     setIsSuccess(true);
   };
 
