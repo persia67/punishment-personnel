@@ -54,6 +54,17 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
   const [selectedCode, setSelectedCode] = useState<number | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, evidence: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Smart Search States
   const [empSearchTerm, setEmpSearchTerm] = useState('');
   const [showEmpResults, setShowEmpResults] = useState(false);
@@ -411,6 +422,62 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
               placeholder="..."
               onChange={e => setFormData({...formData, description: e.target.value})}
             />
+          </div>
+
+          <div>
+            <label className="block text-xs md:text-sm font-medium text-gray-700 mb-2">
+              {lang === 'fa' ? 'ضمیمه عکس / مستندات تصویری' : 'Attach Photo / Documentation'}
+            </label>
+            <div className="flex flex-col gap-3 bg-gray-50 p-4 border border-dashed border-gray-300 rounded-2xl">
+              <div className="flex flex-wrap gap-2">
+                <label className="bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 font-bold py-2 px-3 rounded-xl shadow-xs cursor-pointer transition-all flex items-center gap-1.5 text-xs">
+                  <Camera className="w-4 h-4 text-indigo-600" />
+                  <span>{lang === 'fa' ? 'انتخاب فایل یا عکاسی' : 'Upload / Capture'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
+                
+                <label className="bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 font-bold py-2 px-3 rounded-xl shadow-xs cursor-pointer transition-all flex items-center gap-1.5 text-xs">
+                  <Camera className="w-4 h-4 text-emerald-600" />
+                  <span>{lang === 'fa' ? 'عکاسی مستقیم با دوربین' : 'Direct Camera Capture'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {formData.evidence ? (
+                <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-gray-200 bg-white group shadow-sm">
+                  <img 
+                    src={formData.evidence} 
+                    alt="Evidence Preview" 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, evidence: undefined }))}
+                    className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs"
+                  >
+                    {lang === 'fa' ? 'حذف عکس' : 'Remove'}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[10px] text-gray-400 font-semibold">
+                  {lang === 'fa' 
+                    ? 'فرمت‌های مجاز: JPG، PNG. عکس گرفته شده به صورت خودکار فشرده و ضمیمه می‌گردد.' 
+                    : 'Supported formats: JPG, PNG. Captured photo will be attached as evidence.'}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-3 md:pt-4 border-t border-gray-100 mt-auto shrink-0 pb-safe">

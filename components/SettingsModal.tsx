@@ -5,7 +5,7 @@ import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as
 // @ts-ignore
 import * as XLSX from 'xlsx';
 import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
-import { ManualEmployeeForm, DEPARTMENTS_LIST } from './ManualEmployeeForm';
+import { ManualEmployeeForm, DEPARTMENTS_LIST, JOB_TITLES_LIST } from './ManualEmployeeForm';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -1835,13 +1835,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                                           className="w-full text-right bg-white border border-gray-300 rounded px-2 py-1 focus:border-indigo-500 focus:outline-none text-xs font-bold text-gray-900"
                                                                           placeholder={settings.language === 'fa' ? 'نام و نام خانوادگی' : 'Full Name'}
                                                                       />
-                                                                      <input 
-                                                                          type="text" 
-                                                                          value={editingEmpData.jobTitle || ''} 
-                                                                          onChange={e => setEditingEmpData({ ...editingEmpData, jobTitle: e.target.value })} 
-                                                                          className="w-full text-right bg-white border border-gray-300 rounded px-2 py-0.5 focus:border-indigo-500 focus:outline-none text-[10px] text-gray-700"
-                                                                          placeholder={settings.language === 'fa' ? 'سمت شغلی' : 'Job Title'}
-                                                                      />
+                                                                      <select
+                                                                          value={JOB_TITLES_LIST.includes(editingEmpData.jobTitle || '') ? (editingEmpData.jobTitle || '') : 'سایر (ورود دستی)'}
+                                                                          onChange={e => {
+                                                                              const val = e.target.value;
+                                                                              if (val === 'سایر (ورود دستی)') {
+                                                                                  setEditingEmpData({ ...editingEmpData, jobTitle: '' });
+                                                                              } else {
+                                                                                  setEditingEmpData({ ...editingEmpData, jobTitle: val });
+                                                                              }
+                                                                          }}
+                                                                          className="w-full bg-white border border-gray-300 rounded px-1.5 py-0.5 focus:border-indigo-500 focus:outline-none text-[10px] font-bold text-gray-700 cursor-pointer"
+                                                                      >
+                                                                          {JOB_TITLES_LIST.map(jt => (
+                                                                              <option key={jt} value={jt}>{jt}</option>
+                                                                          ))}
+                                                                      </select>
+                                                                      {!JOB_TITLES_LIST.includes(editingEmpData.jobTitle || '') && (
+                                                                          <input 
+                                                                              type="text" 
+                                                                              value={editingEmpData.jobTitle || ''} 
+                                                                              onChange={e => setEditingEmpData({ ...editingEmpData, jobTitle: e.target.value })} 
+                                                                              className="w-full text-right bg-white border border-gray-300 rounded px-2 py-0.5 focus:border-indigo-500 focus:outline-none text-[10px] text-gray-700 font-bold"
+                                                                              placeholder={settings.language === 'fa' ? 'سمت دستی...' : 'Custom...'}
+                                                                          />
+                                                                      )}
                                                                   </div>
                                                               </td>
                                                               <td className="px-3 py-2.5">

@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Violation, Reward, User, AppSettings, Employee } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { X, User as UserIcon, Shield, Activity, TrendingUp, TrendingDown, AlertTriangle, Briefcase, GraduationCap, Gavel, FileText, Calendar } from 'lucide-react';
+import { X, User as UserIcon, Shield, Activity, TrendingUp, TrendingDown, AlertTriangle, Briefcase, GraduationCap, Gavel, FileText, Calendar, Camera } from 'lucide-react';
 
 interface PersonnelProfileModalProps {
   isOpen: boolean;
@@ -16,6 +16,7 @@ interface PersonnelProfileModalProps {
 const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({ 
   isOpen, onClose, personnelId, violations, rewards, settings, employees = []
 }) => {
+  const [activeImage, setActiveImage] = useState<string | null>(null);
   if (!isOpen) return null;
   const t = TRANSLATIONS[settings.language];
 
@@ -134,13 +135,25 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
                     ? 'bg-red-50/80 border-r-4 border-red-500 text-gray-900 shadow-xs' 
                     : 'bg-amber-50/60 border-2 border-dashed border-amber-300 text-gray-900 shadow-xs'
                 }`}>
-                    <div className="flex flex-col gap-1 min-w-0">
-                      <span className="font-semibold truncate">{v.violationType}</span>
-                      <span className="text-[10px] text-gray-500 font-medium">
-                        {v.isApproved 
-                          ? (settings.language === 'fa' ? '✓ تایید نهایی و درج در پرونده' : '✓ Approved & Logged') 
-                          : (settings.language === 'fa' ? '⚠ ثبت اولیه - در انتظار تایید مدیریت' : '⚠ Preliminary - Pending Review')}
-                      </span>
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {v.evidence && (
+                        <img 
+                          src={v.evidence} 
+                          alt="Evidence" 
+                          className="w-9 h-9 object-cover rounded-lg cursor-pointer border border-red-200 hover:scale-105 transition-transform shrink-0" 
+                          onClick={() => setActiveImage(v.evidence)}
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <span className="font-semibold truncate">{v.violationType}</span>
+                        {v.description && <span className="text-[10px] text-gray-500 truncate block font-medium">{v.description}</span>}
+                        <span className="text-[10px] text-gray-500 font-medium">
+                          {v.isApproved 
+                            ? (settings.language === 'fa' ? '✓ تایید نهایی و درج در پرونده' : '✓ Approved & Logged') 
+                            : (settings.language === 'fa' ? '⚠ ثبت اولیه - در انتظار تایید مدیریت' : '⚠ Preliminary - Pending Review')}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                          <span className={`font-black font-mono text-sm ${v.isApproved ? 'text-red-600' : 'text-amber-600'} ltr`}>{v.score}</span>
@@ -154,13 +167,25 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
                     ? 'bg-emerald-50/80 border-r-4 border-emerald-500 text-gray-900 shadow-xs' 
                     : 'bg-amber-50/60 border-2 border-dashed border-amber-300 text-gray-900 shadow-xs'
                 }`}>
-                    <div className="flex flex-col gap-1 min-w-0">
-                      <span className="font-semibold truncate">{(t as any)[`type_${r.rewardType}`] || r.rewardType}</span>
-                      <span className="text-[10px] text-gray-500 font-medium">
-                        {r.isApproved 
-                          ? (settings.language === 'fa' ? '✓ تایید نهایی و درج در پرونده' : '✓ Approved & Logged') 
-                          : (settings.language === 'fa' ? '⚠ ثبت اولیه - در انتظار تایید مدیریت' : '⚠ Preliminary - Pending Review')}
-                      </span>
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {r.evidence && (
+                        <img 
+                          src={r.evidence} 
+                          alt="Evidence" 
+                          className="w-9 h-9 object-cover rounded-lg cursor-pointer border border-emerald-200 hover:scale-105 transition-transform shrink-0" 
+                          onClick={() => setActiveImage(r.evidence)}
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <span className="font-semibold truncate">{(t as any)[`type_${r.rewardType}`] || r.rewardType}</span>
+                        {r.description && <span className="text-[10px] text-gray-500 truncate block font-medium">{r.description}</span>}
+                        <span className="text-[10px] text-gray-500 font-medium">
+                          {r.isApproved 
+                            ? (settings.language === 'fa' ? '✓ تایید نهایی و درج در پرونده' : '✓ Approved & Logged') 
+                            : (settings.language === 'fa' ? '⚠ ثبت اولیه - در انتظار تایید مدیریت' : '⚠ Preliminary - Pending Review')}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                          <span className={`font-black font-mono text-sm ${r.isApproved ? 'text-emerald-600' : 'text-amber-650'} ltr`}>+{r.score}</span>
@@ -291,6 +316,23 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
             )}
         </div>
       </div>
+      
+      {activeImage && (
+        <div className="fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <button 
+            onClick={() => setActiveImage(null)}
+            className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 p-2.5 rounded-full text-white transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img 
+            src={activeImage} 
+            alt="Evidence Full View" 
+            className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-white/10"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      )}
     </div>
   );
 };

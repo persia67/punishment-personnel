@@ -10,6 +10,7 @@ export const DEPARTMENTS_LIST = [
   'فنی - ماشین سازی',
   'فنی - CNC',
   'فنی - هیدرولیک',
+  'فنی - تعمیرات',
   'تولید',
   'تولید - اسیدشویی',
   'تولید - نورد سرد',
@@ -24,13 +25,24 @@ export const DEPARTMENTS_LIST = [
   'مالی',
   'فروش',
   'تاسیسات',
-  'تعمیرات',
   'لیفتراک',
   'کالیبراسیون',
   'انبار',
   'بازرسی',
   'مشاوران شرکت',
   'ایمنی و بهداشت',
+  'سایر (ورود دستی)'
+];
+
+export const JOB_TITLES_LIST = [
+  'مدیر عامل',
+  'مدیر کارخانه',
+  'معاونت تولید و بهره برداری',
+  'مدیر واحد',
+  'مسئول واحد',
+  'سرپرست',
+  'افسر ایمنی',
+  'کارگر',
   'سایر (ورود دستی)'
 ];
 
@@ -56,6 +68,7 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
   });
 
   const [customDept, setCustomDept] = useState('');
+  const [customJobTitle, setCustomJobTitle] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +97,10 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
       ? customDept.trim() 
       : empFormData.department.trim();
 
+    const finalJobTitle = empFormData.jobTitle === 'سایر (ورود دستی)'
+      ? customJobTitle.trim()
+      : empFormData.jobTitle.trim();
+
     const newEmp: Employee = {
       id: Date.now().toString() + Math.random().toString().slice(2, 6),
       personnelId: trimmedPId,
@@ -91,7 +108,7 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
       nationalId: empFormData.nationalId.trim() || undefined,
       department: finalDept || '',
       hireDate: empFormData.hireDate.trim() || undefined,
-      jobTitle: empFormData.jobTitle.trim() || undefined,
+      jobTitle: finalJobTitle || undefined,
       phoneNumber: empFormData.phoneNumber.trim() || undefined
     };
 
@@ -108,6 +125,7 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
       phoneNumber: ''
     });
     setCustomDept('');
+    setCustomJobTitle('');
 
     const isProfileIncomplete = 
       !newEmp.department || newEmp.department.trim() === '' || 
@@ -213,16 +231,26 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
           <label className="block text-[10px] text-gray-500 mb-1">
             {settings.language === 'fa' ? 'سمت سازمانی (اختیاری)' : 'Job Title (Optional)'}
           </label>
-          <input
-            type="text"
-            placeholder="e.g. اپراتور"
+          <select
             value={empFormData.jobTitle}
             onChange={e => setEmpFormData({ ...empFormData, jobTitle: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-          />
+            className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+          >
+            <option value="">{settings.language === 'fa' ? 'انتخاب سمت سازمانی...' : 'Select Job Title...'}</option>
+            {JOB_TITLES_LIST.map(title => (
+              <option key={title} value={title}>{title}</option>
+            ))}
+          </select>
+          {empFormData.jobTitle === 'سایر (ورود دستی)' && (
+            <input
+              type="text"
+              required
+              placeholder={settings.language === 'fa' ? 'سمت سازمانی دستی...' : 'Custom Job Title...'}
+              value={customJobTitle}
+              onChange={e => setCustomJobTitle(e.target.value)}
+              className="mt-1.5 w-full px-3 py-1.5 border border-red-200 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          )}
         </div>
         <div>
           <label className="block text-[10px] text-gray-500 mb-1">

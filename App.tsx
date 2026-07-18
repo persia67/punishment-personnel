@@ -18,6 +18,7 @@ import OfflineSyncModal from './components/OfflineSyncModal';
 import { EditAvatarModal } from './components/EditAvatarModal';
 import { WorkerOfMonthModal } from './components/WorkerOfMonthModal';
 import ChangelogModal from './components/ChangelogModal';
+import HseTrendDashboard from './components/HseTrendDashboard';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { sendNotificationSms } from './services/smsService';
 import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit } from 'lucide-react';
@@ -1459,7 +1460,12 @@ const App: React.FC = () => {
         </div>
 
         {/* Only show Stats if Plant Manager or HR */}
-        {canViewAll && <DashboardStats violations={violations} rewards={rewards} mode={systemMode} language={settings.language} />}
+        {canViewAll && (
+          <>
+            <DashboardStats violations={violations} rewards={rewards} mode={systemMode} language={settings.language} />
+            <HseTrendDashboard violations={violations} rewards={rewards} settings={settings} />
+          </>
+        )}
 
         {/* Action Bar */}
         <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-4">
@@ -2417,6 +2423,7 @@ const App: React.FC = () => {
         violations={violations}
         rewards={rewards}
         employees={employees}
+        mode={systemMode}
       />
 
       <ChangelogModal

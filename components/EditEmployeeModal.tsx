@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, UserCheck, Edit } from 'lucide-react';
 import { Employee, AppSettings } from '../types';
-import { DEPARTMENTS_LIST } from './ManualEmployeeForm';
+import { DEPARTMENTS_LIST, JOB_TITLES_LIST } from './ManualEmployeeForm';
 
 interface EditEmployeeModalProps {
   isOpen: boolean;
@@ -32,17 +32,20 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
   const [customDept, setCustomDept] = useState('');
   const [isCustomDeptActive, setIsCustomDeptActive] = useState(false);
+  const [customJobTitle, setCustomJobTitle] = useState('');
+  const [isCustomJobTitleActive, setIsCustomJobTitleActive] = useState(false);
 
   useEffect(() => {
     if (employee) {
       const isPreset = DEPARTMENTS_LIST.includes(employee.department);
+      const isPresetJob = JOB_TITLES_LIST.includes(employee.jobTitle || '');
       setEmpFormData({
         personnelId: employee.personnelId || '',
         fullName: employee.fullName || '',
         nationalId: employee.nationalId || '',
         department: isPreset ? employee.department : (employee.department ? 'سایر (ورود دستی)' : ''),
         hireDate: employee.hireDate || '',
-        jobTitle: employee.jobTitle || '',
+        jobTitle: isPresetJob ? (employee.jobTitle || '') : (employee.jobTitle ? 'سایر (ورود دستی)' : ''),
         phoneNumber: employee.phoneNumber || '',
       });
       if (!isPreset && employee.department) {
@@ -51,6 +54,13 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
       } else {
         setCustomDept('');
         setIsCustomDeptActive(false);
+      }
+      if (!isPresetJob && employee.jobTitle) {
+        setCustomJobTitle(employee.jobTitle);
+        setIsCustomJobTitleActive(true);
+      } else {
+        setCustomJobTitle('');
+        setIsCustomJobTitleActive(false);
       }
     }
   }, [employee, isOpen]);
@@ -64,6 +74,16 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
     } else {
       setIsCustomDeptActive(false);
       setCustomDept('');
+    }
+  };
+
+  const handleJobTitleChange = (val: string) => {
+    setEmpFormData(prev => ({ ...prev, jobTitle: val }));
+    if (val === 'سایر (ورود دستی)') {
+      setIsCustomJobTitleActive(true);
+    } else {
+      setIsCustomJobTitleActive(false);
+      setCustomJobTitle('');
     }
   };
 
@@ -97,6 +117,10 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
       ? customDept.trim()
       : empFormData.department.trim();
 
+    const finalJobTitle = empFormData.jobTitle === 'سایر (ورود دستی)'
+      ? customJobTitle.trim()
+      : empFormData.jobTitle.trim();
+
     const updatedEmp: Employee = {
       ...employee,
       personnelId: trimmedPId,
@@ -104,7 +128,7 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
       nationalId: empFormData.nationalId.trim() || undefined,
       department: finalDept || '',
       hireDate: empFormData.hireDate.trim() || undefined,
-      jobTitle: empFormData.jobTitle.trim() || undefined,
+      jobTitle: finalJobTitle || undefined,
       phoneNumber: empFormData.phoneNumber.trim() || undefined,
     };
 
@@ -213,19 +237,30 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
               )}
             </div>
 
-            <div>
+            <div className="flex flex-col">
               <label className="block text-[11px] font-bold text-gray-500 mb-1">
                 {settings.language === 'fa' ? 'سمت سازمانی' : 'Job Title'}
               </label>
-              <input
-                type="text"
+              <select
                 value={empFormData.jobTitle}
-                onChange={e => setEmpFormData({ ...empFormData, jobTitle: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 bg-gray-50 hover:bg-white focus:bg-white rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition-colors"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-              />
+                onChange={e => handleJobTitleChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 bg-gray-50 hover:bg-white focus:bg-white rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition-colors cursor-pointer"
+              >
+                <option value="">{settings.language === 'fa' ? 'انتخاب سمت...' : 'Select Job Title...'}</option>
+                {JOB_TITLES_LIST.map(title => (
+                  <option key={title} value={title}>{title}</option>
+                ))}
+              </select>
+              {isCustomJobTitleActive && (
+                <input
+                  type="text"
+                  required
+                  placeholder={settings.language === 'fa' ? 'سمت سازمانی دستی...' : 'Custom Job Title...'}
+                  value={customJobTitle}
+                  onChange={e => setCustomJobTitle(e.target.value)}
+                  className="mt-1.5 w-full px-3 py-1.5 border border-red-200 bg-white rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              )}
             </div>
 
             <div>

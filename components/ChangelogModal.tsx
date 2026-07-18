@@ -30,7 +30,7 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, settin
                 {isFa ? 'آخرین تغییرات و ویژگی‌های جدید' : 'Latest Features & Changelog'}
               </h3>
               <p className="text-[10px] text-indigo-200 font-mono mt-0.5">
-                {isFa ? 'نسخه فعلی: v4.3.0' : 'Current Version: v4.3.0'}
+                {isFa ? 'نسخه فعلی: v4.5.0' : 'Current Version: v4.5.0'}
               </p>
             </div>
           </div>
@@ -49,11 +49,11 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, settin
             <div className="text-xs text-amber-900 leading-relaxed font-medium">
               {isFa ? (
                 <p>
-                  در نسخه <strong>v4.3.0</strong>، طبق نیازهای فنی و عملیاتی مطرح شده، دپارتمان‌های کاری به طور کامل بازطراحی و فیلدهای اطلاعاتی فایل اکسل پرسنل ارتقاء یافته‌اند تا فرآیند ثبت و مدیریت پرسنل به شکل منظم‌تری انجام پذیرد.
+                  در نسخه <strong>v4.5.0</strong>، آیکون و نشان تجاری جدید و اختصاصی سازمان به‌صورت کامل در تمامی ساختارها، فایل‌های نصبی، فایل‌های اجرایی نهایی و پرتال وب یکپارچه‌سازی شده است. همچنین پایداری کلی ماژول‌ها ارتقا یافته است.
                 </p>
               ) : (
                 <p>
-                  In version <strong>v4.3.0</strong>, the work departments have been fully redesigned and the Excel import fields have been upgraded to streamline personnel management.
+                  In version <strong>v4.5.0</strong>, the brand new custom organization icon has been fully integrated across all platforms, installer packages, standalone executables, and web portals, ensuring visual consistency alongside overall module stability.
                 </p>
               )}
             </div>
