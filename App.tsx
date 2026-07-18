@@ -17,6 +17,7 @@ import ChangePasswordModal from './components/ChangePasswordModal';
 import OfflineSyncModal from './components/OfflineSyncModal';
 import { EditAvatarModal } from './components/EditAvatarModal';
 import { WorkerOfMonthModal } from './components/WorkerOfMonthModal';
+import ChangelogModal from './components/ChangelogModal';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { sendNotificationSms } from './services/smsService';
 import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit } from 'lucide-react';
@@ -46,6 +47,7 @@ const App: React.FC = () => {
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isPrintReportOpen, setIsPrintReportOpen] = useState(false);
   const [isOfflineSyncOpen, setIsOfflineSyncOpen] = useState(false);
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isEditAvatarOpen, setIsEditAvatarOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{isOpen: boolean; id: string | null; type: 'VIOLATION' | 'REWARD'}>({ isOpen: false, id: null, type: 'VIOLATION' });
@@ -1046,7 +1048,16 @@ const App: React.FC = () => {
                <div className={`p-2 rounded-xl shadow-lg ${themeStyles.bg} text-white transition-transform active:scale-95`}><Shield className="w-5 h-5 md:w-6 md:h-6" /></div>
              )}
              <div>
-                <h1 className="text-sm md:text-lg font-black text-gray-800 leading-tight">{settings.companyName}</h1>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-sm md:text-lg font-black text-gray-800 leading-tight">{settings.companyName}</h1>
+                  <button
+                    onClick={() => setIsChangelogOpen(true)}
+                    className="px-1.5 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-[9px] md:text-[10px] text-indigo-700 font-mono font-bold cursor-pointer transition-all active:scale-95 shrink-0"
+                    title={settings.language === 'fa' ? 'نمایش آخرین تغییرات آپدیت' : 'Show latest update changelog'}
+                  >
+                    v{APP_VERSION}
+                  </button>
+                </div>
                 <p className="text-[10px] md:text-xs text-gray-500 uppercase tracking-wider">{userDept === 'ALL' ? 'General Management' : `${userDept} Department`}</p>
              </div>
            </div>
@@ -2287,6 +2298,29 @@ const App: React.FC = () => {
           )}
       </main>
 
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-6 print:hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-gray-700">HSE Safewatch & Reward AI</span>
+            <span className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 font-mono font-bold">
+              v{APP_VERSION}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsChangelogOpen(true)}
+              className="text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <span>{settings.language === 'fa' ? '✨ آخرین تغییرات نسخه جدید' : '✨ Latest Update Changelog'}</span>
+            </button>
+            <span className="hidden sm:inline">|</span>
+            <span dir="ltr">© 2026 HSE Safewatch</span>
+          </div>
+        </div>
+      </footer>
+
       {/* Manual Add Employee Overlay Modal */}
       {isAddEmployeeOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -2383,6 +2417,12 @@ const App: React.FC = () => {
         violations={violations}
         rewards={rewards}
         employees={employees}
+      />
+
+      <ChangelogModal
+        isOpen={isChangelogOpen}
+        onClose={() => setIsChangelogOpen(false)}
+        settings={settings}
       />
 
       {user && (
