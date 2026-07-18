@@ -98,9 +98,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Intelligent monitoring system",
-      "installerIcon": "public/app_icon_new_1783848679437_nsis.ico",
-      "uninstallerIcon": "public/app_icon_new_1783848679437_nsis.ico",
-      "installerHeaderIcon": "public/app_icon_new_1783848679437_nsis.ico",
+      "installerIcon": "public/app_icon_new_1783848679437.ico",
+      "uninstallerIcon": "public/app_icon_new_1783848679437.ico",
+      "installerHeaderIcon": "public/app_icon_new_1783848679437.ico",
       "installerHeader": "public/app_icon_new_1783848679437.png",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
