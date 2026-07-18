@@ -21,7 +21,7 @@ import ChangelogModal from './components/ChangelogModal';
 import HseTrendDashboard from './components/HseTrendDashboard';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { sendNotificationSms } from './services/smsService';
-import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit } from 'lucide-react';
+import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit, ShieldAlert } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -1433,14 +1433,25 @@ const App: React.FC = () => {
               </button>
 
               {canViewAll && (
-                <button
-                  type="button"
-                  onClick={handlePickWorkerOfMonth}
-                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-xs"
-                >
-                  <Trophy className="w-4 h-4 text-amber-600" />
-                  <span>{settings.language === 'fa' ? 'محاسبه کارمند نمونه (سیستم امتیازی)' : 'Worker of the Month (Scoring)'}</span>
-                </button>
+                systemMode === 'VIOLATION' ? (
+                  <button
+                    type="button"
+                    onClick={handlePickWorkerOfMonth}
+                    className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-xs"
+                  >
+                    <ShieldAlert className="w-4 h-4 text-red-600 animate-pulse" />
+                    <span>{settings.language === 'fa' ? 'شناسایی پرسنل پرخطر (بیشترین امتیاز منفی)' : 'Identify High-Risk Personnel (Highest Negative Score)'}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handlePickWorkerOfMonth}
+                    className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-xs"
+                  >
+                    <Trophy className="w-4 h-4 text-amber-600" />
+                    <span>{settings.language === 'fa' ? 'محاسبه کارمند نمونه (سیستم امتیازی)' : 'Worker of the Month (Scoring)'}</span>
+                  </button>
+                )
               )}
 
               <button
