@@ -87,9 +87,7 @@
           ]
         }
       ],
-      "icon": "public/app_icon_new_1783848679437.png",
-      "publisherName": "Intelligent monitoring system Team",
-      "requestedExecutionLevel": "asInvoker"
+      "icon": "public/app_icon_new_1783848679437.png"
     },
     "nsis": {
       "oneClick": false,
