@@ -48,7 +48,7 @@
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "electron": "^29.1.0",
-    "electron-builder": "^24.13.3",
+    "electron-builder": "^25.1.8",
     "esbuild": "^0.28.1",
     "eslint": "^10.7.0",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -86,8 +86,7 @@
             "x64"
           ]
         }
-      ],
-      "icon": "public/app_icon_new_1783848679437.png"
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -96,19 +95,17 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Intelligent monitoring system",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "${name}-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "${productName}-Portable-${version}.${ext}"
+      "artifactName": "${name}-Portable-${version}.${ext}"
     },
     "linux": {
       "target": "AppImage",
-      "category": "Office",
-      "icon": "public/app_icon_new_1783848679437.png"
+      "category": "Office"
     },
     "mac": {
-      "target": "dmg",
-      "icon": "public/app_icon_new_1783848679437.png"
+      "target": "dmg"
     }
   }
 }
