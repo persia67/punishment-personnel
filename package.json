@@ -87,11 +87,14 @@
           ]
         }
       ],
-      "icon": "public/icon.ico",
+      "icon": "public/app_icon_new_1783848679437.png",
       "publisherName": "Intelligent monitoring system Team",
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico",
+      "installerHeaderIcon": "public/icon.ico",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
