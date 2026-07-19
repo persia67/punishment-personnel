@@ -87,13 +87,8 @@ jobs:
           node-version: 18
           cache: 'npm'
 
-      - name: Install Build Tools
-        run: |
-          npm install --global windows-build-tools
-          npm install --global node-gyp
-
       - name: Install Dependencies
-        run: npm ci --no-optional
+        run: npm ci
 
       - name: Build Electron App (Windows .exe & latest.yml)
         run: npm run electron:build
