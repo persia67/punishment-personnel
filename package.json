@@ -92,9 +92,6 @@
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
-      "installerIcon": "public/icon.ico",
-      "uninstallerIcon": "public/icon.ico",
-      "installerHeaderIcon": "public/icon.ico",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
