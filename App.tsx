@@ -21,7 +21,7 @@ import ChangelogModal from './components/ChangelogModal';
 import HseTrendDashboard from './components/HseTrendDashboard';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { sendNotificationSms } from './services/smsService';
-import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit, ShieldAlert } from 'lucide-react';
+import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit, ShieldAlert, Briefcase } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -2094,18 +2094,186 @@ const App: React.FC = () => {
                 });
 
                 const getBinderColor = (key: string) => {
-                  if (key.includes('طلایی') || key.includes('Golden') || key.includes('عالی')) return { border: 'border-amber-300', bg: 'bg-amber-500', hoverBg: 'hover:bg-amber-600', text: 'text-amber-700', lightBg: 'bg-amber-50' };
-                  if (key.includes('سبز') || key.includes('Green') || key.includes('ایمن')) return { border: 'border-emerald-300', bg: 'bg-emerald-500', hoverBg: 'hover:bg-emerald-600', text: 'text-emerald-700', lightBg: 'bg-emerald-50' };
-                  if (key.includes('نارنجی') || key.includes('Orange') || key.includes('هشدار')) return { border: 'border-orange-300', bg: 'bg-orange-500', hoverBg: 'hover:bg-orange-600', text: 'text-orange-700', lightBg: 'bg-orange-50' };
-                  if (key.includes('قرمز') || key.includes('Red') || key.includes('بحرانی')) return { border: 'border-red-300', bg: 'bg-red-500', hoverBg: 'hover:bg-red-600', text: 'text-red-700', lightBg: 'bg-red-50' };
-                  
+                  if (personnelGroupCriteria === 'SAFETY_STATUS') {
+                    if (key.includes('طلایی') || key.includes('Golden') || key.includes('عالی')) {
+                      return {
+                        border: 'border-amber-300',
+                        bg: 'bg-gradient-to-b from-amber-400 to-amber-600',
+                        hoverBg: 'hover:from-amber-500 hover:to-amber-700',
+                        text: 'text-amber-800',
+                        lightBg: 'bg-amber-50/60',
+                        badge: 'bg-amber-100 text-amber-900 border-amber-200',
+                        tabColor: 'bg-amber-500',
+                        label: settings.language === 'fa' ? 'رتبه طلایی' : 'HSE: Gold'
+                      };
+                    }
+                    if (key.includes('سبز') || key.includes('Green') || key.includes('ایمن')) {
+                      return {
+                        border: 'border-emerald-300',
+                        bg: 'bg-gradient-to-b from-emerald-500 to-emerald-700',
+                        hoverBg: 'hover:from-emerald-600 hover:to-emerald-800',
+                        text: 'text-emerald-800',
+                        lightBg: 'bg-emerald-50/60',
+                        badge: 'bg-emerald-100 text-emerald-900 border-emerald-200',
+                        tabColor: 'bg-emerald-500',
+                        label: settings.language === 'fa' ? 'رتبه سبز' : 'HSE: Green'
+                      };
+                    }
+                    if (key.includes('نارنجی') || key.includes('Orange') || key.includes('هشدار')) {
+                      return {
+                        border: 'border-orange-300',
+                        bg: 'bg-gradient-to-b from-orange-400 to-orange-600',
+                        hoverBg: 'hover:from-orange-500 hover:to-orange-700',
+                        text: 'text-orange-800',
+                        lightBg: 'bg-orange-50/60',
+                        badge: 'bg-orange-100 text-orange-900 border-orange-200',
+                        tabColor: 'bg-orange-550',
+                        label: settings.language === 'fa' ? 'رتبه نارنجی' : 'HSE: Orange'
+                      };
+                    }
+                    if (key.includes('قرمز') || key.includes('Red') || key.includes('بحرانی')) {
+                      return {
+                        border: 'border-red-300',
+                        bg: 'bg-gradient-to-b from-red-550 to-red-750',
+                        hoverBg: 'hover:from-red-650 hover:to-red-850',
+                        text: 'text-red-800',
+                        lightBg: 'bg-red-50/60',
+                        badge: 'bg-red-100 text-red-900 border-red-200',
+                        tabColor: 'bg-red-600',
+                        label: settings.language === 'fa' ? 'رتبه قرمز' : 'HSE: Red'
+                      };
+                    }
+                  }
+
+                  if (personnelGroupCriteria === 'DEPARTMENT') {
+                    const deptStr = key.toLowerCase();
+                    if (deptStr.includes('تولید') || deptStr.includes('production') || deptStr.includes('پک')) {
+                      return {
+                        border: 'border-teal-300',
+                        bg: 'bg-gradient-to-b from-teal-500 to-teal-700',
+                        hoverBg: 'hover:from-teal-600 hover:to-teal-800',
+                        text: 'text-teal-800',
+                        lightBg: 'bg-teal-50/40',
+                        badge: 'bg-teal-100 text-teal-900 border-teal-200',
+                        tabColor: 'bg-teal-600',
+                        label: settings.language === 'fa' ? 'تولید' : 'DEPT: Prod'
+                      };
+                    }
+                    if (deptStr.includes('فنی') || deptStr.includes('مهندسی') || deptStr.includes('tech') || deptStr.includes('maintenance')) {
+                      return {
+                        border: 'border-indigo-300',
+                        bg: 'bg-gradient-to-b from-indigo-500 to-indigo-700',
+                        hoverBg: 'hover:from-indigo-600 hover:to-indigo-800',
+                        text: 'text-indigo-800',
+                        lightBg: 'bg-indigo-50/40',
+                        badge: 'bg-indigo-100 text-indigo-900 border-indigo-200',
+                        tabColor: 'bg-indigo-600',
+                        label: settings.language === 'fa' ? 'فنی مهندسی' : 'DEPT: Tech'
+                      };
+                    }
+                    if (deptStr.includes('اداری') || deptStr.includes('منابع') || deptStr.includes('hr') || deptStr.includes('admin') || deptStr.includes('پشتیبانی')) {
+                      return {
+                        border: 'border-blue-300',
+                        bg: 'bg-gradient-to-b from-blue-500 to-blue-700',
+                        hoverBg: 'hover:from-blue-600 hover:to-blue-800',
+                        text: 'text-blue-800',
+                        lightBg: 'bg-blue-50/40',
+                        badge: 'bg-blue-100 text-blue-900 border-blue-200',
+                        tabColor: 'bg-blue-600',
+                        label: settings.language === 'fa' ? 'اداری و منابع' : 'DEPT: Admin'
+                      };
+                    }
+                    if (deptStr.includes('ایمنی') || deptStr.includes('بهداشت') || deptStr.includes('hse') || deptStr.includes('سلامت')) {
+                      return {
+                        border: 'border-cyan-300',
+                        bg: 'bg-gradient-to-b from-cyan-500 to-cyan-700',
+                        hoverBg: 'hover:from-cyan-600 hover:to-cyan-800',
+                        text: 'text-cyan-800',
+                        lightBg: 'bg-cyan-50/40',
+                        badge: 'bg-cyan-100 text-cyan-900 border-cyan-200',
+                        tabColor: 'bg-cyan-600',
+                        label: settings.language === 'fa' ? 'ایمنی و بهداشت' : 'DEPT: HSE'
+                      };
+                    }
+                    if (deptStr.includes('حراست') || deptStr.includes('انتظامات') || deptStr.includes('security')) {
+                      return {
+                        border: 'border-sky-300',
+                        bg: 'bg-gradient-to-b from-sky-500 to-sky-700',
+                        hoverBg: 'hover:from-sky-600 hover:to-sky-800',
+                        text: 'text-sky-800',
+                        lightBg: 'bg-sky-50/40',
+                        badge: 'bg-sky-100 text-sky-900 border-sky-200',
+                        tabColor: 'bg-sky-600',
+                        label: settings.language === 'fa' ? 'حراست انتظامات' : 'DEPT: Security'
+                      };
+                    }
+
+                    const colors = [
+                      { border: 'border-blue-200', bg: 'bg-gradient-to-b from-blue-550 to-blue-750', hoverBg: 'hover:bg-blue-700', text: 'text-blue-800', lightBg: 'bg-blue-50/50', badge: 'bg-blue-100 text-blue-900 border-blue-200', tabColor: 'bg-blue-600', label: settings.language === 'fa' ? 'واحد سازمانی' : 'DEPT: Other' },
+                      { border: 'border-teal-200', bg: 'bg-gradient-to-b from-teal-550 to-teal-750', hoverBg: 'hover:bg-teal-700', text: 'text-teal-800', lightBg: 'bg-teal-50/50', badge: 'bg-teal-100 text-teal-900 border-teal-200', tabColor: 'bg-teal-600', label: settings.language === 'fa' ? 'واحد سازمانی' : 'DEPT: Other' },
+                      { border: 'border-indigo-200', bg: 'bg-gradient-to-b from-indigo-550 to-indigo-750', hoverBg: 'hover:bg-indigo-700', text: 'text-indigo-800', lightBg: 'bg-indigo-50/50', badge: 'bg-indigo-100 text-indigo-900 border-indigo-200', tabColor: 'bg-indigo-600', label: settings.language === 'fa' ? 'واحد سازمانی' : 'DEPT: Other' },
+                    ];
+                    let sum = 0;
+                    for (let i = 0; i < key.length; i++) sum += key.charCodeAt(i);
+                    return colors[sum % colors.length];
+                  }
+
+                  // JOB_TITLE Mode: Purple, Violet, Fuchsia, Rose, Pink, Slate
+                  const roleStr = key.toLowerCase();
+                  if (roleStr.includes('سرپرست') || roleStr.includes('supervisor') || roleStr.includes('مدیر') || roleStr.includes('manager')) {
+                    return {
+                      border: 'border-fuchsia-300',
+                      bg: 'bg-gradient-to-b from-fuchsia-500 to-fuchsia-700',
+                      hoverBg: 'hover:from-fuchsia-600 hover:to-fuchsia-800',
+                      text: 'text-fuchsia-850',
+                      lightBg: 'bg-fuchsia-50/40',
+                      badge: 'bg-fuchsia-100 text-fuchsia-900 border-fuchsia-200',
+                      tabColor: 'bg-fuchsia-600',
+                      label: settings.language === 'fa' ? 'مدیر / سرپرست' : 'ROLE: Lead'
+                    };
+                  }
+                  if (roleStr.includes('کارشناس') || roleStr.includes('expert') || roleStr.includes('مهندس') || roleStr.includes('engineer')) {
+                    return {
+                      border: 'border-purple-300',
+                      bg: 'bg-gradient-to-b from-purple-500 to-purple-700',
+                      hoverBg: 'hover:from-purple-600 hover:to-purple-800',
+                      text: 'text-purple-850',
+                      lightBg: 'bg-purple-50/40',
+                      badge: 'bg-purple-100 text-purple-900 border-purple-200',
+                      tabColor: 'bg-purple-600',
+                      label: settings.language === 'fa' ? 'کارشناس / مهندس' : 'ROLE: Expert'
+                    };
+                  }
+                  if (roleStr.includes('تکنسین') || roleStr.includes('technician') || roleStr.includes('اپراتور') || roleStr.includes('operator')) {
+                    return {
+                      border: 'border-violet-300',
+                      bg: 'bg-gradient-to-b from-violet-500 to-violet-700',
+                      hoverBg: 'hover:from-violet-600 hover:to-violet-800',
+                      text: 'text-violet-850',
+                      lightBg: 'bg-violet-50/40',
+                      badge: 'bg-violet-100 text-violet-900 border-violet-200',
+                      tabColor: 'bg-violet-600',
+                      label: settings.language === 'fa' ? 'تکنسین / اپراتور' : 'ROLE: Tech'
+                    };
+                  }
+                  if (roleStr.includes('کارگر') || roleStr.includes('worker') || roleStr.includes('خدمات') || roleStr.includes('کارورز')) {
+                    return {
+                      border: 'border-pink-300',
+                      bg: 'bg-gradient-to-b from-pink-500 to-pink-700',
+                      hoverBg: 'hover:from-pink-600 hover:to-pink-800',
+                      text: 'text-pink-850',
+                      lightBg: 'bg-pink-50/40',
+                      badge: 'bg-pink-100 text-pink-900 border-pink-200',
+                      tabColor: 'bg-pink-600',
+                      label: settings.language === 'fa' ? 'پرسنل اجرایی' : 'ROLE: Worker'
+                    };
+                  }
+
                   const colors = [
-                    { border: 'border-blue-200', bg: 'bg-blue-600', hoverBg: 'hover:bg-blue-700', text: 'text-blue-700', lightBg: 'bg-blue-50/50' },
-                    { border: 'border-indigo-200', bg: 'bg-indigo-650', hoverBg: 'hover:bg-indigo-700', text: 'text-indigo-750', lightBg: 'bg-indigo-50/50' },
-                    { border: 'border-violet-200', bg: 'bg-violet-600', hoverBg: 'hover:bg-violet-700', text: 'text-violet-700', lightBg: 'bg-violet-50/50' },
-                    { border: 'border-sky-200', bg: 'bg-sky-600', hoverBg: 'hover:bg-sky-700', text: 'text-sky-700', lightBg: 'bg-sky-50/50' },
-                    { border: 'border-slate-300', bg: 'bg-slate-600', hoverBg: 'hover:bg-slate-700', text: 'text-slate-700', lightBg: 'bg-slate-50/50' },
-                    { border: 'border-purple-200', bg: 'bg-purple-600', hoverBg: 'hover:bg-purple-700', text: 'text-purple-700', lightBg: 'bg-purple-50/50' },
+                    { border: 'border-violet-200', bg: 'bg-gradient-to-b from-violet-500 to-violet-700', hoverBg: 'hover:bg-violet-800', text: 'text-violet-800', lightBg: 'bg-violet-50/50', badge: 'bg-violet-100 text-violet-900 border-violet-200', tabColor: 'bg-violet-600', label: settings.language === 'fa' ? 'عنوان شغلی' : 'ROLE: Staff' },
+                    { border: 'border-purple-200', bg: 'bg-gradient-to-b from-purple-500 to-purple-700', hoverBg: 'hover:bg-purple-800', text: 'text-purple-800', lightBg: 'bg-purple-50/50', badge: 'bg-purple-100 text-purple-900 border-purple-200', tabColor: 'bg-purple-600', label: settings.language === 'fa' ? 'عنوان شغلی' : 'ROLE: Staff' },
+                    { border: 'border-rose-200', bg: 'bg-gradient-to-b from-rose-500 to-rose-700', hoverBg: 'hover:bg-rose-800', text: 'text-rose-800', lightBg: 'bg-rose-50/50', badge: 'bg-rose-100 text-rose-900 border-rose-200', tabColor: 'bg-rose-600', label: settings.language === 'fa' ? 'عنوان شغلی' : 'ROLE: Staff' },
+                    { border: 'border-slate-300', bg: 'bg-gradient-to-b from-slate-500 to-slate-700', hoverBg: 'hover:bg-slate-800', text: 'text-slate-800', lightBg: 'bg-slate-50/50', badge: 'bg-slate-100 text-slate-900 border-slate-200', tabColor: 'bg-slate-600', label: settings.language === 'fa' ? 'عنوان شغلی' : 'ROLE: Staff' },
                   ];
                   let sum = 0;
                   for (let i = 0; i < key.length; i++) sum += key.charCodeAt(i);
@@ -2267,20 +2435,68 @@ const App: React.FC = () => {
                           className="bg-white border border-gray-200 hover:border-indigo-400 rounded-2xl shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex h-36 relative overflow-hidden group active:scale-98"
                         >
                           {/* Binder Spine */}
-                          <div className={`w-8 md:w-10 ${binderStyles.bg} flex flex-col items-center justify-between py-4 text-white relative shrink-0`}>
-                            <div className="w-4 h-4 rounded-full bg-white/25 border border-white/10 shadow-inner flex items-center justify-center animate-pulse" />
-                            <div className="w-1.5 h-12 bg-black/10 rounded-full" />
-                            <Layers className="w-4 h-4 opacity-75" />
+                          <div className={`w-11 md:w-12 ${binderStyles.bg} flex flex-col items-center justify-between py-3 text-white relative shrink-0 border-r border-black/10 shadow-[inset_-2px_0_4px_rgba(0,0,0,0.25)]`}>
+                            {/* Binder Ring / Pull Hole */}
+                            <div className="w-5 h-5 rounded-full bg-white/15 border border-white/20 shadow-inner flex items-center justify-center relative">
+                              <div className="w-3 h-3 rounded-full bg-black/35 border border-white/10" />
+                            </div>
+
+                            {/* Spine Insert Paper Label */}
+                            <div className="w-7 md:w-8 bg-amber-50/95 border border-black/15 shadow-xs rounded-md py-2 px-1 flex flex-col items-center gap-1.5 my-1.5 select-none">
+                              {/* Group Mode Strip */}
+                              <div className="flex flex-col gap-0.5 w-full items-center">
+                                <div className={`w-full h-1 rounded-xs ${binderStyles.tabColor}`} />
+                                <div className="w-full h-[1px] bg-gray-200" />
+                                <div className="w-full h-[1px] bg-gray-200" />
+                              </div>
+
+                              {/* Spine Label Icon */}
+                              <div className="p-0.5 rounded-full bg-white shadow-2xs border border-gray-100 flex items-center justify-center">
+                                {personnelGroupCriteria === 'DEPARTMENT' && (
+                                  <Users className="w-3 h-3 text-indigo-650" />
+                                )}
+                                {personnelGroupCriteria === 'SAFETY_STATUS' && (
+                                  <Shield className="w-3 h-3 text-emerald-600 animate-pulse" />
+                                )}
+                                {personnelGroupCriteria === 'JOB_TITLE' && (
+                                  <Briefcase className="w-3 h-3 text-purple-600" />
+                                )}
+                              </div>
+
+                              {/* Tiny vertical grouping indicator code */}
+                              <span className="text-[7.5px] font-black text-gray-700 tracking-tighter uppercase whitespace-nowrap overflow-hidden text-center block w-full scale-90">
+                                {personnelGroupCriteria === 'DEPARTMENT' && 'DEPT'}
+                                {personnelGroupCriteria === 'SAFETY_STATUS' && 'HSE'}
+                                {personnelGroupCriteria === 'JOB_TITLE' && 'ROLE'}
+                              </span>
+                            </div>
+
+                            {/* Spine clip accent */}
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className="text-[7px] font-mono tracking-widest text-white/50 block leading-none font-black scale-90">
+                                {settings.language === 'fa' ? 'HSE' : 'SAFE'}
+                              </span>
+                              <div className="w-4 h-0.5 bg-white/25 rounded-full" />
+                            </div>
                           </div>
 
                           {/* Binder Contents info */}
-                          <div className="flex-1 p-4 flex flex-col justify-between overflow-hidden">
-                            <div className="text-right">
+                          <div className="flex-1 p-4 flex flex-col justify-between overflow-hidden relative">
+                            {/* Color Tag Tab indicator at the top corner */}
+                            <div className={`absolute top-0 ${settings.language === 'fa' ? 'left-0 rounded-br-xl' : 'right-0 rounded-bl-xl'} px-2.5 py-1 text-[8px] font-extrabold tracking-wider text-white ${binderStyles.tabColor} flex items-center gap-1 shadow-sm`}>
+                              {personnelGroupCriteria === 'DEPARTMENT' && <Users className="w-2.5 h-2.5" />}
+                              {personnelGroupCriteria === 'SAFETY_STATUS' && <Shield className="w-2.5 h-2.5" />}
+                              {personnelGroupCriteria === 'JOB_TITLE' && <Briefcase className="w-2.5 h-2.5" />}
+                              <span>{binderStyles.label}</span>
+                            </div>
+
+                            {/* Binder Name text */}
+                            <div className="text-right pt-2">
                               <h4 className="font-extrabold text-sm md:text-base text-gray-800 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors" title={binderName}>
                                 {binderName}
                               </h4>
                               <p className="text-[10px] md:text-xs text-gray-400 font-bold mt-1.5">
-                                {settings.language === 'fa' ? `دسته: ${getCriteriaLabel(personnelGroupCriteria)}` : `Type: ${getCriteriaLabel(personnelGroupCriteria)}`}
+                                {settings.language === 'fa' ? `دسته‌بندی: ${getCriteriaLabel(personnelGroupCriteria)}` : `Category: ${getCriteriaLabel(personnelGroupCriteria)}`}
                               </p>
                             </div>
                             
