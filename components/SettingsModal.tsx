@@ -939,15 +939,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
             )}
 
-            {(isDeveloper || currentUser.role === 'HSE_MANAGER' || currentUser.role === 'PLANT_MANAGER') && (
-                <button 
-                    onClick={() => setActiveTab('DATA')}
-                    className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'bg-white shadow-md text-indigo-600 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
-                >
-                    <Database className="w-4 h-4 md:w-5 md:h-5" />
-                    <span className="text-xs md:text-sm">{t.dataManagement}</span>
-                </button>
-            )}
+            <button 
+                onClick={() => setActiveTab('DATA')}
+                className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'bg-white shadow-md text-indigo-600 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+                <Database className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-xs md:text-sm">{t.dataManagement}</span>
+            </button>
 
             {(isDeveloper || currentUser.role === 'HSE_MANAGER' || currentUser.role === 'PLANT_MANAGER' || currentUser.role === 'HR_MANAGER') && (
                 <button 

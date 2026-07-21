@@ -39,6 +39,8 @@ const App: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [personnelSearchQuery, setPersonnelSearchQuery] = useState('');
   const [personnelDeptFilter, setPersonnelDeptFilter] = useState('ALL');
+  const [personnelGroupCriteria, setPersonnelGroupCriteria] = useState<'DEPARTMENT' | 'SAFETY_STATUS' | 'JOB_TITLE'>('DEPARTMENT');
+  const [selectedBinderKey, setSelectedBinderKey] = useState<string | null>(null);
   const [violations, setViolations] = useState<Violation[]>(MOCK_VIOLATIONS);
   const [rewards, setRewards] = useState<Reward[]>(MOCK_REWARDS);
   const [systemMode, setSystemMode] = useState<SystemMode>('VIOLATION');
@@ -56,6 +58,9 @@ const App: React.FC = () => {
   const [localSearch, setLocalSearch] = useState('');
   const [showMainSearchDropdown, setShowMainSearchDropdown] = useState(false);
   const mainSearchContainerRef = useRef<HTMLDivElement>(null);
+
+
+
 
   useEffect(() => {
     if (searchTerm === '') {
@@ -1962,33 +1967,75 @@ const App: React.FC = () => {
                 )}
               </div>
 
-              {/* Search & Filter Bar */}
-              <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className={`absolute ${settings.language === 'fa' ? 'right-3' : 'left-3'} top-3 h-4 w-4 text-gray-400`} />
-                  <input 
-                    type="text" 
-                    placeholder={settings.language === 'fa' ? 'جستجوی نام یا کد پرسنلی...' : 'Search name or personnel ID...'} 
-                    className={`w-full py-2 ${settings.language === 'fa' ? 'pr-9 pl-4' : 'pl-9 pr-4'} text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} bg-white shadow-inner`} 
-                    value={personnelSearchQuery} 
-                    onChange={(e) => setPersonnelSearchQuery(e.target.value)}
-                  />
+              {/* Search, Filter & Binder Selection Bar */}
+              <div className="bg-white p-4 md:p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className={`absolute ${settings.language === 'fa' ? 'right-3' : 'left-3'} top-3 h-4 w-4 text-gray-400`} />
+                    <input 
+                      type="text" 
+                      placeholder={settings.language === 'fa' ? 'جستجوی نام یا کد پرسنلی...' : 'Search name or personnel ID...'} 
+                      className={`w-full py-2 ${settings.language === 'fa' ? 'pr-9 pl-4' : 'pl-9 pr-4'} text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} bg-white shadow-inner`} 
+                      value={personnelSearchQuery} 
+                      onChange={(e) => {
+                        setPersonnelSearchQuery(e.target.value);
+                        if (e.target.value) {
+                          setSelectedBinderKey(null);
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="relative w-full sm:w-48">
+                    <select
+                      value={personnelDeptFilter}
+                      onChange={(e) => {
+                        setPersonnelDeptFilter(e.target.value);
+                        if (e.target.value !== 'ALL') {
+                          setSelectedBinderKey(null);
+                        }
+                      }}
+                      className={`w-full py-2 px-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} text-xs md:text-sm font-semibold shadow-sm text-gray-700 cursor-pointer`}
+                    >
+                      <option value="ALL">{settings.language === 'fa' ? 'همه واحدها' : 'All Departments'}</option>
+                      {DEPARTMENTS_LIST.map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div className="relative w-full sm:w-48">
-                  <select
-                    value={personnelDeptFilter}
-                    onChange={(e) => setPersonnelDeptFilter(e.target.value)}
-                    className={`w-full py-2 px-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 ${themeStyles.ring} text-xs md:text-sm font-semibold shadow-sm text-gray-700 cursor-pointer`}
-                  >
-                    <option value="ALL">{settings.language === 'fa' ? 'همه واحدها' : 'All Departments'}</option>
-                    {DEPARTMENTS_LIST.map(dept => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
+
+                {/* Binder Grouping controls */}
+                <div className="border-t border-gray-100 pt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs font-bold text-gray-600">
+                      {settings.language === 'fa' ? 'دسته‌بندی زونکن‌ها بر اساس:' : 'Organize Binders by:'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
+                    <button
+                      onClick={() => { setPersonnelGroupCriteria('DEPARTMENT'); setSelectedBinderKey(null); }}
+                      className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${personnelGroupCriteria === 'DEPARTMENT' ? 'bg-indigo-650 text-white shadow-sm' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+                    >
+                      {settings.language === 'fa' ? 'واحد سازمانی (دپارتمان)' : 'Department'}
+                    </button>
+                    <button
+                      onClick={() => { setPersonnelGroupCriteria('SAFETY_STATUS'); setSelectedBinderKey(null); }}
+                      className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${personnelGroupCriteria === 'SAFETY_STATUS' ? 'bg-indigo-650 text-white shadow-sm' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+                    >
+                      {settings.language === 'fa' ? 'رتبه و امتیاز ایمنی (HSE)' : 'HSE Score'}
+                    </button>
+                    <button
+                      onClick={() => { setPersonnelGroupCriteria('JOB_TITLE'); setSelectedBinderKey(null); }}
+                      className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${personnelGroupCriteria === 'JOB_TITLE' ? 'bg-indigo-650 text-white shadow-sm' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+                    >
+                      {settings.language === 'fa' ? 'پست و عنوان شغلی' : 'Job Title'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Personnel Grid */}
+              {/* Binders Shelf or Opened Binder view */}
               {(() => {
                 const filteredEmployees = employees.filter(emp => {
                   const query = personnelSearchQuery.toLowerCase().trim();
@@ -2005,121 +2052,246 @@ const App: React.FC = () => {
                     <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-xs">
                       <UserIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                       <h3 className="text-sm font-bold text-gray-700">
-                        {settings.language === 'fa' ? 'پرسنلی با این مشخصات یافت نشد' : 'No personnel records match selection'}
+                        {settings.language === 'fa' ? 'پرونده‌ای با این مشخصات یافت نشد' : 'No personnel records match selection'}
                       </h3>
                       <p className="text-xs text-gray-400 mt-1">
-                        {settings.language === 'fa' ? 'می‌توانید پرسنل جدید را از دکمه ثبت پرسنل ثبت کنید.' : 'Add new employees or adjust your search filters.'}
+                        {settings.language === 'fa' ? 'می‌توانید فیلترها را ریست کرده یا پرسنل جدید ثبت کنید.' : 'Adjust search filters or add new employees.'}
                       </p>
                     </div>
                   );
                 }
 
-                return (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredEmployees.map(emp => {
-                      // Calculate employee's total score starting at 100 base
-                      const empViolations = violations.filter(v => v.personnelId === emp.personnelId && v.isApproved && !v.isArchived);
-                      const empRewards = rewards.filter(r => r.personnelId === emp.personnelId && r.isApproved && !r.isArchived);
-                      const totalDeductions = empViolations.reduce((sum, v) => sum + (v.score || 0), 0); // Negative values
-                      const totalAdditions = empRewards.reduce((sum, r) => sum + (r.score || 0), 0); // Positive values
-                      const totalScore = Math.max(0, 100 + totalDeductions + totalAdditions);
+                // Group them into binders (زونکن ها)
+                const binders: { [key: string]: Employee[] } = {};
+                filteredEmployees.forEach(emp => {
+                  let groupKey = '';
+                  if (personnelGroupCriteria === 'DEPARTMENT') {
+                    groupKey = emp.department || (settings.language === 'fa' ? 'ثبت نشده' : 'Not Specified');
+                  } else if (personnelGroupCriteria === 'SAFETY_STATUS') {
+                    const empViolations = violations.filter(v => v.personnelId === emp.personnelId && v.isApproved && !v.isArchived);
+                    const empRewards = rewards.filter(r => r.personnelId === emp.personnelId && r.isApproved && !r.isArchived);
+                    const totalDeductions = empViolations.reduce((sum, v) => sum + (v.score || 0), 0);
+                    const totalAdditions = empRewards.reduce((sum, r) => sum + (r.score || 0), 0);
+                    const totalScore = Math.max(0, 100 + totalDeductions + totalAdditions);
+                    
+                    if (totalScore >= 100) {
+                      groupKey = settings.language === 'fa' ? 'زونکن طلایی (عالی و نمونه - امتیاز ۱۰۰+)' : 'Golden Binder (Excellent - 100+)';
+                    } else if (totalScore >= 80) {
+                      groupKey = settings.language === 'fa' ? 'زونکن سبز (ایمن و خوب - امتیاز ۸۰ تا ۹۹)' : 'Green Binder (Safe - 80-99)';
+                    } else if (totalScore >= 60) {
+                      groupKey = settings.language === 'fa' ? 'زونکن نارنجی (هشدار و احتیاط - امتیاز ۶۰ تا ۷۹)' : 'Orange Binder (Warning - 60-79)';
+                    } else {
+                      groupKey = settings.language === 'fa' ? 'زونکن قرمز (بحرانی و پرخطر - امتیاز زیر ۶۰)' : 'Red Binder (Critical - <60)';
+                    }
+                  } else {
+                    groupKey = emp.jobTitle || (settings.language === 'fa' ? 'پست متفرقه' : 'Other Roles');
+                  }
 
-                      // Determine status label & color
-                      let scoreColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                      let scoreStatus = settings.language === 'fa' ? 'عالی (نمونه)' : 'Excellent';
-                      
-                      if (totalScore < 60) {
-                        scoreColor = 'bg-red-50 text-red-700 border-red-200';
-                        scoreStatus = settings.language === 'fa' ? 'بحرانی (تعلیق/اخراج)' : 'Critical';
-                      } else if (totalScore < 80) {
-                        scoreColor = 'bg-orange-50 text-orange-700 border-orange-200';
-                        scoreStatus = settings.language === 'fa' ? 'خطر (کمیته انضباطی)' : 'Danger';
-                      } else if (totalScore < 100) {
-                        scoreColor = 'bg-amber-50 text-amber-700 border-amber-200';
-                        scoreStatus = settings.language === 'fa' ? 'هشدار' : 'Warning';
-                      } else if (totalScore <= 110) {
-                        scoreColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
-                        scoreStatus = settings.language === 'fa' ? 'خوب' : 'Good';
-                      }
+                  if (!binders[groupKey]) {
+                    binders[groupKey] = [];
+                  }
+                  binders[groupKey].push(emp);
+                });
 
-                      return (
-                        <div
-                          key={emp.id}
-                          className="bg-white border border-gray-200 hover:border-indigo-300 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all hover:-translate-y-0.5 flex flex-col justify-between group relative overflow-hidden"
-                        >
-                          {/* Background decorative accent based on safety score */}
-                          <div className={`absolute top-0 right-0 left-0 h-1.5 ${
-                            totalScore >= 100 ? 'bg-emerald-500' : totalScore >= 80 ? 'bg-amber-500' : 'bg-red-500'
-                          }`} />
+                const getBinderColor = (key: string) => {
+                  if (key.includes('طلایی') || key.includes('Golden') || key.includes('عالی')) return { border: 'border-amber-300', bg: 'bg-amber-500', hoverBg: 'hover:bg-amber-600', text: 'text-amber-700', lightBg: 'bg-amber-50' };
+                  if (key.includes('سبز') || key.includes('Green') || key.includes('ایمن')) return { border: 'border-emerald-300', bg: 'bg-emerald-500', hoverBg: 'hover:bg-emerald-600', text: 'text-emerald-700', lightBg: 'bg-emerald-50' };
+                  if (key.includes('نارنجی') || key.includes('Orange') || key.includes('هشدار')) return { border: 'border-orange-300', bg: 'bg-orange-500', hoverBg: 'hover:bg-orange-600', text: 'text-orange-700', lightBg: 'bg-orange-50' };
+                  if (key.includes('قرمز') || key.includes('Red') || key.includes('بحرانی')) return { border: 'border-red-300', bg: 'bg-red-500', hoverBg: 'hover:bg-red-600', text: 'text-red-700', lightBg: 'bg-red-50' };
+                  
+                  const colors = [
+                    { border: 'border-blue-200', bg: 'bg-blue-600', hoverBg: 'hover:bg-blue-700', text: 'text-blue-700', lightBg: 'bg-blue-50/50' },
+                    { border: 'border-indigo-200', bg: 'bg-indigo-650', hoverBg: 'hover:bg-indigo-700', text: 'text-indigo-750', lightBg: 'bg-indigo-50/50' },
+                    { border: 'border-violet-200', bg: 'bg-violet-600', hoverBg: 'hover:bg-violet-700', text: 'text-violet-700', lightBg: 'bg-violet-50/50' },
+                    { border: 'border-sky-200', bg: 'bg-sky-600', hoverBg: 'hover:bg-sky-700', text: 'text-sky-700', lightBg: 'bg-sky-50/50' },
+                    { border: 'border-slate-300', bg: 'bg-slate-600', hoverBg: 'hover:bg-slate-700', text: 'text-slate-700', lightBg: 'bg-slate-50/50' },
+                    { border: 'border-purple-200', bg: 'bg-purple-600', hoverBg: 'hover:bg-purple-700', text: 'text-purple-700', lightBg: 'bg-purple-50/50' },
+                  ];
+                  let sum = 0;
+                  for (let i = 0; i < key.length; i++) sum += key.charCodeAt(i);
+                  return colors[sum % colors.length];
+                };
 
-                          <div className="space-y-4 pt-2">
-                            {/* Personnel Info Header */}
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-11 h-11 rounded-xl font-bold text-sm flex items-center justify-center transition-transform group-hover:scale-105 ${themeStyles.lightBg} ${themeStyles.lightText}`}>
-                                  {emp.fullName.charAt(0)}
-                                </div>
-                                <div>
-                                  <h4 className="font-extrabold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-tight">
-                                    {emp.fullName}
-                                  </h4>
-                                  <span className="text-[10px] text-gray-400 font-bold block mt-1">
-                                    {emp.jobTitle || (settings.language === 'fa' ? 'پست سازمانی ثبت نشده' : 'No custom title')}
+                const getCriteriaLabel = (crit: string) => {
+                  if (crit === 'DEPARTMENT') return settings.language === 'fa' ? 'واحد سازمانی' : 'Department';
+                  if (crit === 'SAFETY_STATUS') return settings.language === 'fa' ? 'وضعیت ایمنی' : 'HSE Status';
+                  return settings.language === 'fa' ? 'پست شغلی' : 'Job Title';
+                };
+
+                if (selectedBinderKey && binders[selectedBinderKey]) {
+                  const employeesInBinder = binders[selectedBinderKey];
+                  return (
+                    <div className="space-y-4 animate-in fade-in duration-350">
+                      {/* Folder Title bar */}
+                      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setSelectedBinderKey(null)}
+                            className="px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                          >
+                            <span>{settings.language === 'fa' ? '← بازگشت به زونکن‌ها' : '← Back to Binders'}</span>
+                          </button>
+                          <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+                          <div>
+                            <h3 className="text-sm md:text-base font-black text-gray-800 flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse" />
+                              <span>{settings.language === 'fa' ? `درحال مشاهده زونکن: ${selectedBinderKey}` : `Viewing Folder: ${selectedBinderKey}`}</span>
+                            </h3>
+                            <p className="text-[10px] text-gray-400 font-bold mt-0.5">
+                              {settings.language === 'fa' ? `شامل ${employeesInBinder.length} پرونده پرسنلی` : `Contains ${employeesInBinder.length} personnel records`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-[10px] md:text-xs text-gray-400 font-bold">
+                          {settings.language === 'fa' ? 'جهت تغییر دسته‌بندی ابتدا دکمه بازگشت را بزنید.' : 'To change category, click Back first.'}
+                        </div>
+                      </div>
+
+                      {/* Employees in active binder */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {employeesInBinder.map(emp => {
+                          const empViolations = violations.filter(v => v.personnelId === emp.personnelId && v.isApproved && !v.isArchived);
+                          const empRewards = rewards.filter(r => r.personnelId === emp.personnelId && r.isApproved && !r.isArchived);
+                          const totalDeductions = empViolations.reduce((sum, v) => sum + (v.score || 0), 0);
+                          const totalAdditions = empRewards.reduce((sum, r) => sum + (r.score || 0), 0);
+                          const totalScore = Math.max(0, 100 + totalDeductions + totalAdditions);
+
+                          let scoreColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                          let scoreStatus = settings.language === 'fa' ? 'عالی (نمونه)' : 'Excellent';
+                          
+                          if (totalScore < 60) {
+                            scoreColor = 'bg-red-50 text-red-700 border-red-200';
+                            scoreStatus = settings.language === 'fa' ? 'بحرانی (تعلیق/اخراج)' : 'Critical';
+                          } else if (totalScore < 80) {
+                            scoreColor = 'bg-orange-50 text-orange-700 border-orange-200';
+                            scoreStatus = settings.language === 'fa' ? 'خطر (کمیته انضباطی)' : 'Danger';
+                          } else if (totalScore < 100) {
+                            scoreColor = 'bg-amber-50 text-amber-700 border-amber-200';
+                            scoreStatus = settings.language === 'fa' ? 'هشدار' : 'Warning';
+                          } else if (totalScore <= 110) {
+                            scoreColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+                            scoreStatus = settings.language === 'fa' ? 'خوب' : 'Good';
+                          }
+
+                          return (
+                            <div
+                              key={emp.id}
+                              className="bg-white border border-gray-200 hover:border-indigo-300 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all hover:-translate-y-0.5 flex flex-col justify-between group relative overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                            >
+                              <div className={`absolute top-0 right-0 left-0 h-1.5 ${
+                                totalScore >= 100 ? 'bg-emerald-500' : totalScore >= 80 ? 'bg-amber-500' : 'bg-red-500'
+                              }`} />
+
+                              <div className="space-y-4 pt-2">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-11 h-11 rounded-xl font-bold text-sm flex items-center justify-center transition-transform group-hover:scale-105 ${themeStyles.lightBg} ${themeStyles.lightText}`}>
+                                      {emp.fullName.charAt(0)}
+                                    </div>
+                                    <div>
+                                      <h4 className="font-extrabold text-sm text-gray-900 group-hover:text-indigo-600 transition-colors leading-tight">
+                                        {emp.fullName}
+                                      </h4>
+                                      <span className="text-[10px] text-gray-400 font-bold block mt-1">
+                                        {emp.jobTitle || (settings.language === 'fa' ? 'پست سازمانی ثبت نشده' : 'No custom title')}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <span className="bg-gray-100 border border-gray-200 text-gray-600 text-[10px] px-2.5 py-0.5 rounded-lg font-mono font-bold shrink-0">
+                                    {emp.personnelId}
                                   </span>
                                 </div>
-                              </div>
-                              <span className="bg-gray-100 border border-gray-200 text-gray-600 text-[10px] px-2.5 py-0.5 rounded-lg font-mono font-bold shrink-0">
-                                {emp.personnelId}
-                              </span>
-                            </div>
 
-                            {/* Rating / Score Indicator */}
-                            <div className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold ${scoreColor}`}>
-                              <span>{settings.language === 'fa' ? 'امتیاز رفتار ایمنی:' : 'Safety Point Score:'}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-black font-mono">{totalScore}</span>
-                                <span className="text-[9px] px-1.5 py-0.5 bg-white rounded-md border border-inherit font-semibold">{scoreStatus}</span>
-                              </div>
-                            </div>
+                                <div className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold ${scoreColor}`}>
+                                  <span>{settings.language === 'fa' ? 'امتیاز رفتار ایمنی:' : 'Safety Point Score:'}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-black font-mono">{totalScore}</span>
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-white rounded-md border border-inherit font-semibold">{scoreStatus}</span>
+                                  </div>
+                                </div>
 
-                            {/* Department & Stats Row */}
-                            <div className="grid grid-cols-2 gap-2 text-center text-[10px] border-t border-b border-gray-100 py-3">
-                              <div className="border-l border-gray-100 last:border-0 px-1">
-                                <span className="block text-gray-400 font-bold">{settings.language === 'fa' ? 'دپارتمان' : 'Department'}</span>
-                                <span className="block font-black text-gray-700 truncate mt-1 text-xs" title={emp.department}>
-                                  {emp.department || '—'}
-                                </span>
+                                <div className="grid grid-cols-2 gap-2 text-center text-[10px] border-t border-b border-gray-100 py-3">
+                                  <div className="border-l border-gray-100 last:border-0 px-1">
+                                    <span className="block text-gray-400 font-bold">{settings.language === 'fa' ? 'دپارتمان' : 'Department'}</span>
+                                    <span className="block font-black text-gray-700 truncate mt-1 text-xs" title={emp.department}>
+                                      {emp.department || '—'}
+                                    </span>
+                                  </div>
+                                  <div className="px-1">
+                                    <span className="block text-gray-400 font-bold">{settings.language === 'fa' ? 'خلاصه پرونده' : 'Dossier Log'}</span>
+                                    <span className="block font-black text-xs mt-1 space-x-1 whitespace-nowrap">
+                                      <span className="text-red-500 font-bold">🚫 {empViolations.length} {settings.language === 'fa' ? 'تخلف' : 'Non-comp'}</span>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="text-emerald-500 font-bold">🏆 {empRewards.length} {settings.language === 'fa' ? 'امتیاز' : 'Reward'}</span>
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="px-1">
-                                <span className="block text-gray-400 font-bold">{settings.language === 'fa' ? 'خلاصه پرونده' : 'Dossier Log'}</span>
-                                <span className="block font-black text-xs mt-1 space-x-1 whitespace-nowrap">
-                                  <span className="text-red-500 font-bold">🚫 {empViolations.length} {settings.language === 'fa' ? 'تخلف' : 'Non-comp'}</span>
-                                  <span className="text-gray-300">|</span>
-                                  <span className="text-emerald-500 font-bold">🏆 {empRewards.length} {settings.language === 'fa' ? 'امتیاز' : 'Reward'}</span>
-                                </span>
+
+                              <div className="flex gap-2 mt-4">
+                                <button
+                                  onClick={() => setSelectedPersonnelId(emp.personnelId)}
+                                  className="flex-1 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 cursor-pointer active:scale-95"
+                                >
+                                  <BookOpen className="w-4 h-4" />
+                                  <span>{settings.language === 'fa' ? 'مشاهده پرونده' : 'View Dossier'}</span>
+                                </button>
+                                {['PLANT_MANAGER', 'HR_MANAGER', 'DEVELOPER', 'HSE_MANAGER', 'ADMIN_STAFF'].includes(user?.role || '') && (
+                                  <button
+                                    onClick={() => setEditingEmployee(emp)}
+                                    className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-250 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                                    title={settings.language === 'fa' ? 'ویرایش مشخصات پرسنلی' : 'Edit Personnel'}
+                                  >
+                                    <Edit className="w-4 h-4 text-slate-500" />
+                                    <span>{settings.language === 'fa' ? 'ویرایش' : 'Edit'}</span>
+                                  </button>
+                                )}
                               </div>
                             </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Default: Render the shelf of Binders
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 animate-in fade-in duration-300">
+                    {Object.keys(binders).sort().map(binderName => {
+                      const binderStyles = getBinderColor(binderName);
+                      return (
+                        <div 
+                          key={binderName}
+                          onClick={() => setSelectedBinderKey(binderName)}
+                          className="bg-white border border-gray-200 hover:border-indigo-400 rounded-2xl shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex h-36 relative overflow-hidden group active:scale-98"
+                        >
+                          {/* Binder Spine */}
+                          <div className={`w-8 md:w-10 ${binderStyles.bg} flex flex-col items-center justify-between py-4 text-white relative shrink-0`}>
+                            <div className="w-4 h-4 rounded-full bg-white/25 border border-white/10 shadow-inner flex items-center justify-center animate-pulse" />
+                            <div className="w-1.5 h-12 bg-black/10 rounded-full" />
+                            <Layers className="w-4 h-4 opacity-75" />
                           </div>
 
-                          {/* Main Action Buttons */}
-                          <div className="flex gap-2 mt-4">
-                            <button
-                              onClick={() => setSelectedPersonnelId(emp.personnelId)}
-                              className="flex-1 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 cursor-pointer"
-                            >
-                              <BookOpen className="w-4 h-4" />
-                              <span>{settings.language === 'fa' ? 'مشاهده پرونده' : 'View Dossier'}</span>
-                            </button>
-                            {['PLANT_MANAGER', 'HR_MANAGER', 'DEVELOPER', 'HSE_MANAGER', 'ADMIN_STAFF'].includes(user?.role || '') && (
-                              <button
-                                onClick={() => setEditingEmployee(emp)}
-                                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-250 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                                title={settings.language === 'fa' ? 'ویرایش مشخصات پرسنلی' : 'Edit Personnel'}
-                              >
-                                <Edit className="w-4 h-4 text-slate-500" />
-                                <span>{settings.language === 'fa' ? 'ویرایش' : 'Edit'}</span>
-                              </button>
-                            )}
+                          {/* Binder Contents info */}
+                          <div className="flex-1 p-4 flex flex-col justify-between overflow-hidden">
+                            <div className="text-right">
+                              <h4 className="font-extrabold text-sm md:text-base text-gray-800 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors" title={binderName}>
+                                {binderName}
+                              </h4>
+                              <p className="text-[10px] md:text-xs text-gray-400 font-bold mt-1.5">
+                                {settings.language === 'fa' ? `دسته: ${getCriteriaLabel(personnelGroupCriteria)}` : `Type: ${getCriteriaLabel(personnelGroupCriteria)}`}
+                              </p>
+                            </div>
+                            
+                            <div className="flex items-center justify-between border-t border-gray-100 pt-2 flex-row-reverse">
+                              <span className="text-xs font-black text-indigo-700 bg-indigo-50/85 border border-indigo-100 px-2.5 py-1 rounded-lg">
+                                {binders[binderName].length} {settings.language === 'fa' ? 'پرونده' : 'Files'}
+                              </span>
+                              <span className="text-[10px] font-extrabold text-gray-400 group-hover:text-indigo-500 transition-colors flex items-center gap-1 select-none">
+                                {settings.language === 'fa' ? '← باز کردن زونکن' : 'Open Folder →'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );
