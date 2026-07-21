@@ -76,6 +76,8 @@
     ],
     "win": {
       "icon": "public/app_icon_new_1783848679437.png",
+      "forceCodeSigning": false,
+      "cscLink": null,
       "target": [
         {
           "target": "nsis",
