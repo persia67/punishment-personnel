@@ -20,8 +20,9 @@ import { WorkerOfMonthModal } from './components/WorkerOfMonthModal';
 import ChangelogModal from './components/ChangelogModal';
 import HseTrendDashboard from './components/HseTrendDashboard';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
+import { pushToCloudStorage, pullFromCloudStorage, getCloudConfig } from './services/cloudSyncService';
 import { sendNotificationSms } from './services/smsService';
-import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit, ShieldAlert, Briefcase } from 'lucide-react';
+import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudLightning, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit, ShieldAlert, Briefcase } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -217,6 +218,23 @@ const App: React.FC = () => {
       } else {
         setSyncStatus('error');
       }
+
+      // Sync to ParsPack Cloud Storage if cloud sync is enabled
+      const activeSettings = setts !== undefined ? setts : settings;
+      if (activeSettings.cloudSyncEnabled) {
+        pushToCloudStorage({
+          timestamp: Date.now(),
+          violations: payload.violations,
+          rewards: payload.rewards,
+          users: payload.users,
+          employees: payload.employees,
+          violationCodes: payload.violationCodes,
+          rewardCodes: payload.rewardCodes,
+          settings: activeSettings
+        }, getCloudConfig(activeSettings)).catch((err) => {
+          console.warn('[CloudSync] Background sync notice:', err);
+        });
+      }
     } catch {
       setSyncStatus('error');
     }
@@ -389,8 +407,8 @@ const App: React.FC = () => {
     const savedSettings = localStorage.getItem('sg_settings');
     if (savedSettings) {
       const parsed = JSON.parse(savedSettings);
-      if (parsed.companyLogo && (parsed.companyLogo.includes('app_icon_1781090095655.png') || parsed.companyLogo === './app_icon_fixed.jpg')) {
-        parsed.companyLogo = './app_icon_new_1783848679437.png';
+      if (!parsed.companyLogo || parsed.companyLogo.includes('app_icon') || parsed.companyLogo.startsWith('.')) {
+        parsed.companyLogo = '/icon.png';
       }
       setSettings(parsed);
     }
@@ -432,8 +450,8 @@ const App: React.FC = () => {
         const s = localStorage.getItem('sg_settings');
         if(s) {
             const parsed = JSON.parse(s);
-            if (parsed.companyLogo && (parsed.companyLogo.includes('app_icon_1781090095655.png') || parsed.companyLogo === './app_icon_fixed.jpg')) {
-                parsed.companyLogo = './app_icon_new_1783848679437.png';
+            if (!parsed.companyLogo || parsed.companyLogo.includes('app_icon') || parsed.companyLogo.startsWith('.')) {
+                parsed.companyLogo = '/icon.png';
             }
             setSettings(parsed);
         }
@@ -783,7 +801,7 @@ const App: React.FC = () => {
   };
 
   // Filter Data based on Role/Department
-  const filterData = <T extends Violation | Reward>(data: T[]) => {
+  const filterData = React.useCallback(<T extends Violation | Reward>(data: T[]) => {
     return data.filter(item => {
       // 1. Department Source Role Filter
       const isMyDept = canViewAll || item.departmentSource === userDept;
@@ -816,7 +834,7 @@ const App: React.FC = () => {
       if (approvalStatusFilter === 'APPROVED') return !!item.isApproved;
       return true;
     });
-  };
+  }, [canViewAll, userDept, selectedDeptFilter, searchTerm, activeTab, approvalStatusFilter]);
 
   // Memoized matched employees for main page search to allow opening empty profiles
   const matchedEmployeesForMainSearch = React.useMemo(() => {
@@ -835,7 +853,10 @@ const App: React.FC = () => {
     });
   }, [searchTerm, selectedDeptFilter, employees]);
 
-  const itemsToDisplay = systemMode === 'VIOLATION' ? filterData(violations) : filterData(rewards);
+  const filteredViolations = React.useMemo(() => filterData(violations), [violations, filterData]);
+  const filteredRewards = React.useMemo(() => filterData(rewards), [rewards, filterData]);
+
+  const itemsToDisplay = systemMode === 'VIOLATION' ? filteredViolations : filteredRewards;
 
   const sortedItems = [...itemsToDisplay].sort((a, b) => {
     if (sortField === 'NONE') return 0;
@@ -1047,7 +1068,12 @@ const App: React.FC = () => {
                <img 
                  src={settings.companyLogo} 
                  alt="Intelligent monitoring system Logo" 
-                 className="w-12 h-12 md:w-16 md:h-16 rounded-xl object-contain shadow-md hover:scale-105 transition-transform bg-gray-100/50 border border-gray-200/60 p-0.5" 
+                 onError={(e) => {
+                   const target = e.currentTarget;
+                   target.onerror = null;
+                   target.src = '/icon.png';
+                 }}
+                 className="w-12 h-12 md:w-16 md:h-16 rounded-xl object-contain shadow-md hover:scale-105 transition-transform bg-white border border-gray-200/60 p-0.5" 
                  referrerPolicy="no-referrer"
                />
              ) : (
@@ -1380,8 +1406,21 @@ const App: React.FC = () => {
                   {systemMode === 'VIOLATION' ? <Shield className="w-3.5 h-3.5" /> : <Medal className="w-3.5 h-3.5" />}
                   {systemMode === 'VIOLATION' ? t.mode_violation : t.mode_reward}
                 </span>
-                {/* Server Status Indicators */}
+                {/* Server & Cloud Status Indicators */}
                 <>
+                  {settings.cloudSyncEnabled && (
+                    <span 
+                      onClick={() => {
+                        setSettingsDefaultTab('DATA');
+                        setIsSettingsOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-900 text-sky-200 border border-indigo-700 shadow-xs cursor-pointer hover:bg-indigo-950 transition-all active:scale-95"
+                      title={settings.language === 'fa' ? 'فضای ابری و شبکه پارس‌پک (کلیک جهت تنظیمات)' : 'ParsPack Cloud Sync (Click for Settings)'}
+                    >
+                      <CloudLightning className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+                      <span>{settings.language === 'fa' ? 'شبکه ابری فعال (ParsPack)' : 'ParsPack Cloud Active'}</span>
+                    </span>
+                  )}
                   {(syncStatus === 'synced' && isOnline) ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-emerald-100 text-emerald-600 shadow-xs">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -1478,8 +1517,8 @@ const App: React.FC = () => {
         {/* Only show Stats if Plant Manager or HR */}
         {canViewAll && (
           <>
-            <DashboardStats violations={violations} rewards={rewards} mode={systemMode} language={settings.language} />
-            <HseTrendDashboard violations={violations} rewards={rewards} settings={settings} />
+            <DashboardStats violations={filteredViolations} rewards={filteredRewards} mode={systemMode} language={settings.language} />
+            <HseTrendDashboard violations={filteredViolations} rewards={filteredRewards} settings={settings} />
           </>
         )}
 

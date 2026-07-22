@@ -1,4 +1,5 @@
 {
+  "timestamp": 1784702467623,
   "violations": [
     {
       "id": "V-1001",
@@ -2898,12 +2899,11 @@
     "localHfUrl": "http://localhost:8000",
     "localHfModel": "Qwen/Qwen2.5-Copilot-3B",
     "autoOfflineFailover": true,
-    "cloudSyncEnabled": true,
     "cloudEndpoint": "https://c776876.parspack.net",
     "cloudAccessKey": "qMHLfvgXakpoWNrY",
     "cloudSecretKey": "LSjyQ18o2NUWsjsSnAVjUoqsNmZE6nMXz",
     "cloudBucketName": "safewatch-share",
-    "cloudSyncInterval": 5,
+    "cloudSyncEnabled": true,
     "cloudRealtimeSync": true
   }
 }

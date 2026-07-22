@@ -136,6 +136,14 @@ export interface AppSettings {
   localHfUrl?: string;
   localHfModel?: string;
   autoOfflineFailover?: boolean;
+  // Cloud Sync & Network File Storage (ParsPack / S3 Compatible)
+  cloudSyncEnabled?: boolean;
+  cloudEndpoint?: string;
+  cloudAccessKey?: string;
+  cloudSecretKey?: string;
+  cloudBucketName?: string;
+  cloudSyncInterval?: number; // In seconds
+  cloudRealtimeSync?: boolean;
 }
 
 export interface CodeItem {

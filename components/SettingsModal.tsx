@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, User, ThemeColor, Language, Role, Employee, CodeItem, SmsConfig, SmsLog } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save, ShieldAlert, Share2, Edit, User as UserIcon, Camera } from 'lucide-react';
+import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save, ShieldAlert, Share2, Edit, User as UserIcon, Camera, Cloud, CloudLightning, Radio, Zap, CheckCircle2, Copy } from 'lucide-react';
 // @ts-ignore
 import * as XLSX from 'xlsx';
 import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
+import { testCloudConnection } from '../services/cloudSyncService';
 import { ManualEmployeeForm, DEPARTMENTS_LIST, JOB_TITLES_LIST } from './ManualEmployeeForm';
 
 interface SettingsModalProps {
@@ -209,6 +210,61 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // Server network config states
   const [serverUrl, setServerUrl] = useState(() => localStorage.getItem('sg_serverUrl') || '');
+
+  // Cloud Storage & Real-time Network Sync State (ParsPack S3)
+  const [cloudEndpoint, setCloudEndpoint] = useState(() => settings.cloudEndpoint || 'https://c776876.parspack.net');
+  const [cloudAccessKey, setCloudAccessKey] = useState(() => settings.cloudAccessKey || 'qMHLfvgXakpoWNrY');
+  const [cloudSecretKey, setCloudSecretKey] = useState(() => settings.cloudSecretKey || 'LSjyQ18o2NUWsjsSnAVjUoqsNmZE6nMXz');
+  const [cloudBucketName, setCloudBucketName] = useState(() => settings.cloudBucketName || 'safewatch-share');
+  const [cloudSyncEnabled, setCloudSyncEnabled] = useState(() => settings.cloudSyncEnabled ?? true);
+  const [cloudRealtimeSync, setCloudRealtimeSync] = useState(() => settings.cloudRealtimeSync ?? true);
+  
+  const [cloudTestStatus, setCloudTestStatus] = useState<'idle' | 'checking' | 'success' | 'failed'>('idle');
+  const [cloudTestMessage, setCloudTestMessage] = useState('');
+
+  const handleSaveCloudConfig = () => {
+    const updatedSettings: AppSettings = {
+      ...settings,
+      cloudEndpoint: cloudEndpoint.trim(),
+      cloudAccessKey: cloudAccessKey.trim(),
+      cloudSecretKey: cloudSecretKey.trim(),
+      cloudBucketName: cloudBucketName.trim(),
+      cloudSyncEnabled,
+      cloudRealtimeSync,
+    };
+    onUpdateSettings(updatedSettings);
+    alert(settings.language === 'fa' 
+      ? 'تنظیمات اتصال به فضای ابری پارس‌پک و همگام‌سازی شبکه با موفقیت ذخیره شد.' 
+      : 'ParsPack cloud connection and network sync settings saved successfully.'
+    );
+  };
+
+  const handleLoadParsPackPreset = () => {
+    setCloudEndpoint('https://c776876.parspack.net');
+    setCloudAccessKey('qMHLfvgXakpoWNrY');
+    setCloudSecretKey('LSjyQ18o2NUWsjsSnAVjUoqsNmZE6nMXz');
+    setCloudBucketName('safewatch-share');
+    setCloudSyncEnabled(true);
+    setCloudRealtimeSync(true);
+    setCloudTestStatus('idle');
+  };
+
+  const handleTestCloud = async () => {
+    setCloudTestStatus('checking');
+    const result = await testCloudConnection({
+      endpoint: cloudEndpoint,
+      accessKey: cloudAccessKey,
+      secretKey: cloudSecretKey,
+      bucketName: cloudBucketName
+    });
+    if (result.connected) {
+      setCloudTestStatus('success');
+      setCloudTestMessage(result.message);
+    } else {
+      setCloudTestStatus('failed');
+      setCloudTestMessage(result.message);
+    }
+  };
   const [testPhone, setTestPhone] = useState('');
   const [testMessage, setTestMessage] = useState(settings.language === 'fa' ? 'این یک پیامک تست از سامانه HSE است.' : 'This is a test SMS from HSE system.');
   const [isSendingTest, setIsSendingTest] = useState(false);
@@ -1082,10 +1138,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 />
                                             </label>
 
-                                            {settings.companyLogo && settings.companyLogo !== './app_icon_new_1783848679437.png' && (
+                                            {settings.companyLogo && settings.companyLogo !== '/icon.png' && (
                                                 <button 
                                                     type="button"
-                                                    onClick={() => onUpdateSettings({ ...settings, companyLogo: './app_icon_new_1783848679437.png' })}
+                                                    onClick={() => onUpdateSettings({ ...settings, companyLogo: '/icon.png' })}
                                                     className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 active:scale-95"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
@@ -1343,6 +1399,161 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             
             {activeTab === 'DATA' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 pb-12">
+                     {/* ParsPack Cloud Storage & Real-Time Sync SECTION */}
+                     <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-blue-950 text-white rounded-2xl p-5 md:p-6 shadow-xl border border-indigo-500/30 space-y-5">
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-700/50 pb-3">
+                              <div className="flex items-center gap-3">
+                                  <div className="p-2.5 bg-indigo-500/20 border border-indigo-400/30 rounded-xl text-indigo-300 shadow-inner">
+                                      <CloudLightning className="w-6 h-6 text-sky-400 animate-pulse" />
+                                  </div>
+                                  <div>
+                                      <h4 className="font-bold text-base md:text-lg text-white flex items-center gap-2">
+                                          {settings.language === 'fa' 
+                                              ? 'مشخصات اتصال به فضای ابری و همگام‌سازی شبکه (ParsPack Cloud)' 
+                                              : 'ParsPack Cloud Storage & Real-Time Network Sync'}
+                                      </h4>
+                                      <p className="text-xs text-indigo-200 mt-0.5">
+                                          {settings.language === 'fa'
+                                              ? 'اشتراک‌گذاری لحظه‌ای فایل‌ها و پرونده‌ها بین نرم‌افزارهای نصب شده در سطح شرکت'
+                                              : 'Real-time file sharing & instant database sync across installed company instances'}
+                                      </p>
+                                  </div>
+                              </div>
+
+                              <button
+                                  type="button"
+                                  onClick={handleLoadParsPackPreset}
+                                  className="px-3.5 py-2 bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                              >
+                                  <Zap className="w-3.5 h-3.5 text-amber-300" />
+                                  {settings.language === 'fa' ? 'اعمال مشخصات ابری پارس‌پک (تصویر)' : 'Load ParsPack Credentials'}
+                              </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* End Point URL */}
+                              <div className="md:col-span-2 space-y-1.5">
+                                  <label className="block text-xs font-semibold text-indigo-200 flex items-center justify-between">
+                                      <span>{settings.language === 'fa' ? 'آدرس سرور ابری (End Point URL):' : 'End Point URL:'}</span>
+                                      <span className="text-[10px] text-sky-300 font-mono">c776876.parspack.net</span>
+                                  </label>
+                                  <div className="relative">
+                                      <input 
+                                          type="text" 
+                                          value={cloudEndpoint}
+                                          onChange={(e) => setCloudEndpoint(e.target.value)}
+                                          placeholder="c776876.parspack.net"
+                                          className="w-full px-4 py-2.5 bg-slate-900/80 border border-indigo-500/40 rounded-xl text-xs font-mono text-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder-indigo-400/50"
+                                      />
+                                  </div>
+                              </div>
+
+                              {/* Access Key */}
+                              <div className="space-y-1.5">
+                                  <label className="block text-xs font-semibold text-indigo-200">
+                                      {settings.language === 'fa' ? 'کلید دسترسی (Access Key):' : 'Access Key:'}
+                                  </label>
+                                  <input 
+                                      type="text" 
+                                      value={cloudAccessKey}
+                                      onChange={(e) => setCloudAccessKey(e.target.value)}
+                                      placeholder="qMHLfvgXakpoWNrY"
+                                      className="w-full px-4 py-2.5 bg-slate-900/80 border border-indigo-500/40 rounded-xl text-xs font-mono text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                  />
+                              </div>
+
+                              {/* Secret Key */}
+                              <div className="space-y-1.5">
+                                  <label className="block text-xs font-semibold text-indigo-200">
+                                      {settings.language === 'fa' ? 'کلید محرمانه (Secret Key):' : 'Secret Key:'}
+                                  </label>
+                                  <input 
+                                      type="password" 
+                                      value={cloudSecretKey}
+                                      onChange={(e) => setCloudSecretKey(e.target.value)}
+                                      placeholder="LSjyQ18o2NUWsjsSnAVjUoqsNmZE6nMXz"
+                                      className="w-full px-4 py-2.5 bg-slate-900/80 border border-indigo-500/40 rounded-xl text-xs font-mono text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                  />
+                              </div>
+
+                              {/* Bucket Name */}
+                              <div className="space-y-1.5">
+                                  <label className="block text-xs font-semibold text-indigo-200">
+                                      {settings.language === 'fa' ? 'نام مخزن ابری (Bucket Name):' : 'Bucket Name:'}
+                                  </label>
+                                  <input 
+                                      type="text" 
+                                      value={cloudBucketName}
+                                      onChange={(e) => setCloudBucketName(e.target.value)}
+                                      placeholder="safewatch-share"
+                                      className="w-full px-4 py-2.5 bg-slate-900/80 border border-indigo-500/40 rounded-xl text-xs font-mono text-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                  />
+                              </div>
+
+                              {/* Toggles */}
+                              <div className="flex flex-col justify-center gap-2 bg-indigo-950/60 p-3 rounded-xl border border-indigo-800/40">
+                                  <label className="flex items-center gap-2 text-xs font-semibold text-white cursor-pointer select-none">
+                                      <input 
+                                          type="checkbox" 
+                                          checked={cloudSyncEnabled} 
+                                          onChange={(e) => setCloudSyncEnabled(e.target.checked)}
+                                          className="w-4 h-4 rounded text-indigo-500 focus:ring-indigo-400 bg-slate-800 border-indigo-600"
+                                      />
+                                      <span>{settings.language === 'fa' ? 'فعال‌سازی اتصال و همگام‌سازی ابری' : 'Enable Cloud Connectivity'}</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 text-xs text-indigo-200 cursor-pointer select-none">
+                                      <input 
+                                          type="checkbox" 
+                                          checked={cloudRealtimeSync} 
+                                          onChange={(e) => setCloudRealtimeSync(e.target.checked)}
+                                          className="w-4 h-4 rounded text-sky-500 focus:ring-sky-400 bg-slate-800 border-indigo-600"
+                                      />
+                                      <span>{settings.language === 'fa' ? 'انتقال لحظه‌ای داده‌ها مادامی که اتصال برقرار است' : 'Real-Time Continuous Data Transfer'}</span>
+                                  </label>
+                              </div>
+                          </div>
+
+                          {/* Cloud Test Feedback Banner */}
+                          {cloudTestStatus === 'checking' && (
+                              <div className="p-3 bg-sky-500/10 border border-sky-400/30 rounded-xl text-xs text-sky-200 flex items-center gap-2 animate-pulse">
+                                  <Radio className="w-4 h-4 text-sky-400 animate-spin" />
+                                  <span>{settings.language === 'fa' ? 'در حال برقراری ارتباط و بررسی مشخصات فضای ابری پارس‌پک...' : 'Testing connection to ParsPack Cloud endpoint...'}</span>
+                              </div>
+                          )}
+                          {cloudTestStatus === 'success' && (
+                              <div className="p-3 bg-emerald-500/20 border border-emerald-400/40 rounded-xl text-xs text-emerald-200 flex items-center gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                  <span>{cloudTestMessage || (settings.language === 'fa' ? 'اتصال با موفقیت به فضای ابری برقرار شد! انتقال داده‌ها فعال است.' : 'Connected to ParsPack Cloud successfully!')}</span>
+                              </div>
+                          )}
+                          {cloudTestStatus === 'failed' && (
+                              <div className="p-3 bg-rose-500/20 border border-rose-400/40 rounded-xl text-xs text-rose-200 flex items-center gap-2">
+                                  <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+                                  <span>{cloudTestMessage || (settings.language === 'fa' ? 'خطا در برقراری ارتباط با سرور ابری.' : 'Cloud connection failed.')}</span>
+                              </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-indigo-800/50">
+                              <button
+                                  type="button"
+                                  onClick={handleSaveCloudConfig}
+                                  className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 active:scale-95"
+                              >
+                                  <Save className="w-4 h-4" />
+                                  {settings.language === 'fa' ? 'ذخیره تنظیمات ابری' : 'Save Cloud Settings'}
+                              </button>
+                              <button
+                                  type="button"
+                                  onClick={handleTestCloud}
+                                  className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-indigo-100 border border-indigo-400/30 rounded-xl text-xs font-bold transition-all flex items-center gap-2 active:scale-95"
+                              >
+                                  <Cloud className="w-4 h-4 text-sky-300" />
+                                  {settings.language === 'fa' ? 'تست اتصال به فضای ابری' : 'Test Cloud Connection'}
+                              </button>
+                          </div>
+                     </div>
+
                      {/* Intranet Server Connection Settings SECTION */}
                      <div className="bg-white border border-gray-150 rounded-2xl p-4 md:p-5 shadow-sm space-y-4">
                           <h4 className="font-bold text-gray-800 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">

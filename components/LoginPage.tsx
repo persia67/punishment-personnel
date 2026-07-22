@@ -320,9 +320,15 @@ const LoginPage: React.FC<LoginPageProps> = ({
               <div className="relative z-10 space-y-5 max-w-xs">
                 <div className="w-56 h-56 rounded-2xl bg-slate-950/70 p-2 border border-white/20 shadow-2xl mx-auto overflow-hidden group">
                   <img 
-                    src={settings.companyLogo} 
+                    src={settings.companyLogo || '/icon.png'} 
                     alt="HSE Professional Logo" 
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.src.endsWith('/icon.png')) {
+                        target.src = '/icon.png';
+                      }
+                    }}
                     className="w-full h-full object-contain rounded-xl transition-all duration-700 ease-out group-hover:scale-105" 
                   />
                 </div>
@@ -345,7 +351,16 @@ const LoginPage: React.FC<LoginPageProps> = ({
                   {/* Mobile/Tablet Logo indicator */}
                   <div className="w-24 h-24 md:hidden rounded-2xl bg-slate-950/70 flex items-center justify-center mb-4 shadow-lg border border-white/10 p-1">
                     {settings.companyLogo ? (
-                        <img src={settings.companyLogo} alt="Logo" className="w-full h-full object-contain rounded-xl" />
+                        <img 
+                          src={settings.companyLogo} 
+                          alt="Logo" 
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.onerror = null;
+                            target.src = '/icon.png';
+                          }}
+                          className="w-full h-full object-contain rounded-xl" 
+                        />
                     ) : (
                         <Shield className="w-10 h-10 text-white" />
                     )}

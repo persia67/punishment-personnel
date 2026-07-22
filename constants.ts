@@ -1,6 +1,6 @@
 import { Violation, Severity, User, AppSettings, Reward, CodeItem } from './types';
 
-export const APP_VERSION = "4.5.0";
+export const APP_VERSION = "4.6.0";
 
 export const TRANSLATIONS = {
   fa: {
@@ -396,7 +396,7 @@ export const DEFAULT_USERS: User[] = [
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'fa',
   themeColor: 'blue',
-  companyLogo: './app_icon_new_1783848679437.png',
+  companyLogo: '/icon.png',
   companyName: 'Intelligent monitoring system سامانه جامع پایش',
   customApiKey: '',
   aiProvider: 'GEMINI',
@@ -404,7 +404,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ollamaModel: 'llama3',
   localHfUrl: 'http://localhost:8000',
   localHfModel: 'Qwen/Qwen2.5-Copilot-3B',
-  autoOfflineFailover: true
+  autoOfflineFailover: true,
+  cloudSyncEnabled: true,
+  cloudEndpoint: 'https://c776876.parspack.net',
+  cloudAccessKey: 'qMHLfvgXakpoWNrY',
+  cloudSecretKey: 'LSjyQ18o2NUWsjsSnAVjUoqsNmZE6nMXz',
+  cloudBucketName: 'safewatch-share',
+  cloudSyncInterval: 5,
+  cloudRealtimeSync: true
 };
 
 // Initial Mock Data with Departments
