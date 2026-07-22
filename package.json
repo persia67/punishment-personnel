@@ -65,7 +65,7 @@
   "build": {
     "appId": "com.hsesafewatch.admin",
     "productName": "Intelligent monitoring system",
-    "icon": "public/favicon.ico",
+    "icon": "public/icon.png",
     "asar": true,
     "directories": {
       "output": "release"
@@ -76,7 +76,7 @@
       "package.json"
     ],
     "win": {
-      "icon": "public/favicon.ico",
+      "icon": "public/icon.png",
       "forceCodeSigning": false,
       "verifyUpdateCodeSignature": false,
       "target": [
@@ -107,12 +107,12 @@
       "artifactName": "${name}-Portable-${version}.${ext}"
     },
     "linux": {
-      "icon": "public/favicon.ico",
+      "icon": "public/icon.png",
       "target": "AppImage",
       "category": "Office"
     },
     "mac": {
-      "icon": "public/favicon.ico",
+      "icon": "public/icon.png",
       "target": "dmg"
     }
   }
