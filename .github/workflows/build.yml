@@ -1,4 +1,4 @@
-name: Build Intelligent monitoring system
+name: Build Web-Native App (PWA)
 
 on:
   push:
@@ -6,188 +6,55 @@ on:
   workflow_dispatch:
 
 jobs:
-  prepare-version:
-    name: Read Version from package.json
+  build-web:
+    name: Build Production Artifacts (Web/PWA)
     runs-on: ubuntu-latest
-    outputs:
-      new_version: ${{ steps.get-version.outputs.version }}
+    permissions:
+      contents: write
+      
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Artifacts (Vite)
+        run: npm run build
+
+      - name: Archive Production Artifacts
+        run: |
+          zip -r Intelligent-monitoring-system-web.zip dist/ package.json server.ts .env.example
+
+      - name: Upload Web Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Intelligent-monitoring-system-Web-PWA
+          path: Intelligent-monitoring-system-web.zip
 
       - name: Get version from package.json
         id: get-version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Current package.json version is $VERSION"
-
-  build-all:
-    name: Build Web & Android
-    needs: prepare-version
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Setup Java JDK (For Android)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Build Web Assets (Vite)
-        run: npm run build
-
-      # --- ANDROID BUILD STEPS ---
-      - name: Setup Android Platform
-        run: |
-          if [ ! -d "android" ]; then
-            echo "Android folder not found. Adding platform..."
-            npx cap add android
-          fi
-          npx cap sync android
-
-      - name: Build Android APK (Debug)
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-      - name: Upload Android APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Intelligent-monitoring-system-Android-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-
-  build-windows:
-    name: Build Windows Desktop
-    needs: prepare-version
-    runs-on: windows-latest
-    
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
-
-      - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tauriScript: npm run tauri
-
-      - name: Upload Windows Setup
-        uses: actions/upload-artifact@v4
-        with:
-          name: Intelligent-monitoring-system-Windows-Setup
-          path: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/nsis/*.exe
-
-  publish-release:
-    name: Publish GitHub Release
-    needs: [prepare-version, build-all, build-windows]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Download Android Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: Intelligent-monitoring-system-Android-APK
-          path: artifacts/android
-
-      - name: Download Windows Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: Intelligent-monitoring-system-Windows-Setup
-          path: artifacts/windows
-
-      - name: Prepare Assets
-        run: |
-          mkdir -p release-assets
-          
-          # Copy Android APK with version tag
-          if [ -f "artifacts/android/app-debug.apk" ]; then
-            cp "artifacts/android/app-debug.apk" "release-assets/Intelligent-monitoring-system-Android-v${{ needs.prepare-version.outputs.new_version }}.apk"
-            echo "Android APK successfully copied with version tag."
-          else
-            echo "Android compilation artifact not found!"
-          fi
-          
-          # Copy all Windows exact setup binaries & latest.yml for auto-update to function
-          if [ -d "artifacts/windows" ]; then
-            cp -r artifacts/windows/* release-assets/
-            echo "Windows Installer files and latest.yml metadata successfully copied."
-          else
-            echo "Windows compilation artifacts directory not found!"
-          fi
 
       - name: Create unique GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Checking GH CLI version and authorization..."
-          gh --version
+          echo "### 🚀 Intelligent monitoring system Release v${{ steps.get-version.outputs.version }}" > release-notes.md
+          echo "Automated Web-Native (PWA) release for the **Intelligent monitoring system**." >> release-notes.md
+          echo "This release bypasses desktop packaging and provides a direct web-hosted distribution." >> release-notes.md
           
-          # Create Release Notes describing version bump
-          echo "### 🚀 Intelligent monitoring system Release v${{ needs.prepare-version.outputs.new_version }}" > release-notes.md
-          echo "Automated cross-compiled release of the **Intelligent monitoring system** system for Windows Desktop and Android Mobile." >> release-notes.md
-          echo "" >> release-notes.md
-          echo "---" >> release-notes.md
-          echo "### 📥 Direct Downloads" >> release-notes.md
-          echo "* **[Android Mobile App (.apk)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/Intelligent-monitoring-system-Android-v${{ needs.prepare-version.outputs.new_version }}.apk)**" >> release-notes.md
-          
-          # Look for Windows exact setup & portable binaries
-          shopt -s nullglob
-          for win_file in release-assets/*.exe release-assets/*.msi; do
-            exe_name=$(basename "$win_file")
-            # URL encode spaces to %20 to avoid broken links in Markdown
-            encoded_name="${exe_name// /%20}"
-            if [[ "$exe_name" == *"Portable"* ]]; then
-              echo "* **[Windows Portable Version ($exe_name)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/${encoded_name})**" >> release-notes.md
-            else
-              echo "* **[Windows Desktop Installer ($exe_name)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/${encoded_name})**" >> release-notes.md
-            fi
-          done
-          
-          echo "" >> release-notes.md
-          echo "*This release supports in-app auto-updates for existing desktop installations.*" >> release-notes.md
-          
-          # Create uniquely versioned tag and release
-          gh release create "v${{ needs.prepare-version.outputs.new_version }}" \
-            --title "Intelligent monitoring system - v${{ needs.prepare-version.outputs.new_version }}" \
+          gh release create "v${{ steps.get-version.outputs.version }}" \
+            --title "Intelligent monitoring system - Web Edition v${{ steps.get-version.outputs.version }}" \
             --notes-file release-notes.md \
             --prerelease=false || true
             
-          echo "Uploading versioned release binaries..."
-          gh release upload "v${{ needs.prepare-version.outputs.new_version }}" release-assets/* --clobber
+          gh release upload "v${{ steps.get-version.outputs.version }}" Intelligent-monitoring-system-web.zip --clobber
