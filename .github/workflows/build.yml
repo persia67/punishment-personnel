@@ -90,19 +90,25 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Build Electron App (Windows .exe & latest.yml)
-        run: npm run electron:build
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: npm run tauri
 
       - name: Upload Windows Setup
         uses: actions/upload-artifact@v4
         with:
           name: Intelligent-monitoring-system-Windows-Setup
           path: |
-            release/*.exe
-            release/latest.yml
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
 
   publish-release:
     name: Publish GitHub Release
@@ -163,14 +169,14 @@ jobs:
           
           # Look for Windows exact setup & portable binaries
           shopt -s nullglob
-          for win_file in release-assets/*.exe; do
+          for win_file in release-assets/*.exe release-assets/*.msi; do
             exe_name=$(basename "$win_file")
             # URL encode spaces to %20 to avoid broken links in Markdown
             encoded_name="${exe_name// /%20}"
             if [[ "$exe_name" == *"Portable"* ]]; then
-              echo "* **[Windows Portable Version (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/${encoded_name})**" >> release-notes.md
+              echo "* **[Windows Portable Version ($exe_name)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/${encoded_name})**" >> release-notes.md
             else
-              echo "* **[Windows Desktop Installer (.exe)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/${encoded_name})**" >> release-notes.md
+              echo "* **[Windows Desktop Installer ($exe_name)](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ needs.prepare-version.outputs.new_version }}/${encoded_name})**" >> release-notes.md
             fi
           done
           
