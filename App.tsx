@@ -219,22 +219,20 @@ const App: React.FC = () => {
         setSyncStatus('error');
       }
 
-      // Sync to ParsPack Cloud Storage if cloud sync is enabled
+      // Sync to ParsPack Cloud Storage (Always enabled as requested)
       const activeSettings = setts !== undefined ? setts : settings;
-      if (activeSettings.cloudSyncEnabled) {
-        pushToCloudStorage({
-          timestamp: Date.now(),
-          violations: payload.violations,
-          rewards: payload.rewards,
-          users: payload.users,
-          employees: payload.employees,
-          violationCodes: payload.violationCodes,
-          rewardCodes: payload.rewardCodes,
-          settings: activeSettings
-        }, getCloudConfig(activeSettings)).catch((err) => {
-          console.warn('[CloudSync] Background sync notice:', err);
-        });
-      }
+      pushToCloudStorage({
+        timestamp: Date.now(),
+        violations: payload.violations,
+        rewards: payload.rewards,
+        users: payload.users,
+        employees: payload.employees,
+        violationCodes: payload.violationCodes,
+        rewardCodes: payload.rewardCodes,
+        settings: activeSettings
+      }, getCloudConfig(activeSettings)).catch((err) => {
+        console.warn('[CloudSync] Background sync notice:', err);
+      });
     } catch {
       setSyncStatus('error');
     }

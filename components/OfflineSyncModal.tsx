@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { pushToCloudStorage, getCloudConfig } from '../services/cloudSyncService';
 import { 
   X, 
   ArrowLeftRight, 
@@ -17,7 +18,8 @@ import {
   History,
   Trash2,
   Info,
-  Share2
+  Share2,
+  Cloud
 } from 'lucide-react';
 import { Violation, Reward, Employee, AppSettings } from '../types';
 
@@ -162,6 +164,9 @@ export default function OfflineSyncModal({
   violations,
   rewards,
   employees,
+  users,
+  violationCodes,
+  rewardCodes,
   onMergeSuccess
 }: OfflineSyncModalProps) {
   const isFa = settings.language === 'fa';
@@ -219,6 +224,30 @@ export default function OfflineSyncModal({
   const saveLogs = (updated: SyncLogEntry[]) => {
     setSyncLogs(updated);
     localStorage.setItem('sg_offline_sync_logs', JSON.stringify(updated));
+  };
+
+  const handleManualCloudSync = async () => {
+    try {
+      showToast(isFa ? 'در حال ارسال داده‌ها به ابر...' : 'Syncing to cloud...', 'success');
+      const success = await pushToCloudStorage({
+        timestamp: Date.now(),
+        violations,
+        rewards,
+        users,
+        employees,
+        violationCodes,
+        rewardCodes,
+        settings
+      }, getCloudConfig(settings));
+      
+      if (success) {
+        showToast(isFa ? 'همگام‌سازی با ابر با موفقیت انجام شد.' : 'Cloud sync successful!', 'success');
+      } else {
+        showToast(isFa ? 'خطا در همگام‌سازی با ابر.' : 'Cloud sync failed.', 'error');
+      }
+    } catch (err) {
+      showToast(isFa ? 'خطای سیستمی در همگام‌سازی.' : 'System sync error.', 'error');
+    }
   };
 
   if (!isOpen) return null;
@@ -693,6 +722,19 @@ export default function OfflineSyncModal({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Box: Export periodic records */}
             <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-xs space-y-4 flex flex-col justify-between">
+              <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-4">
+                  <h4 className="font-black text-gray-800 text-xs md:text-sm flex items-center gap-2">
+                    <Cloud className="w-4.5 h-4.5 text-indigo-600" />
+                    {isFa ? 'همگام‌سازی فوری با ابر' : 'Manual Cloud Sync'}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleManualCloudSync}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] py-1.5 px-3 rounded-lg shadow-sm hover:shadow active:scale-95 transition-all"
+                  >
+                    {isFa ? 'شروع همگام‌سازی ابری' : 'Start Cloud Sync'}
+                  </button>
+              </div>
               <div className="space-y-4">
                 <h4 className="font-black text-gray-800 text-xs md:text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
                   <Download className="w-4.5 h-4.5 text-indigo-600" />
