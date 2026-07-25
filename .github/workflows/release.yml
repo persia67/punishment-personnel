@@ -1,62 +1,186 @@
-name: Release All Platforms
+name: Release Multi-Platform Installers (Android, Windows, Web PWA)
 
 on:
+  push:
+    branches: [ "main" ]
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (e.g., 4.6.1)'
-        required: true
+        description: 'Manual Release Version (e.g. 4.6.0). Leave empty to use package.json version'
+        required: false
+        default: ''
 
 jobs:
-  build-android:
+  build-web:
+    name: Build Web/PWA Package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: actions/setup-java@v4
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Package Web Distribution
+        run: |
+          zip -r Intelligent-monitoring-system-web.zip dist/ package.json server.ts .env.example
+
+      - name: Upload Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-artifact
+          path: Intelligent-monitoring-system-web.zip
+
+  build-android:
+    name: Build Android APK Installer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-      - run: npm install
-      - run: npm run build
-      - run: npm run android:sync
-      - run: cd android && ./gradlew assembleRelease
-      - uses: actions/upload-artifact@v4
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Assets
+        run: npm run build
+
+      - name: Add Android Platform (if missing)
+        run: npx cap add android || true
+
+      - name: Sync Capacitor Android
+        run: npm run android:sync
+
+      - name: Make Gradle Executable & Build APK
+        run: |
+          if [ -f "android/gradlew" ]; then
+            chmod +x android/gradlew
+            cd android && ./gradlew assembleRelease
+            cd ..
+            cp android/app/build/outputs/apk/release/*.apk ./Intelligent-monitoring-system-android.apk
+          else
+            echo "Gradle wrapper not found!" && exit 1
+          fi
+
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: android-release
-          path: android/app/build/outputs/apk/release/*.apk
+          name: android-artifact
+          path: Intelligent-monitoring-system-android.apk
 
   build-windows:
+    name: Build Windows Desktop Installer
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: dtolnay/rust-toolchain@stable
-      - run: npm install
-      - run: npm run build
-      - run: npm run tauri build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-release
-          path: src-tauri/target/release/bundle/msi/*.msi
+          cache: 'npm'
 
-  release:
-    needs: [build-android, build-windows]
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Assets
+        run: npm run build
+
+      - name: Build Tauri Windows Installer
+        run: npm run tauri build
+
+      - name: Locate and Rename Windows Installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "src-tauri\target\release\bundle" -Recurse -Include *.msi,*.exe | Select-Object -First 1
+          if ($installer) {
+            Copy-Item $installer.FullName -Destination ".\Intelligent-monitoring-system-windows.msi"
+            Write-Host "Found installer at $($installer.FullName)"
+          } else {
+            Write-Error "No Windows installer (.msi or .exe) was generated."
+            exit 1
+          }
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifact
+          path: Intelligent-monitoring-system-windows.msi
+
+  publish-release:
+    name: Publish GitHub Multi-Platform Release
+    needs: [build-web, build-android, build-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
-      - name: Create Release
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Determine Version
+        id: version
+        run: |
+          INPUT_VERSION="${{ github.event.inputs.version }}"
+          if [ -n "$INPUT_VERSION" ]; then
+            REL_VER="$INPUT_VERSION"
+          else
+            REL_VER=$(node -p "require('./package.json').version")
+          fi
+          echo "RELEASE_VERSION=$REL_VER" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=v$REL_VER" >> $GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v${{ inputs.version }}" \
-            --title "Release v${{ inputs.version }}" \
-            --notes "Automated release of Android and Windows installers."
-          gh release upload "v${{ inputs.version }}" android-release/*.apk
-          gh release upload "v${{ inputs.version }}" windows-release/*.msi
+          TAG="${{ steps.version.outputs.TAG_NAME }}"
+          VERSION="${{ steps.version.outputs.RELEASE_VERSION }}"
+          
+          # Consolidate build outputs
+          mkdir -p final-assets
+          cp release-artifacts/web-artifact/Intelligent-monitoring-system-web.zip final-assets/ Intelligent-monitoring-system-v${VERSION}-Web-PWA.zip || true
+          cp release-artifacts/android-artifact/Intelligent-monitoring-system-android.apk final-assets/ Intelligent-monitoring-system-v${VERSION}-Android.apk || true
+          cp release-artifacts/windows-artifact/Intelligent-monitoring-system-windows.msi final-assets/ Intelligent-monitoring-system-v${VERSION}-Windows-Setup.msi || true
+
+          echo "### 🚀 Intelligent Monitoring System Release v${VERSION}" > release-notes.md
+          echo "" >> release-notes.md
+          echo "This release includes compiled packages for all supported platforms:" >> release-notes.md
+          echo "- 📱 **Android Installer (APK)**: \`Intelligent-monitoring-system-v${VERSION}-Android.apk\`" >> release-notes.md
+          echo "- 💻 **Windows Desktop Installer (MSI)**: \`Intelligent-monitoring-system-v${VERSION}-Windows-Setup.msi\`" >> release-notes.md
+          echo "- 🌐 **Web / PWA Application**: \`Intelligent-monitoring-system-v${VERSION}-Web-PWA.zip\`" >> release-notes.md
+
+          gh release create "$TAG" \
+            --title "Intelligent Monitoring System v${VERSION}" \
+            --notes-file release-notes.md \
+            --prerelease=false || true
+
+          gh release upload "$TAG" final-assets/* --clobber

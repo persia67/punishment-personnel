@@ -1,4 +1,4 @@
-name: Build Web-Native App (PWA)
+name: Multi-Platform Build & CI
 
 on:
   push:
@@ -6,55 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-web:
-    name: Build Production Artifacts (Web/PWA)
-    runs-on: ubuntu-latest
+  multi-platform-build:
+    name: Run Multi-Platform Release Pipeline
+    uses: ./.github/workflows/release.yml
     permissions:
       contents: write
-      
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Build Web Artifacts (Vite)
-        run: npm run build
-
-      - name: Archive Production Artifacts
-        run: |
-          zip -r Intelligent-monitoring-system-web.zip dist/ package.json server.ts .env.example
-
-      - name: Upload Web Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Intelligent-monitoring-system-Web-PWA
-          path: Intelligent-monitoring-system-web.zip
-
-      - name: Get version from package.json
-        id: get-version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Create unique GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "### 🚀 Intelligent monitoring system Release v${{ steps.get-version.outputs.version }}" > release-notes.md
-          echo "Automated Web-Native (PWA) release for the **Intelligent monitoring system**." >> release-notes.md
-          echo "This release bypasses desktop packaging and provides a direct web-hosted distribution." >> release-notes.md
-          
-          gh release create "v${{ steps.get-version.outputs.version }}" \
-            --title "Intelligent monitoring system - Web Edition v${{ steps.get-version.outputs.version }}" \
-            --notes-file release-notes.md \
-            --prerelease=false || true
-            
-          gh release upload "v${{ steps.get-version.outputs.version }}" Intelligent-monitoring-system-web.zip --clobber
