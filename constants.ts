@@ -1,6 +1,6 @@
 import { Violation, Severity, User, AppSettings, Reward, CodeItem } from './types';
 
-export const APP_VERSION = "4.6.0";
+export const APP_VERSION = "4.7.0";
 
 export const TRANSLATIONS = {
   fa: {

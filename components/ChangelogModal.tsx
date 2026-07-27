@@ -30,7 +30,7 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, settin
                 {isFa ? 'آخرین تغییرات و ویژگی‌های جدید' : 'Latest Features & Changelog'}
               </h3>
               <p className="text-[10px] text-indigo-200 font-mono mt-0.5">
-                {isFa ? 'نسخه فعلی: v4.6.0' : 'Current Version: v4.6.0'}
+                {isFa ? 'نسخه فعلی: v4.7.0' : 'Current Version: v4.7.0'}
               </p>
             </div>
           </div>
@@ -49,11 +49,11 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, settin
             <div className="text-xs text-amber-900 leading-relaxed font-medium">
               {isFa ? (
                 <p>
-                  در نسخه <strong>v4.6.0</strong>، آیکون و نشان تجاری اختصاصی برنامه‌ها تثبیت شده و امکان اتصال شبکه و همگام‌سازی لحظه‌ای ابری (ParsPack Cloud) جهت انتقال برخط اطلاعات و اشتراک‌گذاری فایل‌ها بین سیستم‌های شرکت اضافه شد.
+                  در نسخه <strong>v4.7.0</strong>، کلیدهای میانبر کیبورد، آیکون و نشان تجاری جدید در تمامی پلتفرم‌ها به‌روزرسانی شده و فرآیند انتشار خودکار نسخه دسکتاپ، اندروید و وب اصلاح گردید.
                 </p>
               ) : (
                 <p>
-                  In version <strong>v4.6.0</strong>, the custom application logo has been completely fixed and standardized, and real-time ParsPack Cloud sync & file sharing has been enabled across company instances.
+                  In version <strong>v4.7.0</strong>, keyboard shortcuts modal, brand icons across all target builds, and automated multi-platform release CI/CD workflows have been updated and fixed.
                 </p>
               )}
             </div>

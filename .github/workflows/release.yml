@@ -174,9 +174,9 @@ jobs:
           
           # Consolidate build outputs
           mkdir -p final-assets
-          cp release-artifacts/web-artifact/Intelligent-monitoring-system-web.zip final-assets/ Intelligent-monitoring-system-v${VERSION}-Web-PWA.zip || true
-          cp release-artifacts/android-artifact/Intelligent-monitoring-system-android.apk final-assets/ Intelligent-monitoring-system-v${VERSION}-Android.apk || true
-          cp release-artifacts/windows-artifact/Intelligent-monitoring-system-windows.msi final-assets/ Intelligent-monitoring-system-v${VERSION}-Windows-Setup.msi || true
+          cp release-artifacts/web-artifact/Intelligent-monitoring-system-web.zip final-assets/Intelligent-monitoring-system-v${VERSION}-Web-PWA.zip || true
+          cp release-artifacts/android-artifact/Intelligent-monitoring-system-android.apk final-assets/Intelligent-monitoring-system-v${VERSION}-Android.apk || true
+          cp release-artifacts/windows-artifact/Intelligent-monitoring-system-windows.msi final-assets/Intelligent-monitoring-system-v${VERSION}-Windows-Setup.msi || true
 
           echo "### 🚀 Intelligent Monitoring System Release v${VERSION}" > release-notes.md
           echo "" >> release-notes.md
