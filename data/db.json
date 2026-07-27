@@ -2889,7 +2889,7 @@
   "settings": {
     "language": "fa",
     "themeColor": "blue",
-    "companyLogo": "/icon.png",
+    "companyLogo": "/logo.png",
     "companyName": "Intelligent monitoring system سامانه جامع پایش",
     "customApiKey": "",
     "aiProvider": "GEMINI",

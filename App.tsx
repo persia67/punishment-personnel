@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MOCK_VIOLATIONS, MOCK_REWARDS, getSeverityColor, getStatusColor, isOlderThanSixMonths, APP_VERSION, DEFAULT_USERS, DEFAULT_SETTINGS, TRANSLATIONS, INITIAL_VIOLATION_CODES, INITIAL_REWARD_CODES } from './constants';
+import { MOCK_VIOLATIONS, MOCK_REWARDS, getSeverityColor, getStatusColor, isOlderThanSixMonths, APP_VERSION, DEFAULT_USERS, DEFAULT_SETTINGS, DEFAULT_COMPANY_LOGO, TRANSLATIONS, INITIAL_VIOLATION_CODES, INITIAL_REWARD_CODES } from './constants';
 import { Violation, Reward, User, AppSettings, SystemMode, WorkerOfMonthResult, Department, Employee, CodeItem } from './types';
 import DashboardStats from './components/DashboardStats';
 import ViolationForm from './components/ViolationForm';
@@ -18,6 +18,7 @@ import OfflineSyncModal from './components/OfflineSyncModal';
 import { EditAvatarModal } from './components/EditAvatarModal';
 import { WorkerOfMonthModal } from './components/WorkerOfMonthModal';
 import ChangelogModal from './components/ChangelogModal';
+import CompanyLogo from './components/CompanyLogo';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 import HseTrendDashboard from './components/HseTrendDashboard';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
@@ -368,6 +369,9 @@ const App: React.FC = () => {
           setRewardCodes(prev => JSON.stringify(prev) === JSON.stringify(mergedRewardCodes) ? prev : mergedRewardCodes);
         }
         if (mergedSettings) {
+          if (!mergedSettings.companyLogo || mergedSettings.companyLogo === '/icon.png' || mergedSettings.companyLogo.includes('app_icon') || mergedSettings.companyLogo.startsWith('.')) {
+            mergedSettings = { ...mergedSettings, companyLogo: DEFAULT_COMPANY_LOGO };
+          }
           setSettings(prev => JSON.stringify(prev) === JSON.stringify(mergedSettings) ? prev : mergedSettings);
         }
 
@@ -405,8 +409,8 @@ const App: React.FC = () => {
     const savedSettings = localStorage.getItem('sg_settings');
     if (savedSettings) {
       const parsed = JSON.parse(savedSettings);
-      if (!parsed.companyLogo || parsed.companyLogo.includes('app_icon') || parsed.companyLogo.startsWith('.')) {
-        parsed.companyLogo = '/icon.png';
+      if (!parsed.companyLogo || parsed.companyLogo === '/icon.png' || parsed.companyLogo.includes('app_icon') || parsed.companyLogo.startsWith('.')) {
+        parsed.companyLogo = DEFAULT_COMPANY_LOGO;
       }
       setSettings(parsed);
     }
@@ -448,8 +452,8 @@ const App: React.FC = () => {
         const s = localStorage.getItem('sg_settings');
         if(s) {
             const parsed = JSON.parse(s);
-            if (!parsed.companyLogo || parsed.companyLogo.includes('app_icon') || parsed.companyLogo.startsWith('.')) {
-                parsed.companyLogo = '/icon.png';
+            if (!parsed.companyLogo || parsed.companyLogo === '/icon.png' || parsed.companyLogo.includes('app_icon') || parsed.companyLogo.startsWith('.')) {
+                parsed.companyLogo = DEFAULT_COMPANY_LOGO;
             }
             setSettings(parsed);
         }
@@ -1190,21 +1194,11 @@ const App: React.FC = () => {
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">
            <div className="flex items-center gap-2 md:gap-3">
-             {settings.companyLogo ? (
-               <img 
-                 src={settings.companyLogo} 
-                 alt="Intelligent monitoring system Logo" 
-                 onError={(e) => {
-                   const target = e.currentTarget;
-                   target.onerror = null;
-                   target.src = '/icon.png';
-                 }}
-                 className="w-12 h-12 md:w-16 md:h-16 rounded-xl object-contain shadow-md hover:scale-105 transition-transform bg-white border border-gray-200/60 p-0.5" 
-                 referrerPolicy="no-referrer"
-               />
-             ) : (
-               <div className={`p-2 rounded-xl shadow-lg ${themeStyles.bg} text-white transition-transform active:scale-95`}><Shield className="w-5 h-5 md:w-6 md:h-6" /></div>
-             )}
+             <CompanyLogo 
+               src={settings.companyLogo} 
+               alt={settings.companyName}
+               className="w-12 h-12 md:w-16 md:h-16 rounded-xl object-contain shadow-md hover:scale-105 transition-transform bg-white border border-gray-200/60 p-0.5" 
+             />
              <div>
                 <div className="flex items-center gap-1.5">
                   <h1 className="text-sm md:text-lg font-black text-gray-800 leading-tight">{settings.companyName}</h1>

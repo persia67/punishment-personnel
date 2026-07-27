@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { User, AppSettings } from '../types';
-import { TRANSLATIONS } from '../constants';
+import { TRANSLATIONS, DEFAULT_COMPANY_LOGO } from '../constants';
 import { Shield, Lock, User as UserIcon, LogIn, Key, ArrowLeft, ArrowRight, Eye, EyeOff, AlertCircle, Smartphone, Mail, MessageSquare, Send, CheckCircle, RefreshCw } from 'lucide-react';
 import { getSmsConfig } from '../services/smsService';
+import CompanyLogo from './CompanyLogo';
 
 interface LoginPageProps {
   onLogin: (username: string, password: string) => void;
@@ -291,15 +292,13 @@ const LoginPage: React.FC<LoginPageProps> = ({
         </div>
       )}
       {/* Background Poster Cover */}
-      {settings.companyLogo && (
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-30 z-0 scale-105 pointer-events-none"
-          style={{ 
-            backgroundImage: `url(${settings.companyLogo})`,
-            filter: 'blur(12px) brightness(0.35)'
-          }}
-        />
-      )}
+      <div 
+        className="absolute inset-0 bg-cover bg-center opacity-30 z-0 scale-105 pointer-events-none"
+        style={{ 
+          backgroundImage: `url(${settings.companyLogo || DEFAULT_COMPANY_LOGO})`,
+          filter: 'blur(12px) brightness(0.35)'
+        }}
+      />
 
       {/* Animated Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
@@ -311,59 +310,41 @@ const LoginPage: React.FC<LoginPageProps> = ({
         <div className="bg-slate-950/45 backdrop-blur-2xl border border-white/10 rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden md:grid md:grid-cols-12">
           
           {/* Brand Presentation Column (Desktop Split Screen Layout) */}
-          {settings.companyLogo && (
-            <div className="hidden md:flex md:col-span-6 flex-col items-center justify-center p-8 bg-black/40 border-r border-white/10 text-center relative overflow-hidden">
-              <div 
-                className="absolute inset-0 bg-cover bg-center brightness-[0.4] opacity-50 hover:scale-105 transition-transform duration-1000"
-                style={{ backgroundImage: `url(${settings.companyLogo})` }}
-              />
-              <div className="relative z-10 space-y-5 max-w-xs">
-                <div className="w-56 h-56 rounded-2xl bg-slate-950/70 p-2 border border-white/20 shadow-2xl mx-auto overflow-hidden group">
-                  <img 
-                    src={settings.companyLogo || '/icon.png'} 
-                    alt="HSE Professional Logo" 
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (!target.src.endsWith('/icon.png')) {
-                        target.src = '/icon.png';
-                      }
-                    }}
-                    className="w-full h-full object-contain rounded-xl transition-all duration-700 ease-out group-hover:scale-105" 
-                  />
-                </div>
-                <h2 className="text-lg font-extrabold text-white leading-snug tracking-wide">{settings.companyName}</h2>
-                <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent my-3" />
-                <p className="text-white/80 text-xs font-light leading-relaxed">
-                  {settings.language === 'fa' 
-                    ? 'سامانه هوشمند و پیشرفته مدیریت پایش عملکرد، ثبت عدم انطباقات و تخلفات سازمانی به همراه سیستم انگیزش و پاداش پرسنلی.' 
-                    : 'Advanced and intelligent enterprise platform for organizational compliance logs, performance auditing, and local AI-driven worker reward systems.'}
-                </p>
+          <div className="hidden md:flex md:col-span-6 flex-col items-center justify-center p-8 bg-black/40 border-r border-white/10 text-center relative overflow-hidden">
+            <div 
+              className="absolute inset-0 bg-cover bg-center brightness-[0.4] opacity-50 hover:scale-105 transition-transform duration-1000"
+              style={{ backgroundImage: `url(${settings.companyLogo || DEFAULT_COMPANY_LOGO})` }}
+            />
+            <div className="relative z-10 space-y-5 max-w-xs">
+              <div className="w-56 h-56 rounded-2xl bg-slate-950/70 p-2 border border-white/20 shadow-2xl mx-auto overflow-hidden group flex items-center justify-center">
+                <CompanyLogo 
+                  src={settings.companyLogo} 
+                  alt="HSE Professional Logo" 
+                  className="w-full h-full object-contain rounded-xl transition-all duration-700 ease-out group-hover:scale-105" 
+                />
               </div>
+              <h2 className="text-lg font-extrabold text-white leading-snug tracking-wide">{settings.companyName}</h2>
+              <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent my-3" />
+              <p className="text-white/80 text-xs font-light leading-relaxed">
+                {settings.language === 'fa' 
+                  ? 'سامانه هوشمند و پیشرفته مدیریت پایش عملکرد، ثبت عدم انطباقات و تخلفات سازمانی به همراه سیستم انگیزش و پاداش پرسنلی.' 
+                  : 'Advanced and intelligent enterprise platform for organizational compliance logs, performance auditing, and local AI-driven worker reward systems.'}
+              </p>
             </div>
-          )}
+          </div>
 
           {/* Secure Login Form Column */}
-          <div className={`${settings.companyLogo ? 'col-span-12 md:col-span-6' : 'col-span-12'} p-6 md:p-10 flex flex-col justify-between min-h-[500px]`}>
+          <div className="col-span-12 md:col-span-6 p-6 md:p-10 flex flex-col justify-between min-h-[500px]">
             {!isRecoverOpen ? (
               <div>
                 <div className="flex flex-col items-center mb-6 md:mb-8 text-center">
                   {/* Mobile/Tablet Logo indicator */}
                   <div className="w-24 h-24 md:hidden rounded-2xl bg-slate-950/70 flex items-center justify-center mb-4 shadow-lg border border-white/10 p-1">
-                    {settings.companyLogo ? (
-                        <img 
-                          src={settings.companyLogo} 
-                          alt="Logo" 
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            target.onerror = null;
-                            target.src = '/icon.png';
-                          }}
-                          className="w-full h-full object-contain rounded-xl" 
-                        />
-                    ) : (
-                        <Shield className="w-10 h-10 text-white" />
-                    )}
+                    <CompanyLogo 
+                      src={settings.companyLogo} 
+                      alt="Logo" 
+                      className="w-full h-full object-contain rounded-xl" 
+                    />
                   </div>
                   <h1 className="text-xl md:text-2xl font-bold text-white tracking-wide">{settings.companyName}</h1>
                   <p className="text-white/60 text-xs md:text-sm mt-1">{t.loginTitle}</p>

@@ -1,5 +1,7 @@
 import { Violation, Severity, User, AppSettings, Reward, CodeItem } from './types';
 
+export const DEFAULT_COMPANY_LOGO = '/logo.png';
+
 export const APP_VERSION = "4.7.0";
 
 export const TRANSLATIONS = {
@@ -396,7 +398,7 @@ export const DEFAULT_USERS: User[] = [
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'fa',
   themeColor: 'blue',
-  companyLogo: '/icon.png',
+  companyLogo: DEFAULT_COMPANY_LOGO,
   companyName: 'Intelligent monitoring system سامانه جامع پایش',
   customApiKey: '',
   aiProvider: 'GEMINI',

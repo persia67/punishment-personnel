@@ -78,13 +78,38 @@ jobs:
       - name: Sync Capacitor Android
         run: npm run android:sync
 
-      - name: Make Gradle Executable & Build APK
+      - name: Make Gradle Executable, Build & Sign Android APK
         run: |
           if [ -f "android/gradlew" ]; then
             chmod +x android/gradlew
-            cd android && ./gradlew assembleRelease
+            cd android
+            
+            # Inject debug signing for release build type if unconfigured
+            sed -i 's/buildTypes {/signingConfigs { debug { } } buildTypes {\n        release {\n            signingConfig signingConfigs.debug/g' app/build.gradle || true
+            
+            ./gradlew assembleRelease
             cd ..
-            cp android/app/build/outputs/apk/release/*.apk ./Intelligent-monitoring-system-android.apk
+
+            # Locate compiled APK file
+            RAW_APK=$(find android/app/build/outputs/apk -name "*.apk" | head -n 1)
+            echo "Found compiled APK at: $RAW_APK"
+
+            if [ -z "$RAW_APK" ]; then
+              echo "Error: No APK found after Gradle build!" && exit 1
+            fi
+
+            # Create release key for APK signing
+            keytool -genkeypair -v -keystore release.keystore -alias hsekey -keyalg RSA -keysize 2048 -validity 10000 -storepass hsepass123 -keypass hsepass123 -dname "CN=SafeWatch, OU=HSE, O=HSE, L=Tehran, ST=Tehran, C=IR"
+
+            # Locate apksigner tool in Android SDK build-tools
+            BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -n 1)
+            echo "Using Android Build Tools at: $BUILD_TOOLS_DIR"
+
+            # Sign the APK with apksigner (v2/v3 signature scheme)
+            $BUILD_TOOLS_DIR/apksigner sign --ks release.keystore --ks-pass pass:hsepass123 --key-pass pass:hsepass123 --out Intelligent-monitoring-system-android.apk "$RAW_APK"
+
+            # Verify signing status
+            $BUILD_TOOLS_DIR/apksigner verify Intelligent-monitoring-system-android.apk && echo "Android APK successfully signed and verified!"
           else
             echo "Gradle wrapper not found!" && exit 1
           fi

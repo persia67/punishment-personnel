@@ -1,49 +1,6 @@
 {
-  "timestamp": 1784702467623,
-  "violations": [
-    {
-      "id": "V-1001",
-      "employeeName": "علی محمدی",
-      "personnelId": "980123",
-      "department": "تاسیسات",
-      "departmentSource": "HSE",
-      "reporterName": "مدیر ایمنی",
-      "date": "1403/02/10",
-      "violationType": "عدم استفاده از کلاه ایمنی",
-      "violationCode": 10,
-      "description": "در سایت بدون کلاه دیده شد.",
-      "severity": "Medium",
-      "score": -5,
-      "penaltyActions": [
-        "تذکر شفاهی"
-      ],
-      "violationStage": 1,
-      "status": "Pending",
-      "isApproved": true,
-      "isArchived": false
-    },
-    {
-      "id": "V-2001",
-      "employeeName": "رضا کریمی",
-      "personnelId": "990222",
-      "department": "انبار",
-      "departmentSource": "SECURITY",
-      "reporterName": "سرپرست انتظامات",
-      "date": "1403/02/12",
-      "violationType": "خوابیدن در شیفت کاری",
-      "violationCode": 202,
-      "description": "در گشت زنی ساعت 2 بامداد مشاهده شد.",
-      "severity": "High",
-      "score": -30,
-      "penaltyActions": [
-        "توبیخ کتبی"
-      ],
-      "violationStage": 1,
-      "status": "Pending",
-      "isApproved": true,
-      "isArchived": false
-    }
-  ],
+  "timestamp": 1785186283127,
+  "violations": [],
   "rewards": [
     {
       "id": "R-1001",
@@ -2890,7 +2847,7 @@
   "settings": {
     "language": "fa",
     "themeColor": "blue",
-    "companyLogo": "/icon.png",
+    "companyLogo": "/logo.png",
     "companyName": "Intelligent monitoring system سامانه جامع پایش",
     "customApiKey": "",
     "aiProvider": "GEMINI",
@@ -2899,11 +2856,12 @@
     "localHfUrl": "http://localhost:8000",
     "localHfModel": "Qwen/Qwen2.5-Copilot-3B",
     "autoOfflineFailover": true,
+    "cloudSyncEnabled": true,
     "cloudEndpoint": "https://c776876.parspack.net",
     "cloudAccessKey": "qMHLfvgXakpoWNrY",
     "cloudSecretKey": "LSjyQ18o2NUWsjsSnAVjUoqsNmZE6nMXz",
     "cloudBucketName": "safewatch-share",
-    "cloudSyncEnabled": true,
+    "cloudSyncInterval": 5,
     "cloudRealtimeSync": true
   }
 }

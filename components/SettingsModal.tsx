@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, User, ThemeColor, Language, Role, Employee, CodeItem, SmsConfig, SmsLog } from '../types';
-import { TRANSLATIONS } from '../constants';
+import { TRANSLATIONS, DEFAULT_COMPANY_LOGO } from '../constants';
 import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save, ShieldAlert, Share2, Edit, User as UserIcon, Camera, Cloud, CloudLightning, Radio, Zap, CheckCircle2, Copy } from 'lucide-react';
 // @ts-ignore
 import * as XLSX from 'xlsx';
 import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
 import { testCloudConnection } from '../services/cloudSyncService';
 import { ManualEmployeeForm, DEPARTMENTS_LIST, JOB_TITLES_LIST } from './ManualEmployeeForm';
+import CompanyLogo from './CompanyLogo';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -1113,16 +1114,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 
                                 <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                                     <div className="w-16 h-16 bg-white border border-gray-250 rounded-lg overflow-hidden flex items-center justify-center shrink-0 shadow-xs">
-                                        {settings.companyLogo ? (
-                                            <img 
-                                                src={settings.companyLogo} 
-                                                alt="Preview" 
-                                                className="w-full h-full object-contain"
-                                                referrerPolicy="no-referrer"
-                                            />
-                                        ) : (
-                                            <Building2 className="w-8 h-8 text-gray-300" />
-                                        )}
+                                        <CompanyLogo 
+                                            src={settings.companyLogo} 
+                                            alt="Preview" 
+                                            className="w-full h-full object-contain"
+                                        />
                                     </div>
                                     
                                     <div className="flex-1 space-y-2">
@@ -1138,10 +1134,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 />
                                             </label>
 
-                                            {settings.companyLogo && settings.companyLogo !== '/icon.png' && (
+                                            {settings.companyLogo && settings.companyLogo !== DEFAULT_COMPANY_LOGO && (
                                                 <button 
                                                     type="button"
-                                                    onClick={() => onUpdateSettings({ ...settings, companyLogo: '/icon.png' })}
+                                                    onClick={() => onUpdateSettings({ ...settings, companyLogo: DEFAULT_COMPANY_LOGO })}
                                                     className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 active:scale-95"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
