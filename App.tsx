@@ -18,11 +18,12 @@ import OfflineSyncModal from './components/OfflineSyncModal';
 import { EditAvatarModal } from './components/EditAvatarModal';
 import { WorkerOfMonthModal } from './components/WorkerOfMonthModal';
 import ChangelogModal from './components/ChangelogModal';
+import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 import HseTrendDashboard from './components/HseTrendDashboard';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { pushToCloudStorage, pullFromCloudStorage, getCloudConfig } from './services/cloudSyncService';
 import { sendNotificationSms } from './services/smsService';
-import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudLightning, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit, ShieldAlert, Briefcase } from 'lucide-react';
+import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudLightning, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit, ShieldAlert, Briefcase, Keyboard, Command } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -49,6 +50,7 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false); 
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false); 
   const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isPrintReportOpen, setIsPrintReportOpen] = useState(false);
   const [isOfflineSyncOpen, setIsOfflineSyncOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
@@ -59,9 +61,7 @@ const App: React.FC = () => {
   const [localSearch, setLocalSearch] = useState('');
   const [showMainSearchDropdown, setShowMainSearchDropdown] = useState(false);
   const mainSearchContainerRef = useRef<HTMLDivElement>(null);
-
-
-
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (searchTerm === '') {
@@ -751,6 +751,134 @@ const App: React.FC = () => {
   const canViewAll = userDept === 'ALL';
   const canApprove = ['HSE_MANAGER', 'PLANT_MANAGER', 'HR_MANAGER', 'DEVELOPER', 'ADMIN_STAFF'].includes(user?.role || '');
 
+  // Global Keyboard Shortcuts Event Handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeElement = document.activeElement;
+      const isInputFocused =
+        activeElement &&
+        (activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.tagName === 'SELECT' ||
+          (activeElement as HTMLElement).isContentEditable);
+
+      // Escape key closes open modals
+      if (e.key === 'Escape') {
+        if (isShortcutsOpen) setIsShortcutsOpen(false);
+        if (isModalOpen) setIsModalOpen(false);
+        if (isRewardModalOpen) setIsRewardModalOpen(false);
+        if (isLegendOpen) setIsLegendOpen(false);
+        if (showMainSearchDropdown) setShowMainSearchDropdown(false);
+        return;
+      }
+
+      // Ctrl + K or Cmd + K or Alt + S or '/' (when not typing in an input) -> Focus Search Input
+      if (
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') ||
+        (e.altKey && e.key.toLowerCase() === 's') ||
+        (!isInputFocused && e.key === '/')
+      ) {
+        e.preventDefault();
+        setCurrentViewPage('DASHBOARD');
+        setTimeout(() => {
+          if (searchInputRef.current) {
+            searchInputRef.current.focus();
+            searchInputRef.current.select();
+            setShowMainSearchDropdown(true);
+          }
+        }, 50);
+        return;
+      }
+
+      // Alt + V or Ctrl + Shift + V -> Open New Violation Modal
+      if (
+        (e.altKey && e.key.toLowerCase() === 'v') ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'v')
+      ) {
+        e.preventDefault();
+        setSystemMode('VIOLATION');
+        setIsModalOpen(true);
+        return;
+      }
+
+      // Alt + R or Ctrl + Shift + R -> Open New Reward Modal
+      if (
+        (e.altKey && e.key.toLowerCase() === 'r') ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'r')
+      ) {
+        e.preventDefault();
+        setSystemMode('REWARD');
+        setIsRewardModalOpen(true);
+        return;
+      }
+
+      // Alt + M -> Toggle system mode between VIOLATION and REWARD
+      if (e.altKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        setSystemMode((prev) => (prev === 'VIOLATION' ? 'REWARD' : 'VIOLATION'));
+        return;
+      }
+
+      // Alt + L -> Open Code Legend
+      if (e.altKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        setIsLegendOpen(true);
+        return;
+      }
+
+      // Alt + D or Ctrl + 1 -> Switch to Dashboard view
+      if (
+        (e.altKey && e.key.toLowerCase() === 'd') ||
+        ((e.ctrlKey || e.metaKey) && e.key === '1')
+      ) {
+        e.preventDefault();
+        setCurrentViewPage('DASHBOARD');
+        return;
+      }
+
+      // Alt + P or Ctrl + 2 -> Switch to Personnel Directory
+      if (
+        (e.altKey && e.key.toLowerCase() === 'p') ||
+        ((e.ctrlKey || e.metaKey) && e.key === '2')
+      ) {
+        e.preventDefault();
+        setCurrentViewPage('PERSONNEL');
+        return;
+      }
+
+      // Alt + I or Ctrl + 3 -> Switch to Manager Inbox
+      if (
+        (e.altKey && e.key.toLowerCase() === 'i') ||
+        ((e.ctrlKey || e.metaKey) && e.key === '3')
+      ) {
+        if (canApprove) {
+          e.preventDefault();
+          setCurrentViewPage('INBOX');
+        }
+        return;
+      }
+
+      // Shift + ? or Alt + K -> Toggle Keyboard Shortcuts Modal
+      if ((e.shiftKey && e.key === '?') || (e.altKey && e.key.toLowerCase() === 'k')) {
+        e.preventDefault();
+        setIsShortcutsOpen((prev) => !prev);
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [
+    isShortcutsOpen,
+    isModalOpen,
+    isRewardModalOpen,
+    isLegendOpen,
+    showMainSearchDropdown,
+    canApprove,
+  ]);
+
   const getCanApproveItem = (item: Violation | Reward) => {
     if (!user) return false;
     const role = user.role;
@@ -1096,6 +1224,21 @@ const App: React.FC = () => {
 
              <button 
                 type="button"
+                onClick={() => setIsShortcutsOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold transition-all shadow-2xs active:scale-95 shrink-0 cursor-pointer"
+                title={settings.language === 'fa' ? 'راهنمای کلیدهای میانبر (Shift + ?)' : 'Keyboard Shortcuts Guide (Shift + ?)'}
+              >
+                <Keyboard className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden sm:inline">
+                  {settings.language === 'fa' ? 'میانبرها' : 'Shortcuts'}
+                </span>
+                <kbd className="hidden lg:inline-block px-1.5 py-0.2 text-[9px] font-mono bg-white border border-slate-300 rounded text-slate-600">
+                  Shift + ?
+                </kbd>
+              </button>
+
+             <button 
+                type="button"
                 onClick={() => setIsOfflineSyncOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 text-xs font-black transition-all shadow-xs active:scale-95 shrink-0"
                 title={settings.language === 'fa' ? 'تبادل آفلاین داده‌ها (فلش/ایمیل)' : 'Offline Exchange (USB/Email)'}
@@ -1218,6 +1361,9 @@ const App: React.FC = () => {
             >
               <Layers className="w-4 h-4" />
               <span>{settings.language === 'fa' ? 'پیشخوان تخلفات و تشویق‌ها' : 'Compliance Dashboard'}</span>
+              <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 text-gray-500 rounded font-normal">
+                Alt+D
+              </kbd>
             </button>
 
             <button
@@ -1230,6 +1376,9 @@ const App: React.FC = () => {
             >
               <UserIcon className="w-4 h-4" />
               <span>{settings.language === 'fa' ? 'پایگاه پرونده‌های پرسنلی' : 'Personnel Directory'}</span>
+              <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 text-gray-500 rounded font-normal">
+                Alt+P
+              </kbd>
             </button>
 
             {canApprove && (
@@ -1243,6 +1392,9 @@ const App: React.FC = () => {
               >
                 <Inbox className="w-4 h-4" />
                 <span>{settings.language === 'fa' ? 'صندوق ورودی مدیریت' : 'Manager Inbox'}</span>
+                <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 text-gray-500 rounded font-normal">
+                  Alt+I
+                </kbd>
                 {/* Show badge for total pending approval cases that the current user can approve */}
                 {(() => {
                   const pendingViolations = violations.filter(v => !v.isApproved && getCanApproveItem(v));
@@ -1504,9 +1656,13 @@ const App: React.FC = () => {
                     ? 'bg-red-600 hover:bg-red-700' 
                     : `${themeStyles.bg} ${themeStyles.hoverBg}`
                 }`}
+                title={systemMode === 'VIOLATION' ? 'Alt + V' : 'Alt + R'}
               >
                 <Plus className="w-4 h-4 md:w-5 md:h-5 animate-pulse" />
                 <span>{systemMode === 'VIOLATION' ? t.newViolation : t.newReward}</span>
+                <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white/20 text-white rounded">
+                  {systemMode === 'VIOLATION' ? 'Alt+V' : 'Alt+R'}
+                </kbd>
               </button>
             </div>
           </div>
@@ -2817,6 +2973,7 @@ const App: React.FC = () => {
       
       <DeleteModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, id: null, type: 'VIOLATION' })} onConfirm={handleDelete} />
       <CodeLegendModal isOpen={isLegendOpen} onClose={() => setIsLegendOpen(false)} settings={settings} mode={systemMode} violationCodes={violationCodes} rewardCodes={rewardCodes} />
+      <KeyboardShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} settings={settings} />
       <PrintReportModal 
         isOpen={isPrintReportOpen} 
         onClose={() => setIsPrintReportOpen(false)} 
