@@ -9,6 +9,13 @@ on:
         description: 'Manual Release Version (e.g. 4.6.0). Leave empty to use package.json version'
         required: false
         default: ''
+  workflow_call:
+    inputs:
+      version:
+        description: 'Manual Release Version (e.g. 4.6.0)'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build-web:
@@ -149,7 +156,7 @@ jobs:
       - name: Determine Version
         id: version
         run: |
-          INPUT_VERSION="${{ github.event.inputs.version }}"
+          INPUT_VERSION="${{ inputs.version || github.event.inputs.version }}"
           if [ -n "$INPUT_VERSION" ]; then
             REL_VER="$INPUT_VERSION"
           else
