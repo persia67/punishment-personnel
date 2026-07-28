@@ -246,26 +246,22 @@ const App: React.FC = () => {
       if (data) {
         const smartMerge = <T extends { id: string }>(localList: T[], serverList: T[]): T[] => {
           const mergedMap = new Map<string, T>();
-          (serverList || []).forEach(item => {
+          (localList || []).forEach(item => {
             if (item && item.id) mergedMap.set(item.id, item);
           });
-          (localList || []).forEach(item => {
-            if (item && item.id) {
-              mergedMap.set(item.id, item);
-            }
+          (serverList || []).forEach(item => {
+            if (item && item.id) mergedMap.set(item.id, item);
           });
           return Array.from(mergedMap.values());
         };
 
         const smartMergeEmployees = (local: Employee[], server: Employee[]): Employee[] => {
           const mergedMap = new Map<string, Employee>();
-          (server || []).forEach(emp => {
+          (local || []).forEach(emp => {
             if (emp && emp.personnelId) mergedMap.set(emp.personnelId, emp);
           });
-          (local || []).forEach(emp => {
-            if (emp && emp.personnelId) {
-              mergedMap.set(emp.personnelId, emp);
-            }
+          (server || []).forEach(emp => {
+            if (emp && emp.personnelId) mergedMap.set(emp.personnelId, emp);
           });
           return Array.from(mergedMap.values());
         };
@@ -621,9 +617,37 @@ const App: React.FC = () => {
     pushDataToServerState(violations, rewards, updatedUsersList, employees, violationCodes, rewardCodes, settings);
   };
 
-  const handleLogin = (u: string, p: string) => {
+  const handleLogin = async (u: string, p: string) => {
     const cleanU = u.trim().toLowerCase();
-    const foundUser = users.find(user => user.username.trim().toLowerCase() === cleanU && user.password === p);
+    let currentUsers = users;
+    let foundUser = currentUsers.find(user => user.username.trim().toLowerCase() === cleanU && user.password === p);
+
+    // If not found in current memory state, perform live server & cloud fetch
+    if (!foundUser) {
+      try {
+        const freshData = await fetchCentralData();
+        let cloudUsers: User[] = freshData?.users || [];
+
+        // Also try ParsPack cloud pull
+        const cloudPayload = await pullFromCloudStorage();
+        if (cloudPayload?.users && cloudPayload.users.length > 0) {
+          const mergedMap = new Map<string, User>();
+          cloudUsers.forEach(usr => mergedMap.set(usr.id, usr));
+          cloudPayload.users.forEach(usr => mergedMap.set(usr.id, usr));
+          cloudUsers = Array.from(mergedMap.values());
+        }
+
+        if (cloudUsers.length > 0) {
+          currentUsers = cloudUsers;
+          setUsers(currentUsers);
+          localStorage.setItem('sg_users', JSON.stringify(currentUsers));
+          foundUser = currentUsers.find(user => user.username.trim().toLowerCase() === cleanU && user.password === p);
+        }
+      } catch (err) {
+        console.warn('[Login] Live cloud sync attempt error:', err);
+      }
+    }
+
     if (foundUser) {
       setUser(foundUser);
       setLoginError('');
@@ -883,7 +907,7 @@ const App: React.FC = () => {
     canApprove,
   ]);
 
-  const getCanApproveItem = (item: Violation | Reward) => {
+  const getCanApproveItem = React.useCallback((item: Violation | Reward) => {
     if (!user) return false;
     const role = user.role;
     if (['PLANT_MANAGER', 'DEVELOPER'].includes(role)) return true;
@@ -904,7 +928,7 @@ const App: React.FC = () => {
       return true;
     }
     return false;
-  };
+  }, [user]);
 
   const getCanDeleteItem = (item: Violation | Reward) => {
     if (!user) return false;
@@ -960,11 +984,25 @@ const App: React.FC = () => {
         if (item.isArchived) return false;
       }
 
-      if (approvalStatusFilter === 'PENDING') return !item.isApproved;
+      if (approvalStatusFilter === 'PENDING') {
+        if (item.isApproved) return false;
+        return getCanApproveItem(item) || (!!user && (item.reporterName === user.fullName || item.reporterName === user.username));
+      }
       if (approvalStatusFilter === 'APPROVED') return !!item.isApproved;
+
+      // Default (approvalStatusFilter === 'ALL'):
+      // Unapproved items are strictly held in the department manager's Cartable until approved.
+      if (!item.isApproved) {
+        const isAuthor = user && (item.reporterName === user.fullName || item.reporterName === user.username);
+        const isManagerApprover = getCanApproveItem(item);
+        if (!isAuthor && !isManagerApprover) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [canViewAll, userDept, selectedDeptFilter, searchTerm, activeTab, approvalStatusFilter]);
+  }, [canViewAll, userDept, selectedDeptFilter, searchTerm, activeTab, approvalStatusFilter, user, getCanApproveItem]);
 
   // Memoized matched employees for main page search to allow opening empty profiles
   const matchedEmployeesForMainSearch = React.useMemo(() => {
@@ -1186,7 +1224,15 @@ const App: React.FC = () => {
       return list.find(c => c.code === code)?.label || 'Unknown';
   };
 
-  if (!user) return <LoginPage onLogin={handleLogin} settings={settings} error={loginError} />;
+  if (!user) return (
+    <LoginPage 
+      onLogin={handleLogin} 
+      settings={settings} 
+      error={loginError} 
+      users={users}
+      onUpdateUsers={handleUpdateUsers}
+    />
+  );
 
   return (
     <div className="min-h-screen pb-safe bg-gray-50 flex flex-col font-sans transition-all duration-300" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>

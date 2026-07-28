@@ -46,15 +46,15 @@ function readDB(): DBState {
       const data = fs.readFileSync(DB_FILE, 'utf8');
       const parsed = JSON.parse(data);
       
-      // Self-healing: Ensure users exists, is an array, and is not empty
       if (!parsed.users || !Array.isArray(parsed.users) || parsed.users.length === 0) {
         parsed.users = DEFAULT_USERS_BACKUP;
-      }
-      
-      // Self-healing: Upgrade legacy users
-      const hasLegacyUsers = parsed.users.some((u: any) => u.username === 'dev' || u.password === '123' || u.id === 'u8');
-      if (hasLegacyUsers) {
-        parsed.users = DEFAULT_USERS_BACKUP;
+      } else {
+        // Ensure standard system roles exist without overwriting user changes or reset passwords
+        DEFAULT_USERS_BACKUP.forEach(defUser => {
+          if (!parsed.users.some((u: any) => u.username === defUser.username)) {
+            parsed.users.push(defUser);
+          }
+        });
       }
       
       return parsed;
@@ -105,17 +105,14 @@ app.post('/api/db', (req, res) => {
   const current = readDB();
   
   let incomingUsers = incoming.users;
-  if (incomingUsers && Array.isArray(incomingUsers)) {
-    const hasLegacy = incomingUsers.some((u: any) => u.username === 'dev' || u.password === '123' || u.id === 'u8');
-    if (incomingUsers.length === 0 || hasLegacy) {
-      incomingUsers = DEFAULT_USERS_BACKUP;
-    }
+  if (!incomingUsers || !Array.isArray(incomingUsers) || incomingUsers.length === 0) {
+    incomingUsers = current.users && current.users.length > 0 ? current.users : DEFAULT_USERS_BACKUP;
   }
   
   const updated: DBState = {
     violations: incoming.violations || current.violations,
     rewards: incoming.rewards || current.rewards,
-    users: incomingUsers || current.users,
+    users: incomingUsers,
     employees: incoming.employees || current.employees,
     violationCodes: incoming.violationCodes || current.violationCodes,
     rewardCodes: incoming.rewardCodes || current.rewardCodes,
@@ -129,14 +126,15 @@ app.post('/api/db', (req, res) => {
 // Single-endpoint full replacement (excellent for continuous sync)
 app.put('/api/db/sync', (req, res) => {
   const data = req.body;
+  const current = readDB();
   
   if (data) {
-    if (!data.users || !Array.isArray(data.users) || data.users.length === 0 || data.users.some((u: any) => u.username === 'dev' || u.password === '123' || u.id === 'u8')) {
-      data.users = DEFAULT_USERS_BACKUP;
+    if (!data.users || !Array.isArray(data.users) || data.users.length === 0) {
+      data.users = current.users && current.users.length > 0 ? current.users : DEFAULT_USERS_BACKUP;
     }
+    writeDB(data);
   }
   
-  writeDB(data);
   res.json({ success: true, message: 'Synchronized completely' });
 });
 

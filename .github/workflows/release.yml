@@ -84,10 +84,7 @@ jobs:
             chmod +x android/gradlew
             cd android
             
-            # Inject debug signing for release build type if unconfigured
-            sed -i 's/buildTypes {/signingConfigs { debug { } } buildTypes {\n        release {\n            signingConfig signingConfigs.debug/g' app/build.gradle || true
-            
-            ./gradlew assembleRelease
+            ./gradlew assembleDebug || ./gradlew assembleRelease
             cd ..
 
             # Locate compiled APK file
