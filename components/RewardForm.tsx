@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Reward, User, RewardType, Department, Employee, CodeItem } from '../types';
-import { X, Camera, UserCheck, Medal, Star, ShieldCheck, HardHat, Zap, Briefcase, Search } from 'lucide-react';
+import { X, Camera, UserCheck, Medal, Star, ShieldCheck, HardHat, Zap, Briefcase, Search, Calendar } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { DEPARTMENTS_LIST } from './ManualEmployeeForm';
 import { useSessionStorage, clearSessionStorageKeys } from '../hooks/useSessionStorage';
@@ -12,6 +12,14 @@ interface RewardFormProps {
   employees: Employee[];
   codes: CodeItem[];
 }
+
+const getTodayJalali = () => {
+  try {
+    return new Date().toLocaleDateString('fa-IR');
+  } catch {
+    return '1403/01/01';
+  }
+};
 
 const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser, employees, codes }) => {
   const lang = document.documentElement.dir === 'rtl' ? 'fa' : 'en';
@@ -40,7 +48,7 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
 
   const [formData, setFormData] = useSessionStorage<Partial<Reward>>('reward_formData', {
     rewardType: 'SafetyPrinciples',
-    date: new Date().toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-US'),
+    date: getTodayJalali(),
     rewardsGiven: [],
     isApproved: false, 
     reporterName: currentUser.fullName,
@@ -341,12 +349,26 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
               )}
             </div>
             <div>
-              <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5">{t.date}</label>
+              <label className="block text-xs md:text-sm font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4 text-emerald-600" />
+                  {lang === 'fa' ? 'تاریخ ثبت (جلالی / شمسی) *' : 'Jalali Date *'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, date: getTodayJalali() }))}
+                  className="text-[10px] text-emerald-600 hover:underline font-bold"
+                >
+                  {lang === 'fa' ? 'تاریخ امروز' : 'Today'}
+                </button>
+              </label>
               <input
+                required
                 type="text"
-                className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg outline-none"
-                defaultValue={formData.date}
-                onChange={e => setFormData({...formData, date: e.target.value})}
+                placeholder={lang === 'fa' ? 'مثال: ۱۴۰۳/۰۵/۱۱' : 'e.g. 1403/05/11'}
+                value={formData.date || ''}
+                className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-mono"
+                onChange={e => setFormData({ ...formData, date: e.target.value })}
               />
             </div>
           </div>

@@ -34,7 +34,7 @@ const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loginError, setLoginError] = useState<string>('');
-   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsDefaultTab, setSettingsDefaultTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'SMS' | 'PROFILE'>('APPEARANCE');
   const [currentViewPage, setCurrentViewPage] = useState<'DASHBOARD' | 'PERSONNEL' | 'INBOX'>('DASHBOARD');

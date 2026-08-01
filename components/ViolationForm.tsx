@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Violation, Severity, User, Department, Employee, CodeItem } from '../types';
-import { X, Camera, AlertOctagon, CheckSquare, Square, UserCheck, Search, Filter } from 'lucide-react';
+import { X, Camera, AlertOctagon, CheckSquare, Square, UserCheck, Search, Filter, Calendar } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { DEPARTMENTS_LIST } from './ManualEmployeeForm';
 import { useSessionStorage, clearSessionStorageKeys } from '../hooks/useSessionStorage';
@@ -13,6 +13,14 @@ interface ViolationFormProps {
   currentUser: User;
   codes: CodeItem[];
 }
+
+const getTodayJalali = () => {
+  try {
+    return new Date().toLocaleDateString('fa-IR');
+  } catch {
+    return '1403/01/01';
+  }
+};
 
 const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, employees, onClose, onSubmit, currentUser, codes }) => {
   const lang = document.documentElement.dir === 'rtl' ? 'fa' : 'en';
@@ -44,7 +52,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
   const [formData, setFormData] = useSessionStorage<Partial<Violation>>('violation_formData', {
     severity: Severity.MEDIUM,
     status: 'Pending',
-    date: new Date().toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-US'),
+    date: getTodayJalali(),
     penaltyActions: [],
     violationStage: 1,
     isApproved: false, 
@@ -374,6 +382,30 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
                 <option value={Severity.HIGH}>{t.severity_High}</option>
                 <option value={Severity.CRITICAL}>{t.severity_Critical}</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-xs md:text-sm font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4 text-red-500" />
+                  {lang === 'fa' ? 'تاریخ ثبت (جلالی / شمسی) *' : 'Jalali Date *'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, date: getTodayJalali() }))}
+                  className="text-[10px] text-red-600 hover:underline font-bold"
+                >
+                  {lang === 'fa' ? 'تاریخ امروز' : 'Today'}
+                </button>
+              </label>
+              <input
+                required
+                type="text"
+                placeholder={lang === 'fa' ? 'مثال: ۱۴۰۳/۰۵/۱۱' : 'e.g. 1403/05/11'}
+                value={formData.date || ''}
+                className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all bg-white font-mono"
+                onChange={e => setFormData({ ...formData, date: e.target.value })}
+              />
             </div>
           </div>
 
