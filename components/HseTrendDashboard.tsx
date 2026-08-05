@@ -31,22 +31,44 @@ interface HseTrendDashboardProps {
   settings: AppSettings;
 }
 
+export type RangeOption = 7 | 15 | 30 | 90 | 'ALL';
+
 // Helper to convert Persian/Arabic digits to English digits
-function toEnglishDigits(str: string): string {
+export function toEnglishDigits(str: string): string {
+  if (!str) return '';
   return str
     .replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1776))
     .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1632));
 }
 
 // Robust date normalizer to YYYY/MM/DD
-function normalizeDate(dStr: string): string {
+export function normalizeDate(dStr: string): string {
   if (!dStr) return '';
-  let clean = toEnglishDigits(dStr);
-  clean = clean.replace(/-/g, '/');
-  clean = clean.replace(/[^0-9/]/g, '');
-  const parts = clean.split('/');
-  if (parts.length === 3) {
-    const y = parts[0];
+  let clean = toEnglishDigits(String(dStr)).trim();
+  
+  // Try YYYY/MM/DD or YYYY-MM-DD pattern first
+  const matchYMD = clean.match(/^(\d{4})[/\.-](\d{1,2})[/\.-](\d{1,2})/);
+  if (matchYMD) {
+    const y = matchYMD[1];
+    const m = matchYMD[2].padStart(2, '0');
+    const d = matchYMD[3].padStart(2, '0');
+    return `${y}/${m}/${d}`;
+  }
+
+  // Try DD/MM/YYYY or D/M/YYYY
+  const matchDMY = clean.match(/^(\d{1,2})[/\.-](\d{1,2})[/\.-](\d{4})/);
+  if (matchDMY) {
+    const d = matchDMY[1].padStart(2, '0');
+    const m = matchDMY[2].padStart(2, '0');
+    const y = matchDMY[3];
+    return `${y}/${m}/${d}`;
+  }
+
+  // Fallback cleanup
+  clean = clean.replace(/-/g, '/').replace(/[^0-9/]/g, '');
+  const parts = clean.split('/').filter(Boolean);
+  if (parts.length >= 3) {
+    const y = parts[0].padStart(4, '0');
     const m = parts[1].padStart(2, '0');
     const d = parts[2].padStart(2, '0');
     return `${y}/${m}/${d}`;
@@ -67,8 +89,7 @@ function subtractJalaliDays(dateStr: string, days: number): string {
     if (month >= 1 && month <= 6) return 31;
     if (month >= 7 && month <= 11) return 30;
     if (month === 12) {
-      // Leap years (approximate for 1390-1415 range)
-      const isLeap = [1391, 1395, 1399, 1403, 1407, 1411, 1415].includes(year);
+      const isLeap = [1391, 1395, 1399, 1403, 1407, 1411, 1415, 1419, 1423].includes(year);
       return isLeap ? 30 : 29;
     }
     return 30;
@@ -102,7 +123,60 @@ function subtractGregorianDays(dateStr: string, days: number): string {
   return `${y}/${m}/${day}`;
 }
 
-// Generate the last N days range based on the reference date
+// Add 1 Jalali day
+function addOneJalaliDay(dateStr: string): string {
+  const parts = dateStr.split('/');
+  let y = parseInt(parts[0], 10);
+  let m = parseInt(parts[1], 10);
+  let d = parseInt(parts[2], 10);
+
+  const getDaysInMonth = (year: number, month: number) => {
+    if (month >= 1 && month <= 6) return 31;
+    if (month >= 7 && month <= 11) return 30;
+    if (month === 12) {
+      const isLeap = [1391, 1395, 1399, 1403, 1407, 1411, 1415, 1419, 1423].includes(year);
+      return isLeap ? 30 : 29;
+    }
+    return 30;
+  };
+
+  d++;
+  if (d > getDaysInMonth(y, m)) {
+    d = 1;
+    m++;
+    if (m > 12) {
+      m = 1;
+      y++;
+    }
+  }
+
+  const mm = String(m).padStart(2, '0');
+  const dd = String(d).padStart(2, '0');
+  return `${y}/${mm}/${dd}`;
+}
+
+// Add 1 Gregorian day
+function addOneGregorianDay(dateStr: string): string {
+  const d = new Date(dateStr.replace(/\//g, '-'));
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}/${m}/${day}`;
+}
+
+function addOneDay(dateStr: string): string {
+  const parts = dateStr.split('/');
+  const year = parseInt(parts[0], 10);
+  if (year < 1600) {
+    return addOneJalaliDay(dateStr);
+  } else {
+    return addOneGregorianDay(dateStr);
+  }
+}
+
+// Generate N days backwards
 function getNDaysRange(referenceDateStr: string, rangeDays: number): string[] {
   const normalized = normalizeDate(referenceDateStr);
   const parts = normalized.split('/');
@@ -122,65 +196,115 @@ function getNDaysRange(referenceDateStr: string, rangeDays: number): string[] {
   return days;
 }
 
+// Generate range between min and max date
+function getDaysBetween(minDateStr: string, maxDateStr: string): string[] {
+  const startNorm = normalizeDate(minDateStr);
+  const endNorm = normalizeDate(maxDateStr);
+
+  if (!startNorm || !endNorm) return [];
+  if (startNorm >= endNorm) return [startNorm];
+
+  const days: string[] = [];
+  let current = startNorm;
+  
+  let guard = 0;
+  while (current <= endNorm && guard < 366) {
+    days.push(current);
+    if (current === endNorm) break;
+    const next = addOneDay(current);
+    if (next === current) break;
+    current = next;
+    guard++;
+  }
+  return days;
+}
+
 const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewards, settings }) => {
   const isFa = settings.language === 'fa';
   const [chartType, setChartType] = useState<'daily' | 'cumulative'>('daily');
-  const [rangeDays, setRangeDays] = useState<7 | 15 | 30>(30);
+
+  // Smart initial range selection: Default to 'ALL' if there are records outside the last 30 days
+  const [rangeDays, setRangeDays] = useState<RangeOption>('ALL');
+
+  // All extracted normalized dates
+  const allNormalizedDates = useMemo(() => {
+    return [
+      ...violations.map(v => normalizeDate(v.date)),
+      ...rewards.map(r => normalizeDate(r.date))
+    ].filter(Boolean);
+  }, [violations, rewards]);
+
+  // Determine reference date (latest date or today)
+  const referenceDate = useMemo(() => {
+    if (allNormalizedDates.length === 0) {
+      const todayLoc = new Date().toLocaleDateString(isFa ? 'fa-IR' : 'en-US');
+      return normalizeDate(todayLoc);
+    }
+    const sorted = [...allNormalizedDates].sort((a, b) => b.localeCompare(a));
+    return sorted[0];
+  }, [allNormalizedDates, isFa]);
+
+  // Determine min date
+  const minDate = useMemo(() => {
+    if (allNormalizedDates.length === 0) {
+      return referenceDate;
+    }
+    const sorted = [...allNormalizedDates].sort((a, b) => a.localeCompare(b));
+    return sorted[0];
+  }, [allNormalizedDates, referenceDate]);
+
+  // Timeline computation
+  const timeline = useMemo(() => {
+    if (rangeDays === 'ALL') {
+      if (allNormalizedDates.length === 0) {
+        return getNDaysRange(referenceDate, 7);
+      }
+      return getDaysBetween(minDate, referenceDate);
+    } else {
+      return getNDaysRange(referenceDate, rangeDays as number);
+    }
+  }, [rangeDays, referenceDate, minDate, allNormalizedDates]);
+
+  // Range label text
+  const rangeLabel = useMemo(() => {
+    if (rangeDays === 'ALL') return isFa ? 'کل دوره ثبت‌شده' : 'All Time';
+    return isFa ? `${rangeDays} روز گذشته` : `Last ${rangeDays} Days`;
+  }, [isFa, rangeDays]);
 
   // Translations
   const t = useMemo(() => {
     return {
-      title: isFa ? `تحلیل روند شاخص‌های عملکردی HSE (${rangeDays} روز گذشته)` : `HSE Performance Indicators Trend Analysis (Last ${rangeDays} Days)`,
+      title: isFa ? `تحلیل روند شاخص‌های عملکردی HSE (${rangeLabel})` : `HSE Performance Indicators Trend Analysis (${rangeLabel})`,
       subtitle: isFa ? 'رصد آماری رویدادها، تخلفات ثبت‌شده و مشوق‌های اعطایی به پرسنل' : 'Statistical monitoring of incidents, violations, and safety incentives',
       violations: isFa ? 'تخلفات ثبت‌شده' : 'Recorded Violations',
       rewards: isFa ? 'تشویق‌های ایمنی' : 'Safety Rewards',
       dailyView: isFa ? 'فراوانی روزانه' : 'Daily Frequency',
       cumulativeView: isFa ? 'انباشته تجمعی' : 'Cumulative Trend',
-      totalViolations: isFa ? `کل تخلفات (${rangeDays}d)` : `Total Violations (${rangeDays}d)`,
-      totalRewards: isFa ? `کل تشویق‌ها (${rangeDays}d)` : `Total Rewards (${rangeDays}d)`,
+      totalViolations: isFa ? `تخلفات (${rangeLabel})` : `Violations (${rangeLabel})`,
+      totalRewards: isFa ? `تشویق‌ها (${rangeLabel})` : `Rewards (${rangeLabel})`,
       hseScore: isFa ? 'شاخص توازن عملکرد ایمنی' : 'HSE Performance Balance',
-      balanceDesc: isFa ? 'تفاضل تراز تشویق منهای تخلف؛ تراز مثبت نشانگر برتری رفتارهای ایمن است' : 'Rewards minus violations; a positive balance indicates safer workplace behavior',
-      noData: isFa ? `داده‌ای در بازه زمانی ${rangeDays} روز گذشته یافت نشد.` : `No data recorded in the last ${rangeDays} days.`,
+      balanceDesc: isFa ? 'تفاضل تراز تشویق منهای تخلف؛ تراز مثبت نشانگر برتری رفتارهای ایمن است' : 'Rewards minus violations; positive balance indicates safer workplace behavior',
+      noData: isFa ? `داده‌ای در بازه زمانی انتخاب شده (${rangeLabel}) یافت نشد.` : `No data recorded in the selected period (${rangeLabel}).`,
       legendTitle: isFa ? 'راهنمای نمودار:' : 'Chart Legend:',
       date: isFa ? 'تاریخ' : 'Date',
       value: isFa ? 'تعداد' : 'Count',
-      approvedOnly: isFa ? 'پرونده‌های تایید نهایی شده' : 'Approved records only',
       days7: isFa ? '۷ روز' : '7 Days',
       days15: isFa ? '۱۵ روز' : '15 Days',
       days30: isFa ? '۳۰ روز' : '30 Days',
+      days90: isFa ? '۹۰ روز' : '90 Days',
+      allTime: isFa ? 'کل دوره' : 'All Time',
     };
-  }, [isFa, rangeDays]);
+  }, [isFa, rangeLabel]);
 
-  // Determine reference date (maximum date in either violations or rewards, or today)
-  const referenceDate = useMemo(() => {
-    const allDates = [
-      ...violations.map(v => normalizeDate(v.date)),
-      ...rewards.map(r => normalizeDate(r.date))
-    ].filter(Boolean);
-
-    if (allDates.length === 0) {
-      // Default to current date in correct language locale format
-      const todayLoc = new Date().toLocaleDateString(isFa ? 'fa-IR' : 'en-US');
-      return normalizeDate(todayLoc);
-    }
-
-    // Sort to find latest
-    allDates.sort((a, b) => b.localeCompare(a));
-    return allDates[0];
-  }, [violations, rewards, isFa]);
-
-  // N Days Timeline
-  const timeline = useMemo(() => {
-    return getNDaysRange(referenceDate, rangeDays);
-  }, [referenceDate, rangeDays]);
-
-  // Aggregate stats & prepare charts data
+  // Aggregate stats & prepare chart data
   const { chartData, stats } = useMemo(() => {
     if (timeline.length === 0) {
-      return { chartData: [], stats: { totalV: 0, totalR: 0, balance: 0 } };
+      return { 
+        chartData: [], 
+        stats: { totalV: 0, totalR: 0, balance: 0, overallV: violations.length, overallR: rewards.length } 
+      };
     }
 
-    // Hash maps for daily occurrence counting
     const violationsMap: Record<string, number> = {};
     const rewardsMap: Record<string, number> = {};
 
@@ -189,7 +313,7 @@ const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewar
       rewardsMap[day] = 0;
     });
 
-    // Count approved violations (or all that have isApproved !== false)
+    // Count violations
     violations.forEach(v => {
       const normalizedDay = normalizeDate(v.date);
       if (normalizedDay in violationsMap) {
@@ -197,7 +321,7 @@ const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewar
       }
     });
 
-    // Count approved rewards
+    // Count rewards
     rewards.forEach(r => {
       const normalizedDay = normalizeDate(r.date);
       if (normalizedDay in rewardsMap) {
@@ -205,7 +329,6 @@ const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewar
       }
     });
 
-    // Generate cumulative & daily data array
     let cumViolations = 0;
     let cumRewards = 0;
     let totalV = 0;
@@ -221,7 +344,6 @@ const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewar
       cumViolations += vCount;
       cumRewards += rCount;
 
-      // Extract only MM/DD for elegant x-axis label representation
       const parts = day.split('/');
       const label = parts.length === 3 ? `${parts[1]}/${parts[2]}` : day;
 
@@ -238,14 +360,16 @@ const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewar
     return {
       chartData: data,
       stats: {
-        totalV,
-        totalR,
-        balance: totalR - totalV
+        totalV: rangeDays === 'ALL' ? violations.length : totalV,
+        totalR: rangeDays === 'ALL' ? rewards.length : totalR,
+        balance: (rangeDays === 'ALL' ? rewards.length : totalR) - (rangeDays === 'ALL' ? violations.length : totalV),
+        overallV: violations.length,
+        overallR: rewards.length
       }
     };
-  }, [timeline, violations, rewards, t]);
+  }, [timeline, violations, rewards, t, rangeDays]);
 
-  const hasData = stats.totalV > 0 || stats.totalR > 0;
+  const hasData = stats.overallV > 0 || stats.overallR > 0;
 
   return (
     <motion.div
@@ -271,7 +395,7 @@ const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewar
             </h3>
           </div>
           <p className="text-[10px] md:text-xs text-gray-400 font-medium leading-normal">
-            {t.subtitle} ({t.approvedOnly})
+            {t.subtitle} ({isFa ? `کل پرونده‌ها: ${stats.overallV} تخلف / ${stats.overallR} تشویق` : `Total Records: ${stats.overallV} Violations / ${stats.overallR} Rewards`})
           </p>
         </div>
 
@@ -281,9 +405,9 @@ const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewar
           {/* Range Selector */}
           <div className="flex items-center bg-gray-100/80 p-1 rounded-xl gap-1">
             <Filter className="w-3.5 h-3.5 text-gray-400 mx-1" />
-            {([7, 15, 30] as const).map(d => (
+            {(['ALL', 30, 15, 7] as const).map(d => (
               <button
-                key={d}
+                key={String(d)}
                 onClick={() => setRangeDays(d)}
                 className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
                   rangeDays === d
@@ -291,7 +415,7 @@ const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewar
                     : 'text-gray-500 hover:text-gray-800'
                 }`}
               >
-                {d === 7 ? t.days7 : d === 15 ? t.days15 : t.days30}
+                {d === 'ALL' ? t.allTime : d === 30 ? t.days30 : d === 15 ? t.days15 : t.days7}
               </button>
             ))}
           </div>
@@ -324,7 +448,7 @@ const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewar
         </div>
       </div>
 
-      {/* Mini stats cards with Staggered Entrance */}
+      {/* Mini stats cards */}
       <motion.div
         key={`${rangeDays}-${violations.length}-${rewards.length}`}
         initial="hidden"
@@ -462,8 +586,8 @@ const HseTrendDashboard: React.FC<HseTrendDashboardProps> = ({ violations, rewar
               <p className="text-xs font-bold text-gray-400 mb-1">{t.noData}</p>
               <p className="text-[10px] text-gray-400 font-medium max-w-sm">
                 {isFa 
-                  ? `به محض ثبت تخلفات و تشویق‌های جدید با تاریخ‌های معتبر، آمار ${rangeDays} روزه در این نمودار نمایش داده می‌شود.` 
-                  : `As soon as new violations or rewards are logged with valid dates, the ${rangeDays}-day statistics will update here.`}
+                  ? 'به محض ثبت تخلفات و تشویق‌های جدید با تاریخ‌های معتبر، آمار مربوطه در این نمودار نمایش داده می‌شود.' 
+                  : 'As soon as new violations or rewards are logged with valid dates, the statistics will update here.'}
               </p>
             </motion.div>
           ) : (

@@ -6,6 +6,7 @@ import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as
 import * as XLSX from 'xlsx';
 import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
 import { testCloudConnection } from '../services/cloudSyncService';
+import { processEmployeeDepartments, getMasterDepartments, saveMasterDepartments } from '../services/departmentUtils';
 import { ManualEmployeeForm, DEPARTMENTS_LIST, JOB_TITLES_LIST } from './ManualEmployeeForm';
 import CompanyLogo from './CompanyLogo';
 
@@ -603,6 +604,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             };
           }).filter((e: Employee) => e.personnelId && e.fullName);
 
+          // Auto-normalize imported departments & register any new departments
+          const masterDepts = getMasterDepartments(settings.customDepartments);
+          const { updatedEmployees: normalizedImported, updatedDepartments } = processEmployeeDepartments(imported, masterDepts);
+          imported = normalizedImported;
+          if (updatedDepartments.length > masterDepts.length) {
+            onUpdateSettings({ ...settings, customDepartments: updatedDepartments });
+            saveMasterDepartments(updatedDepartments);
+          }
+
           if (imported.length > 0) {
              const checkIncompleteCount = imported.filter((emp: Employee) => {
                return !emp.department || emp.department.trim() === '' || emp.department === 'ثبت نشده' ||
@@ -729,6 +739,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         ? 'داده معتبری یافت نشد. لطفاً مطمئن شوید اطلاعات را در قالب ستون‌های مشخص شده (حداقل شامل کد پرسنلی و نام پرسنل) وارد کرده‌اید.' 
         : 'No valid data found. Make sure you entered data in the specified columns (at least Personnel ID and Full Name).');
       return;
+    }
+
+    // Auto-normalize imported departments & register any new departments
+    const masterDepts = getMasterDepartments(settings.customDepartments);
+    const { updatedEmployees: normalizedParsed, updatedDepartments } = processEmployeeDepartments(parsedEmployees, masterDepts);
+    parsedEmployees = normalizedParsed;
+    if (updatedDepartments.length > masterDepts.length) {
+      onUpdateSettings({ ...settings, customDepartments: updatedDepartments });
+      saveMasterDepartments(updatedDepartments);
     }
 
     const checkIncompleteCount = parsedEmployees.filter((emp: Employee) => {

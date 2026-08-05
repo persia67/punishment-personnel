@@ -23,6 +23,7 @@ import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 import HseTrendDashboard from './components/HseTrendDashboard';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { pushToCloudStorage, pullFromCloudStorage, getCloudConfig } from './services/cloudSyncService';
+import { processEmployeeDepartments, getMasterDepartments, saveMasterDepartments } from './services/departmentUtils';
 import { sendNotificationSms } from './services/smsService';
 import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudLightning, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit, ShieldAlert, Briefcase, Keyboard, Command } from 'lucide-react';
 import { getTheme } from './theme';
@@ -312,6 +313,16 @@ const App: React.FC = () => {
         let mergedViolationCodes = data.violationCodes || [];
         let mergedRewardCodes = data.rewardCodes || [];
         let mergedSettings = data.settings || localSettings;
+
+        // Auto normalize employee departments and sync newly discovered departments
+        const currentCustomDepts = mergedSettings?.customDepartments || [];
+        const masterDepts = getMasterDepartments(currentCustomDepts);
+        const { updatedEmployees, updatedDepartments } = processEmployeeDepartments(mergedEmployees, masterDepts);
+        mergedEmployees = updatedEmployees;
+        if (updatedDepartments.length > currentCustomDepts.length) {
+          mergedSettings = { ...(mergedSettings || DEFAULT_SETTINGS), customDepartments: updatedDepartments };
+          saveMasterDepartments(updatedDepartments);
+        }
 
         if (forceBootstrap) {
           // On bootstrap, merge local state (including any edits/changes) with server data,
@@ -1024,6 +1035,16 @@ const App: React.FC = () => {
   const filteredViolations = React.useMemo(() => filterData(violations), [violations, filterData]);
   const filteredRewards = React.useMemo(() => filterData(rewards), [rewards, filterData]);
 
+  const accessibleViolations = React.useMemo(() => {
+    if (canViewAll) return violations;
+    return violations.filter(v => v.departmentSource === userDept || v.department === userDept);
+  }, [canViewAll, violations, userDept]);
+
+  const accessibleRewards = React.useMemo(() => {
+    if (canViewAll) return rewards;
+    return rewards.filter(r => r.departmentSource === userDept || r.department === userDept);
+  }, [canViewAll, rewards, userDept]);
+
   const itemsToDisplay = systemMode === 'VIOLATION' ? filteredViolations : filteredRewards;
 
   const sortedItems = [...itemsToDisplay].sort((a, b) => {
@@ -1712,7 +1733,7 @@ const App: React.FC = () => {
         {canViewAll && (
           <>
             <DashboardStats violations={filteredViolations} rewards={filteredRewards} mode={systemMode} language={settings.language} />
-            <HseTrendDashboard violations={filteredViolations} rewards={filteredRewards} settings={settings} />
+            <HseTrendDashboard violations={accessibleViolations} rewards={accessibleRewards} settings={settings} />
           </>
         )}
 
@@ -2331,8 +2352,8 @@ const App: React.FC = () => {
                     if (key.includes('طلایی') || key.includes('Golden') || key.includes('عالی')) {
                       return {
                         border: 'border-amber-300',
-                        bg: 'bg-gradient-to-b from-amber-400 to-amber-600',
-                        hoverBg: 'hover:from-amber-500 hover:to-amber-700',
+                        bg: 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-700',
+                        hoverBg: 'hover:from-amber-500 hover:to-amber-800',
                         text: 'text-amber-800',
                         lightBg: 'bg-amber-50/60',
                         badge: 'bg-amber-100 text-amber-900 border-amber-200',
@@ -2343,32 +2364,32 @@ const App: React.FC = () => {
                     if (key.includes('سبز') || key.includes('Green') || key.includes('ایمن')) {
                       return {
                         border: 'border-emerald-300',
-                        bg: 'bg-gradient-to-b from-emerald-500 to-emerald-700',
-                        hoverBg: 'hover:from-emerald-600 hover:to-emerald-800',
+                        bg: 'bg-gradient-to-b from-emerald-500 via-emerald-600 to-emerald-800',
+                        hoverBg: 'hover:from-emerald-600 hover:to-emerald-900',
                         text: 'text-emerald-800',
                         lightBg: 'bg-emerald-50/60',
                         badge: 'bg-emerald-100 text-emerald-900 border-emerald-200',
-                        tabColor: 'bg-emerald-500',
+                        tabColor: 'bg-emerald-600',
                         label: settings.language === 'fa' ? 'رتبه سبز' : 'HSE: Green'
                       };
                     }
                     if (key.includes('نارنجی') || key.includes('Orange') || key.includes('هشدار')) {
                       return {
                         border: 'border-orange-300',
-                        bg: 'bg-gradient-to-b from-orange-400 to-orange-600',
-                        hoverBg: 'hover:from-orange-500 hover:to-orange-700',
+                        bg: 'bg-gradient-to-b from-orange-400 via-orange-500 to-orange-700',
+                        hoverBg: 'hover:from-orange-500 hover:to-orange-800',
                         text: 'text-orange-800',
                         lightBg: 'bg-orange-50/60',
                         badge: 'bg-orange-100 text-orange-900 border-orange-200',
-                        tabColor: 'bg-orange-550',
+                        tabColor: 'bg-orange-600',
                         label: settings.language === 'fa' ? 'رتبه نارنجی' : 'HSE: Orange'
                       };
                     }
                     if (key.includes('قرمز') || key.includes('Red') || key.includes('بحرانی')) {
                       return {
                         border: 'border-red-300',
-                        bg: 'bg-gradient-to-b from-red-550 to-red-750',
-                        hoverBg: 'hover:from-red-650 hover:to-red-850',
+                        bg: 'bg-gradient-to-b from-red-500 via-red-600 to-red-800',
+                        hoverBg: 'hover:from-red-600 hover:to-red-900',
                         text: 'text-red-800',
                         lightBg: 'bg-red-50/60',
                         badge: 'bg-red-100 text-red-900 border-red-200',
@@ -2378,80 +2399,65 @@ const App: React.FC = () => {
                     }
                   }
 
-                  if (personnelGroupCriteria === 'DEPARTMENT') {
-                    const deptStr = key.toLowerCase();
-                    if (deptStr.includes('تولید') || deptStr.includes('production') || deptStr.includes('پک')) {
-                      return {
-                        border: 'border-teal-300',
-                        bg: 'bg-gradient-to-b from-teal-500 to-teal-700',
-                        hoverBg: 'hover:from-teal-600 hover:to-teal-800',
-                        text: 'text-teal-800',
-                        lightBg: 'bg-teal-50/40',
-                        badge: 'bg-teal-100 text-teal-900 border-teal-200',
-                        tabColor: 'bg-teal-600',
-                        label: settings.language === 'fa' ? 'تولید' : 'DEPT: Prod'
-                      };
-                    }
-                    if (deptStr.includes('فنی') || deptStr.includes('مهندسی') || deptStr.includes('tech') || deptStr.includes('maintenance')) {
-                      return {
-                        border: 'border-indigo-300',
-                        bg: 'bg-gradient-to-b from-indigo-500 to-indigo-700',
-                        hoverBg: 'hover:from-indigo-600 hover:to-indigo-800',
-                        text: 'text-indigo-800',
-                        lightBg: 'bg-indigo-50/40',
-                        badge: 'bg-indigo-100 text-indigo-900 border-indigo-200',
-                        tabColor: 'bg-indigo-600',
-                        label: settings.language === 'fa' ? 'فنی مهندسی' : 'DEPT: Tech'
-                      };
-                    }
-                    if (deptStr.includes('اداری') || deptStr.includes('منابع') || deptStr.includes('hr') || deptStr.includes('admin') || deptStr.includes('پشتیبانی')) {
-                      return {
-                        border: 'border-blue-300',
-                        bg: 'bg-gradient-to-b from-blue-500 to-blue-700',
-                        hoverBg: 'hover:from-blue-600 hover:to-blue-800',
-                        text: 'text-blue-800',
-                        lightBg: 'bg-blue-50/40',
-                        badge: 'bg-blue-100 text-blue-900 border-blue-200',
-                        tabColor: 'bg-blue-600',
-                        label: settings.language === 'fa' ? 'اداری و منابع' : 'DEPT: Admin'
-                      };
-                    }
-                    if (deptStr.includes('ایمنی') || deptStr.includes('بهداشت') || deptStr.includes('hse') || deptStr.includes('سلامت')) {
-                      return {
-                        border: 'border-cyan-300',
-                        bg: 'bg-gradient-to-b from-cyan-500 to-cyan-700',
-                        hoverBg: 'hover:from-cyan-600 hover:to-cyan-800',
-                        text: 'text-cyan-800',
-                        lightBg: 'bg-cyan-50/40',
-                        badge: 'bg-cyan-100 text-cyan-900 border-cyan-200',
-                        tabColor: 'bg-cyan-600',
-                        label: settings.language === 'fa' ? 'ایمنی و بهداشت' : 'DEPT: HSE'
-                      };
-                    }
-                    if (deptStr.includes('حراست') || deptStr.includes('انتظامات') || deptStr.includes('security')) {
-                      return {
-                        border: 'border-sky-300',
-                        bg: 'bg-gradient-to-b from-sky-500 to-sky-700',
-                        hoverBg: 'hover:from-sky-600 hover:to-sky-800',
-                        text: 'text-sky-800',
-                        lightBg: 'bg-sky-50/40',
-                        badge: 'bg-sky-100 text-sky-900 border-sky-200',
-                        tabColor: 'bg-sky-600',
-                        label: settings.language === 'fa' ? 'حراست انتظامات' : 'DEPT: Security'
-                      };
-                    }
+                  const VIBRANT_PALETTE = [
+                    { border: 'border-teal-300', bg: 'bg-gradient-to-b from-teal-500 to-teal-700', hoverBg: 'hover:from-teal-600 hover:to-teal-800', text: 'text-teal-900', lightBg: 'bg-teal-50/40', badge: 'bg-teal-100 text-teal-900 border-teal-200', tabColor: 'bg-teal-600', label: 'واحد' },
+                    { border: 'border-indigo-300', bg: 'bg-gradient-to-b from-indigo-500 to-indigo-700', hoverBg: 'hover:from-indigo-600 hover:to-indigo-800', text: 'text-indigo-900', lightBg: 'bg-indigo-50/40', badge: 'bg-indigo-100 text-indigo-900 border-indigo-200', tabColor: 'bg-indigo-600', label: 'واحد' },
+                    { border: 'border-cyan-300', bg: 'bg-gradient-to-b from-cyan-500 to-cyan-700', hoverBg: 'hover:from-cyan-600 hover:to-cyan-800', text: 'text-cyan-900', lightBg: 'bg-cyan-50/40', badge: 'bg-cyan-100 text-cyan-900 border-cyan-200', tabColor: 'bg-cyan-600', label: 'واحد' },
+                    { border: 'border-rose-300', bg: 'bg-gradient-to-b from-rose-500 to-rose-700', hoverBg: 'hover:from-rose-600 hover:to-rose-800', text: 'text-rose-900', lightBg: 'bg-rose-50/40', badge: 'bg-rose-100 text-rose-900 border-rose-200', tabColor: 'bg-rose-600', label: 'واحد' },
+                    { border: 'border-amber-300', bg: 'bg-gradient-to-b from-amber-500 to-amber-700', hoverBg: 'hover:from-amber-600 hover:to-amber-800', text: 'text-amber-900', lightBg: 'bg-amber-50/40', badge: 'bg-amber-100 text-amber-900 border-amber-200', tabColor: 'bg-amber-600', label: 'واحد' },
+                    { border: 'border-violet-300', bg: 'bg-gradient-to-b from-violet-500 to-violet-700', hoverBg: 'hover:from-violet-600 hover:to-violet-800', text: 'text-violet-900', lightBg: 'bg-violet-50/40', badge: 'bg-violet-100 text-violet-900 border-violet-200', tabColor: 'bg-violet-600', label: 'واحد' },
+                    { border: 'border-fuchsia-300', bg: 'bg-gradient-to-b from-fuchsia-500 to-fuchsia-700', hoverBg: 'hover:from-fuchsia-600 hover:to-fuchsia-800', text: 'text-fuchsia-900', lightBg: 'bg-fuchsia-50/40', badge: 'bg-fuchsia-100 text-fuchsia-900 border-fuchsia-200', tabColor: 'bg-fuchsia-600', label: 'واحد' },
+                    { border: 'border-emerald-300', bg: 'bg-gradient-to-b from-emerald-500 to-emerald-700', hoverBg: 'hover:from-emerald-600 hover:to-emerald-800', text: 'text-emerald-900', lightBg: 'bg-emerald-50/40', badge: 'bg-emerald-100 text-emerald-900 border-emerald-200', tabColor: 'bg-emerald-600', label: 'واحد' },
+                    { border: 'border-lime-400', bg: 'bg-gradient-to-b from-lime-600 to-lime-800', hoverBg: 'hover:from-lime-700 hover:to-lime-900', text: 'text-lime-900', lightBg: 'bg-lime-50/40', badge: 'bg-lime-100 text-lime-900 border-lime-200', tabColor: 'bg-lime-600', label: 'واحد' },
+                    { border: 'border-sky-300', bg: 'bg-gradient-to-b from-sky-500 to-sky-700', hoverBg: 'hover:from-sky-600 hover:to-sky-800', text: 'text-sky-900', lightBg: 'bg-sky-50/40', badge: 'bg-sky-100 text-sky-900 border-sky-200', tabColor: 'bg-sky-600', label: 'واحد' },
+                    { border: 'border-orange-300', bg: 'bg-gradient-to-b from-orange-500 to-orange-700', hoverBg: 'hover:from-orange-600 hover:to-orange-800', text: 'text-orange-900', lightBg: 'bg-orange-50/40', badge: 'bg-orange-100 text-orange-900 border-orange-200', tabColor: 'bg-orange-600', label: 'واحد' },
+                    { border: 'border-purple-300', bg: 'bg-gradient-to-b from-purple-500 to-purple-700', hoverBg: 'hover:from-purple-600 hover:to-purple-800', text: 'text-purple-900', lightBg: 'bg-purple-50/40', badge: 'bg-purple-100 text-purple-900 border-purple-200', tabColor: 'bg-purple-600', label: 'واحد' },
+                    { border: 'border-blue-300', bg: 'bg-gradient-to-b from-blue-500 to-blue-700', hoverBg: 'hover:from-blue-600 hover:to-blue-800', text: 'text-blue-900', lightBg: 'bg-blue-50/40', badge: 'bg-blue-100 text-blue-900 border-blue-200', tabColor: 'bg-blue-600', label: 'واحد' },
+                    { border: 'border-pink-300', bg: 'bg-gradient-to-b from-pink-500 to-pink-700', hoverBg: 'hover:from-pink-600 hover:to-pink-800', text: 'text-pink-900', lightBg: 'bg-pink-50/40', badge: 'bg-pink-100 text-pink-900 border-pink-200', tabColor: 'bg-pink-600', label: 'واحد' },
+                    { border: 'border-stone-400', bg: 'bg-gradient-to-b from-stone-600 to-stone-800', hoverBg: 'hover:from-stone-700 hover:to-stone-900', text: 'text-stone-900', lightBg: 'bg-stone-50/40', badge: 'bg-stone-100 text-stone-900 border-stone-200', tabColor: 'bg-stone-700', label: 'واحد' },
+                    { border: 'border-red-300', bg: 'bg-gradient-to-b from-red-550 to-red-750', hoverBg: 'hover:from-red-650 hover:to-red-850', text: 'text-red-900', lightBg: 'bg-red-50/40', badge: 'bg-red-100 text-red-900 border-red-200', tabColor: 'bg-red-600', label: 'واحد' },
+                    { border: 'border-yellow-400', bg: 'bg-gradient-to-b from-yellow-500 to-yellow-700', hoverBg: 'hover:from-yellow-600 hover:to-yellow-800', text: 'text-yellow-900', lightBg: 'bg-yellow-50/40', badge: 'bg-yellow-100 text-yellow-900 border-yellow-200', tabColor: 'bg-yellow-600', label: 'واحد' },
+                    { border: 'border-slate-400', bg: 'bg-gradient-to-b from-slate-600 to-slate-800', hoverBg: 'hover:from-slate-700 hover:to-slate-900', text: 'text-slate-900', lightBg: 'bg-slate-50/40', badge: 'bg-slate-100 text-slate-900 border-slate-200', tabColor: 'bg-slate-700', label: 'واحد' },
+                    { border: 'border-teal-400', bg: 'bg-gradient-to-b from-teal-600 to-cyan-800', hoverBg: 'hover:from-teal-700 hover:to-cyan-900', text: 'text-teal-900', lightBg: 'bg-teal-50/40', badge: 'bg-teal-100 text-teal-900 border-teal-200', tabColor: 'bg-teal-700', label: 'واحد' },
+                    { border: 'border-indigo-400', bg: 'bg-gradient-to-b from-indigo-600 to-violet-800', hoverBg: 'hover:from-indigo-700 hover:to-violet-900', text: 'text-indigo-900', lightBg: 'bg-indigo-50/40', badge: 'bg-indigo-100 text-indigo-900 border-indigo-200', tabColor: 'bg-indigo-700', label: 'واحد' },
+                    { border: 'border-rose-400', bg: 'bg-gradient-to-b from-rose-600 to-fuchsia-800', hoverBg: 'hover:from-rose-700 hover:to-fuchsia-900', text: 'text-rose-900', lightBg: 'bg-rose-50/40', badge: 'bg-rose-100 text-rose-900 border-rose-200', tabColor: 'bg-rose-700', label: 'واحد' },
+                    { border: 'border-emerald-400', bg: 'bg-gradient-to-b from-emerald-600 to-lime-800', hoverBg: 'hover:from-emerald-700 hover:to-lime-900', text: 'text-emerald-900', lightBg: 'bg-emerald-50/40', badge: 'bg-emerald-100 text-emerald-900 border-emerald-200', tabColor: 'bg-emerald-700', label: 'واحد' },
+                    { border: 'border-amber-400', bg: 'bg-gradient-to-b from-amber-600 to-orange-800', hoverBg: 'hover:from-amber-700 hover:to-orange-900', text: 'text-amber-900', lightBg: 'bg-amber-50/40', badge: 'bg-amber-100 text-amber-900 border-amber-200', tabColor: 'bg-amber-700', label: 'واحد' },
+                    { border: 'border-zinc-400', bg: 'bg-gradient-to-b from-zinc-600 to-zinc-800', hoverBg: 'hover:from-zinc-700 hover:to-zinc-900', text: 'text-zinc-900', lightBg: 'bg-zinc-50/40', badge: 'bg-zinc-100 text-zinc-900 border-zinc-200', tabColor: 'bg-zinc-700', label: 'واحد' },
+                  ];
 
-                    const colors = [
-                      { border: 'border-blue-200', bg: 'bg-gradient-to-b from-blue-550 to-blue-750', hoverBg: 'hover:bg-blue-700', text: 'text-blue-800', lightBg: 'bg-blue-50/50', badge: 'bg-blue-100 text-blue-900 border-blue-200', tabColor: 'bg-blue-600', label: settings.language === 'fa' ? 'واحد سازمانی' : 'DEPT: Other' },
-                      { border: 'border-teal-200', bg: 'bg-gradient-to-b from-teal-550 to-teal-750', hoverBg: 'hover:bg-teal-700', text: 'text-teal-800', lightBg: 'bg-teal-50/50', badge: 'bg-teal-100 text-teal-900 border-teal-200', tabColor: 'bg-teal-600', label: settings.language === 'fa' ? 'واحد سازمانی' : 'DEPT: Other' },
-                      { border: 'border-indigo-200', bg: 'bg-gradient-to-b from-indigo-550 to-indigo-750', hoverBg: 'hover:bg-indigo-700', text: 'text-indigo-800', lightBg: 'bg-indigo-50/50', badge: 'bg-indigo-100 text-indigo-900 border-indigo-200', tabColor: 'bg-indigo-600', label: settings.language === 'fa' ? 'واحد سازمانی' : 'DEPT: Other' },
-                    ];
-                    let sum = 0;
-                    for (let i = 0; i < key.length; i++) sum += key.charCodeAt(i);
-                    return colors[sum % colors.length];
+                  if (personnelGroupCriteria === 'DEPARTMENT') {
+                    const d = key.toLowerCase();
+                    if (d.includes('هیدرولیک')) return { ...VIBRANT_PALETTE[2], label: 'فنی: هیدرولیک' };
+                    if (d.includes('جوشکاری')) return { ...VIBRANT_PALETTE[10], label: 'فنی: جوشکاری' };
+                    if (d.includes('نقاشی')) return { ...VIBRANT_PALETTE[13], label: 'فنی: نقاشی' };
+                    if (d.includes('ماشین سازی') || d.includes('ماشینسازی')) return { ...VIBRANT_PALETTE[1], label: 'فنی: ماشین‌سازی' };
+                    if (d.includes('cnc') || d.includes('سی ان سی')) return { ...VIBRANT_PALETTE[5], label: 'فنی: CNC' };
+                    if (d.includes('تعمیرات')) return { ...VIBRANT_PALETTE[8], label: 'فنی: تعمیرات' };
+                    if (d.includes('اسیدشویی') || d.includes('اسید شویی')) return { ...VIBRANT_PALETTE[0], label: 'تولید: اسیدشویی' };
+                    if (d.includes('نورد')) return { ...VIBRANT_PALETTE[3], label: 'تولید: نورد سرد' };
+                    if (d.includes('گالوانیزه')) return { ...VIBRANT_PALETTE[9], label: 'تولید: گالوانیزه' };
+                    if (d.includes('شیت')) return { ...VIBRANT_PALETTE[4], label: 'تولید: شیت‌کن' };
+                    if (d.includes('رنگی') || d.includes('رنگ')) return { ...VIBRANT_PALETTE[10], label: 'تولید: خط رنگی' };
+                    if (d.includes('برق')) return { ...VIBRANT_PALETTE[16], label: 'واحد برق' };
+                    if (d.includes('الکترونیک')) return { ...VIBRANT_PALETTE[11], label: 'الکترونیک' };
+                    if (d.includes('انفورماتیک') || d.includes('it') || d.includes('شبکه')) return { ...VIBRANT_PALETTE[12], label: 'انفورماتیک' };
+                    if (d.includes('انبار')) return { ...VIBRANT_PALETTE[14], label: 'واحد انبار' };
+                    if (d.includes('مالی') || d.includes('حسابداری')) return { ...VIBRANT_PALETTE[7], label: 'امور مالی' };
+                    if (d.includes('فروش')) return { ...VIBRANT_PALETTE[6], label: 'واحد فروش' };
+                    if (d.includes('تاسیسات') || d.includes('تأسیسات')) return { ...VIBRANT_PALETTE[18], label: 'تاسیسات' };
+                    if (d.includes('لیفتراک')) return { ...VIBRANT_PALETTE[22], label: 'ناوگان لیفتراک' };
+                    if (d.includes('کالیبراسیون')) return { ...VIBRANT_PALETTE[19], label: 'کالیبراسیون' };
+                    if (d.includes('بازرسی') || d.includes('کیفیت')) return { ...VIBRANT_PALETTE[20], label: 'بازرسی کیفیت' };
+                    if (d.includes('آموزش')) return { ...VIBRANT_PALETTE[21], label: 'واحد آموزش' };
+                    if (d.includes('اداری') || d.includes('منابع')) return { ...VIBRANT_PALETTE[12], label: 'اداری و منابع' };
+                    if (d.includes('حراست') || d.includes('انتظامات')) return { ...VIBRANT_PALETTE[17], label: 'انتظامات' };
+                    if (d.includes('ایمنی') || d.includes('بهداشت') || d.includes('hse')) return { ...VIBRANT_PALETTE[7], label: 'ایمنی و بهداشت' };
+                    if (d.includes('تولید')) return { ...VIBRANT_PALETTE[0], label: 'تولید عمومی' };
+                    if (d.includes('فنی')) return { ...VIBRANT_PALETTE[1], label: 'فنی مهندسی' };
                   }
 
-                  // JOB_TITLE Mode: Purple, Violet, Fuchsia, Rose, Pink, Slate
+                  // JOB_TITLE Mode
                   const roleStr = key.toLowerCase();
                   if (roleStr.includes('سرپرست') || roleStr.includes('supervisor') || roleStr.includes('مدیر') || roleStr.includes('manager')) {
                     return {
@@ -2502,15 +2508,19 @@ const App: React.FC = () => {
                     };
                   }
 
-                  const colors = [
-                    { border: 'border-violet-200', bg: 'bg-gradient-to-b from-violet-500 to-violet-700', hoverBg: 'hover:bg-violet-800', text: 'text-violet-800', lightBg: 'bg-violet-50/50', badge: 'bg-violet-100 text-violet-900 border-violet-200', tabColor: 'bg-violet-600', label: settings.language === 'fa' ? 'عنوان شغلی' : 'ROLE: Staff' },
-                    { border: 'border-purple-200', bg: 'bg-gradient-to-b from-purple-500 to-purple-700', hoverBg: 'hover:bg-purple-800', text: 'text-purple-800', lightBg: 'bg-purple-50/50', badge: 'bg-purple-100 text-purple-900 border-purple-200', tabColor: 'bg-purple-600', label: settings.language === 'fa' ? 'عنوان شغلی' : 'ROLE: Staff' },
-                    { border: 'border-rose-200', bg: 'bg-gradient-to-b from-rose-500 to-rose-700', hoverBg: 'hover:bg-rose-800', text: 'text-rose-800', lightBg: 'bg-rose-50/50', badge: 'bg-rose-100 text-rose-900 border-rose-200', tabColor: 'bg-rose-600', label: settings.language === 'fa' ? 'عنوان شغلی' : 'ROLE: Staff' },
-                    { border: 'border-slate-300', bg: 'bg-gradient-to-b from-slate-500 to-slate-700', hoverBg: 'hover:bg-slate-800', text: 'text-slate-800', lightBg: 'bg-slate-50/50', badge: 'bg-slate-100 text-slate-900 border-slate-200', tabColor: 'bg-slate-600', label: settings.language === 'fa' ? 'عنوان شغلی' : 'ROLE: Staff' },
-                  ];
                   let sum = 0;
                   for (let i = 0; i < key.length; i++) sum += key.charCodeAt(i);
-                  return colors[sum % colors.length];
+                  const themeIndex = sum % VIBRANT_PALETTE.length;
+                  const chosenTheme = VIBRANT_PALETTE[themeIndex];
+                  
+                  const customLabel = personnelGroupCriteria === 'DEPARTMENT'
+                    ? (settings.language === 'fa' ? `واحد: ${key}` : `DEPT: ${key}`)
+                    : (settings.language === 'fa' ? `پست: ${key}` : `ROLE: ${key}`);
+
+                  return {
+                    ...chosenTheme,
+                    label: customLabel
+                  };
                 };
 
                 const getCriteriaLabel = (crit: string) => {

@@ -1,36 +1,10 @@
 import React, { useState } from 'react';
 import { UserPlus } from 'lucide-react';
 import { Employee, AppSettings } from '../types';
+import { DEFAULT_DEPARTMENTS_LIST, getMasterDepartments, normalizeDepartmentName } from '../services/departmentUtils';
 
 export const DEPARTMENTS_LIST = [
-  'انتظامات',
-  'فنی',
-  'فنی - جوشکاری',
-  'فنی - نقاشی',
-  'فنی - ماشین سازی',
-  'فنی - CNC',
-  'فنی - هیدرولیک',
-  'فنی - تعمیرات',
-  'تولید',
-  'تولید - اسیدشویی',
-  'تولید - نورد سرد',
-  'تولید - گالوانیزه',
-  'تولید - شیت کن',
-  'تولید - خط رنگی',
-  'برق',
-  'الکترونیک',
-  'انفورماتیک',
-  'اداری',
-  'آموزش',
-  'مالی',
-  'فروش',
-  'تاسیسات',
-  'لیفتراک',
-  'کالیبراسیون',
-  'انبار',
-  'بازرسی',
-  'مشاوران شرکت',
-  'ایمنی و بهداشت',
+  ...DEFAULT_DEPARTMENTS_LIST,
   'سایر (ورود دستی)'
 ];
 
@@ -93,9 +67,14 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
       return;
     }
 
-    const finalDept = empFormData.department === 'سایر (ورود دستی)' 
+    let finalDept = empFormData.department === 'سایر (ورود دستی)' 
       ? customDept.trim() 
       : empFormData.department.trim();
+
+    if (finalDept) {
+      const { normalized } = normalizeDepartmentName(finalDept, getMasterDepartments(settings.customDepartments));
+      finalDept = normalized;
+    }
 
     const finalJobTitle = empFormData.jobTitle === 'سایر (ورود دستی)'
       ? customJobTitle.trim()

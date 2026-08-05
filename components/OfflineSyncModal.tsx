@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { pushToCloudStorage, getCloudConfig } from '../services/cloudSyncService';
+import { processEmployeeDepartments, getMasterDepartments, saveMasterDepartments } from '../services/departmentUtils';
 import { 
   X, 
   ArrowLeftRight, 
@@ -556,7 +557,14 @@ export default function OfflineSyncModal({
 
       const mergedV = Array.from(finalViolationsMap.values());
       const mergedR = Array.from(finalRewardsMap.values());
-      const mergedE = Array.from(finalEmployeesMap.values());
+      const rawE = Array.from(finalEmployeesMap.values());
+
+      // Auto-normalize employee departments and collect any newly discovered departments
+      const masterDepts = getMasterDepartments(settings.customDepartments);
+      const { updatedEmployees: mergedE, updatedDepartments } = processEmployeeDepartments(rawE, masterDepts);
+      if (updatedDepartments.length > masterDepts.length) {
+        saveMasterDepartments(updatedDepartments);
+      }
 
       // Detect departments from imported data
       const importedDepts = new Set<string>();

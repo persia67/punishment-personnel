@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, UserCheck, Edit } from 'lucide-react';
 import { Employee, AppSettings } from '../types';
+import { normalizeDepartmentName, getMasterDepartments } from '../services/departmentUtils';
 import { DEPARTMENTS_LIST, JOB_TITLES_LIST } from './ManualEmployeeForm';
 
 interface EditEmployeeModalProps {
@@ -113,9 +114,14 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
       }
     }
 
-    const finalDept = empFormData.department === 'سایر (ورود دستی)'
+    let finalDept = empFormData.department === 'سایر (ورود دستی)'
       ? customDept.trim()
       : empFormData.department.trim();
+
+    if (finalDept) {
+      const { normalized } = normalizeDepartmentName(finalDept, getMasterDepartments(settings.customDepartments));
+      finalDept = normalized;
+    }
 
     const finalJobTitle = empFormData.jobTitle === 'سایر (ورود دستی)'
       ? customJobTitle.trim()
