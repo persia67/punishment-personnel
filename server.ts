@@ -149,29 +149,56 @@ app.use('/cloud-files', express.static(CLOUD_FILES_DIR));
 
 app.post('/api/cloud/test', async (req, res) => {
   const { endpoint, accessKey, secretKey, bucketName } = req.body || {};
-  const cleanEndpoint = (endpoint || 'c776876.parspack.net').trim();
+  const cleanEndpoint = (endpoint || '').trim();
   
   if (!cleanEndpoint) {
-    return res.status(400).json({ success: false, message: 'آدرس End Point الزامی است.' });
+    return res.status(400).json({ success: false, message: 'آدرس فضای ابری / End Point الزامی است.' });
   }
 
+  const targetUrl = cleanEndpoint.startsWith('http://') || cleanEndpoint.startsWith('https://') 
+    ? cleanEndpoint 
+    : `https://${cleanEndpoint}`;
+
   try {
-    // Ping/HEAD test to endpoint or simulation
-    const targetUrl = cleanEndpoint.startsWith('http') ? cleanEndpoint : `https://${cleanEndpoint}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
     
-    return res.json({
-      success: true,
-      endpoint: targetUrl,
-      message: `اتصال به فضای ابری پارس‌پک (${targetUrl}) با کلید دسترسی ${accessKey ? accessKey.substring(0, 6) + '...' : 'تایید شده'} با موفقیت برقرار شد.`,
-      bucket: bucketName || 'safewatch-share',
-      timestamp: new Date().toISOString()
-    });
+    // Attempt actual HTTP HEAD or GET request to verify endpoint reachability
+    let response: Response | null = null;
+    try {
+      response = await fetch(targetUrl, { method: 'HEAD', signal: controller.signal });
+    } catch {
+      // Retry with GET if HEAD is forbidden or unsupported by CORS/S3 bucket
+      response = await fetch(targetUrl, { method: 'GET', signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (response && (response.ok || response.status < 500)) {
+      return res.json({
+        success: true,
+        endpoint: targetUrl,
+        statusCode: response.status,
+        message: `ارتباط با فضای ابری (${targetUrl}) برقرار شد. (کد وضعیت: ${response.status})`,
+        bucket: bucketName || 'safewatch-share',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        endpoint: targetUrl,
+        statusCode: response ? response.status : 0,
+        message: `سرور ابری پاسخ نامعتبر ارسال کرد (کد وضعیت ${response ? response.status : 'ناشناخته'}). لطفاً آدرس سرور ابری را بررسی نمایید.`
+      });
+    }
   } catch (err: any) {
-    return res.json({
-      success: true,
-      endpoint: cleanEndpoint,
-      message: `اتصال آمادگی شبکه برای فضای ابری پارس‌پک برقرار است.`,
-      timestamp: new Date().toISOString()
+    const isTimeout = err.name === 'AbortError' || err.message?.includes('aborted');
+    return res.status(502).json({
+      success: false,
+      endpoint: targetUrl,
+      message: isTimeout 
+        ? `خطای عدم پاسخ‌گویی سرور ابری: مهلت زمان اتصال (6 ثانیه) به پایان رسید.`
+        : `خطا در برقراری ارتباط با فضای ابری (${targetUrl}): ${err.message || 'شبکه غیرقابل دسترس است'}`
     });
   }
 });

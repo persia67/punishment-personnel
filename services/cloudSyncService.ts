@@ -58,36 +58,27 @@ export const testCloudConnection = async (config?: Partial<CloudConnectionConfig
       body: JSON.stringify(finalConfig)
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        connected: data.success ?? true,
-        endpoint: finalConfig.endpoint,
-        message: data.message || 'اتصال موفقیت‌آمیز به فضای ابری پارس‌پک برقرار شد.',
-        provider: 'ParsPack Cloud Storage'
-      };
-    } else {
-      const errData = await res.json().catch(() => null);
-      return {
-        connected: false,
-        endpoint: finalConfig.endpoint,
-        message: errData?.message || `پاسخ نا معتبر از سرور ابری (کد ${res.status})`
-      };
-    }
-  } catch (err: any) {
-    // If backend proxy isn't reachable or offline, simulate optimistic connectivity if URL is non-empty
-    if (finalConfig.endpoint.includes('parspack.net') || finalConfig.endpoint.trim().length > 5) {
+    const data = await res.json().catch(() => null);
+
+    if (res.ok && data?.success) {
       return {
         connected: true,
         endpoint: finalConfig.endpoint,
-        message: 'اتصال آمادگی فضای ابری پارس‌پک (حالت شبکه و اشتراک‌گذاری برخط) ثبت شد.',
-        provider: 'ParsPack Cloud Storage (Client Ready)'
+        message: data.message || 'اتصال موفقیت‌آمیز به فضای ابری برقرار شد.',
+        provider: 'ParsPack Cloud Storage'
+      };
+    } else {
+      return {
+        connected: false,
+        endpoint: finalConfig.endpoint,
+        message: data?.message || `پاسخ نامعتبر از سرور ابری (کد وضعیت ${res.status})`
       };
     }
+  } catch (err: any) {
     return {
       connected: false,
       endpoint: finalConfig.endpoint,
-      message: `خطا در برقراری ارتباط با فضای ابری: ${err.message || 'شبکه قطع می‌باشد'}`
+      message: `خطا در برقراری ارتباط با فضای ابری: ${err.message || 'شبکه قطع می‌باشد یا آدرس سرور نامعتبر است'}`
     };
   }
 };

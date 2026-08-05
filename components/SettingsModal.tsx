@@ -375,17 +375,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setConnectionStatus('checking');
     try {
       const activeUrl = getNormalizedActiveUrl();
-      const res = await fetch(`${activeUrl}/api/health`, { method: 'GET' });
-      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const res = await fetch(`${activeUrl}/api/health`, { 
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
       const contentType = res.headers.get('content-type') || '';
-      const isHtmlResponse = contentType.includes('text/html');
-      const isCustomServer = serverUrl.trim() !== '' && !getNormalizedActiveUrl().startsWith(window.location.origin);
-      
-      if (res.ok && !(isCustomServer && isHtmlResponse)) {
-        setConnectionStatus('success');
-      } else {
-        setConnectionStatus('failed');
+      const isJson = contentType.includes('application/json');
+
+      if (res.ok && isJson) {
+        const data = await res.json().catch(() => null);
+        if (data && (data.status === 'healthy' || data.status === 'ok' || data.version)) {
+          setConnectionStatus('success');
+          return;
+        }
       }
+      setConnectionStatus('failed');
     } catch {
       setConnectionStatus('failed');
     }
@@ -400,7 +410,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       setServerUrl('');
       localStorage.removeItem('sg_serverUrl');
     }
-    alert(settings.language === 'fa' ? 'آدرس اتصال به سرور با موفقیت ثبت شد. اتصالات بعدی از این آدرس انجام می‌شود.' : 'Server connection URL saved successfully.');
+    alert(settings.language === 'fa' 
+      ? 'آدرس اتصال به سرور شبکه ثبت شد. در صورت در دسترس بودن سرور، همگام‌سازی انجام می‌گیرد.' 
+      : 'Server connection URL saved successfully.');
   };
 
   const t = TRANSLATIONS[settings.language];
