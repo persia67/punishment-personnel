@@ -36,9 +36,11 @@ export type RangeOption = 7 | 15 | 30 | 90 | 'ALL';
 // Helper to convert Persian/Arabic digits to English digits
 export function toEnglishDigits(str: string): string {
   if (!str) return '';
-  return str
-    .replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1776))
-    .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1632));
+  const map: Record<string, string> = {
+    '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9',
+    '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
+  };
+  return str.replace(/[۰-۹٠-٩]/g, (w) => map[w] || w);
 }
 
 // Robust date normalizer to YYYY/MM/DD

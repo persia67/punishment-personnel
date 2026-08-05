@@ -30,6 +30,77 @@ import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
 
+export function ensureAllCodes(
+  violations: Violation[] = [],
+  rewards: Reward[] = [],
+  existingVCodes: CodeItem[] = [],
+  existingRCodes: CodeItem[] = []
+): { violationCodes: CodeItem[]; rewardCodes: CodeItem[] } {
+  const vMap = new Map<string, CodeItem>();
+  const rMap = new Map<string, CodeItem>();
+
+  // 1. Add INITIAL_VIOLATION_CODES
+  INITIAL_VIOLATION_CODES.forEach(item => {
+    vMap.set(String(item.code), { ...item });
+  });
+
+  // 2. Add existingVCodes
+  (existingVCodes || []).forEach(item => {
+    if (item && item.code !== undefined && item.code !== null) {
+      vMap.set(String(item.code), { ...item });
+    }
+  });
+
+  // 3. Auto-discover missing codes from violations
+  (violations || []).forEach((v, idx) => {
+    if (v && v.violationCode !== undefined && v.violationCode !== null) {
+      const codeKey = String(v.violationCode).trim();
+      if (codeKey !== '' && !vMap.has(codeKey)) {
+        vMap.set(codeKey, {
+          id: `auto-v-${v.violationCode}-${idx}`,
+          code: Number(v.violationCode) || 0,
+          label: v.violationType || `کد ${v.violationCode}`,
+          score: v.score || -10,
+          department: (v.departmentSource as any) || 'HSE'
+        });
+      }
+    }
+  });
+
+  // 1. Add INITIAL_REWARD_CODES
+  INITIAL_REWARD_CODES.forEach(item => {
+    rMap.set(String(item.code), { ...item });
+  });
+
+  // 2. Add existingRCodes
+  (existingRCodes || []).forEach(item => {
+    if (item && item.code !== undefined && item.code !== null) {
+      rMap.set(String(item.code), { ...item });
+    }
+  });
+
+  // 3. Auto-discover missing codes from rewards
+  (rewards || []).forEach((r, idx) => {
+    if (r && r.rewardCode !== undefined && r.rewardCode !== null) {
+      const codeKey = String(r.rewardCode).trim();
+      if (codeKey !== '' && !rMap.has(codeKey)) {
+        rMap.set(codeKey, {
+          id: `auto-r-${r.rewardCode}-${idx}`,
+          code: Number(r.rewardCode) || 0,
+          label: (r as any).rewardType || `کد ${r.rewardCode}`,
+          score: r.score || 10,
+          department: (r.departmentSource as any) || 'HSE'
+        });
+      }
+    }
+  });
+
+  return {
+    violationCodes: Array.from(vMap.values()),
+    rewardCodes: Array.from(rMap.values())
+  };
+}
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
@@ -120,9 +191,26 @@ const App: React.FC = () => {
     setSortOrder('ASC');
   };
   
-  // Dynamic Code State
-  const [violationCodes, setViolationCodes] = useState<CodeItem[]>(INITIAL_VIOLATION_CODES);
-  const [rewardCodes, setRewardCodes] = useState<CodeItem[]>(INITIAL_REWARD_CODES);
+  // Dynamic Code State with auto-ensured code list
+  const [violationCodes, setViolationCodes] = useState<CodeItem[]>(() => {
+    const saved = localStorage.getItem('sg_violationCodes');
+    let parsed: CodeItem[] = [];
+    if (saved) { try { parsed = JSON.parse(saved); } catch {} }
+    const savedV = localStorage.getItem('sg_violations');
+    let parsedV: Violation[] = [];
+    if (savedV) { try { parsedV = JSON.parse(savedV); } catch {} }
+    return ensureAllCodes(parsedV, [], parsed, []).violationCodes;
+  });
+
+  const [rewardCodes, setRewardCodes] = useState<CodeItem[]>(() => {
+    const saved = localStorage.getItem('sg_rewardCodes');
+    let parsed: CodeItem[] = [];
+    if (saved) { try { parsed = JSON.parse(saved); } catch {} }
+    const savedR = localStorage.getItem('sg_rewards');
+    let parsedR: Reward[] = [];
+    if (savedR) { try { parsedR = JSON.parse(savedR); } catch {} }
+    return ensureAllCodes([], parsedR, [], parsed).rewardCodes;
+  });
 
   const violationsRef = useRef(violations);
   const rewardsRef = useRef(rewards);
@@ -360,6 +448,15 @@ const App: React.FC = () => {
           mergedSettings = data.settings || localSettings;
         }
 
+        const { violationCodes: finalVC, rewardCodes: finalRC } = ensureAllCodes(
+          mergedViolations,
+          mergedRewards,
+          mergedViolationCodes,
+          mergedRewardCodes
+        );
+        mergedViolationCodes = finalVC;
+        mergedRewardCodes = finalRC;
+
         setSyncStatus('synced');
         
         // Prevent state update and re-renders if the data hasn't actually changed
@@ -369,12 +466,12 @@ const App: React.FC = () => {
           setUsers(prev => JSON.stringify(prev) === JSON.stringify(mergedUsers) ? prev : mergedUsers);
         }
         setEmployees(prev => JSON.stringify(prev) === JSON.stringify(mergedEmployees) ? prev : mergedEmployees);
-        if (mergedViolationCodes.length > 0) {
-          setViolationCodes(prev => JSON.stringify(prev) === JSON.stringify(mergedViolationCodes) ? prev : mergedViolationCodes);
-        }
-        if (mergedRewardCodes.length > 0) {
-          setRewardCodes(prev => JSON.stringify(prev) === JSON.stringify(mergedRewardCodes) ? prev : mergedRewardCodes);
-        }
+        setViolationCodes(prev => JSON.stringify(prev) === JSON.stringify(mergedViolationCodes) ? prev : mergedViolationCodes);
+        setRewardCodes(prev => JSON.stringify(prev) === JSON.stringify(mergedRewardCodes) ? prev : mergedRewardCodes);
+        try {
+          localStorage.setItem('sg_violationCodes', JSON.stringify(mergedViolationCodes));
+          localStorage.setItem('sg_rewardCodes', JSON.stringify(mergedRewardCodes));
+        } catch {}
         if (mergedSettings) {
           if (!mergedSettings.companyLogo || mergedSettings.companyLogo === '/icon.png' || mergedSettings.companyLogo.includes('app_icon') || mergedSettings.companyLogo.startsWith('.')) {
             mergedSettings = { ...mergedSettings, companyLogo: DEFAULT_COMPANY_LOGO };
@@ -1240,9 +1337,23 @@ const App: React.FC = () => {
   };
 
   // Helper to map text to code label
-  const getDisplayLabel = (code: number, type: 'VIOLATION' | 'REWARD') => {
+  const getDisplayLabel = (code: number | string, type: 'VIOLATION' | 'REWARD', fallbackTitle?: string) => {
       const list = type === 'VIOLATION' ? violationCodes : rewardCodes;
-      return list.find(c => c.code === code)?.label || 'Unknown';
+      if (code !== undefined && code !== null) {
+          const numCode = Number(code);
+          const strCode = String(code).trim();
+          let found = list.find(c => Number(c.code) === numCode || String(c.code).trim() === strCode);
+          if (found) return found.label;
+      }
+      if (fallbackTitle && fallbackTitle.trim()) {
+          const found = list.find(c => c.label.trim().toLowerCase() === fallbackTitle.trim().toLowerCase());
+          if (found) return found.label;
+          return fallbackTitle.trim();
+      }
+      if (code !== undefined && code !== null && String(code).trim() !== '') {
+          return settings.language === 'fa' ? `کد ${code}` : `Code ${code}`;
+      }
+      return settings.language === 'fa' ? 'کد ناشناخته' : 'Unknown Code';
   };
 
   if (!user) return (

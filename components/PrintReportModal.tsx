@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Printer, Download, Calendar, Award, AlertTriangle, FileText, CheckCircle, TrendingUp, TrendingDown, Building, Layers } from 'lucide-react';
+// @ts-ignore
 import html2pdf from 'html2pdf.js';
 import { AppSettings, Violation, Reward, Employee } from '../types';
 import { TRANSLATIONS } from '../constants';

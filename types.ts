@@ -32,6 +32,7 @@ export interface Violation {
   violationType: string;
   violationCode: number; // Stored code
   description: string;
+  reason?: string;
   severity: Severity;
   score: number; // Negative value
   penaltyActions: string[]; 
@@ -66,6 +67,7 @@ export interface Reward {
   rewardType: RewardType;
   rewardCode: number; // Stored code
   description: string;
+  reason?: string;
   score: number; // Positive value
   rewardsGiven: string[];
   evidence?: string;
@@ -136,6 +138,7 @@ export interface AppSettings {
   localHfUrl?: string;
   localHfModel?: string;
   autoOfflineFailover?: boolean;
+  customDepartments?: string[];
   // Cloud Sync & Network File Storage (ParsPack / S3 Compatible)
   cloudSyncEnabled?: boolean;
   cloudEndpoint?: string;

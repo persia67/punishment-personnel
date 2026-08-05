@@ -448,9 +448,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedUsername = newUser.username.trim();
-    const trimmedPassword = newUser.password.trim();
-    const trimmedFullName = newUser.fullName.trim();
+    const trimmedUsername = (newUser.username || '').trim();
+    const trimmedPassword = (newUser.password || '').trim();
+    const trimmedFullName = (newUser.fullName || '').trim();
     if(trimmedUsername && trimmedPassword && trimmedFullName) {
         const validateCredentialsObj = (str: string) => {
             return /[a-z]/.test(str) && /[A-Z]/.test(str) && /\d/.test(str);
@@ -583,7 +583,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             return '';
           };
 
-          const imported: Employee[] = data.map((row: any) => {
+          let imported: Employee[] = data.map((row: any) => {
             const pId = getRowValue(row, ['PersonnelID', 'کد پرسنلی', 'کد', 'کد_پرسنلی', 'personnel_id', 'شماره پرسنلی', 'شماره_پرسنلی']);
             const fName = getRowValue(row, ['FullName', 'نام و نام خانوادگی', 'نام', 'نام کامل', 'نام_کامل', 'full_name', 'نام خانوادگی']);
             const nId = getRowValue(row, ['NationalID', 'کد ملی', 'کدملی', 'کد_ملی', 'national_id', 'شناسنامه']);
@@ -702,7 +702,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     if (parsedEmployees.length === 0) {
       // Split by lines
       const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-      parsedEmployees = lines.map(line => {
+      const mapped: (Employee | null)[] = lines.map(line => {
         // Detect delimiter
         let delimiter: string | RegExp = ',';
         if (line.includes('\t')) {
@@ -731,7 +731,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           phoneNumber: cols[5] || undefined,
           hireDate: cols[6] || undefined,
         };
-      }).filter((e): e is Employee => e !== null && e.personnelId !== '' && e.fullName !== '');
+      });
+      parsedEmployees = mapped.filter((e): e is Employee => e !== null && Boolean(e.personnelId) && Boolean(e.fullName));
     }
 
     if (parsedEmployees.length === 0) {

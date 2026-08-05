@@ -39,7 +39,11 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
 
   const [sourceDept, setSourceDept] = useSessionStorage<string>('reward_sourceDept', getInitialDept());
 
-  const availableCodes = codes.filter(c => c.department === sourceDept);
+  // Filter available codes based on the selected Department with fallback
+  const availableCodes = React.useMemo(() => {
+    const filtered = codes.filter(c => c.department === sourceDept);
+    return filtered.length > 0 ? filtered : codes;
+  }, [codes, sourceDept]);
 
   const availableDepartments = Array.from(new Set([
       'HSE', 'SECURITY', 'TRAINING', 'ADMIN', 
@@ -116,7 +120,7 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
         return;
     }
 
-    const codeObj = codes.find(c => c.code === selectedCode);
+    const codeObj = codes.find(c => Number(c.code) === Number(selectedCode) || String(c.code).trim() === String(selectedCode).trim());
     if (!codeObj) return;
 
     const newReward: Reward = {

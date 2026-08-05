@@ -22,7 +22,7 @@ import {
   Share2,
   Cloud
 } from 'lucide-react';
-import { Violation, Reward, Employee, AppSettings } from '../types';
+import { Violation, Reward, Employee, AppSettings, User, CodeItem } from '../types';
 
 interface OfflineSyncModalProps {
   isOpen: boolean;
@@ -31,6 +31,9 @@ interface OfflineSyncModalProps {
   violations: Violation[];
   rewards: Reward[];
   employees: Employee[];
+  users?: User[];
+  violationCodes?: CodeItem[];
+  rewardCodes?: CodeItem[];
   onMergeSuccess: (
     mergedViolations: Violation[], 
     mergedRewards: Reward[], 
@@ -257,14 +260,15 @@ export default function OfflineSyncModal({
   const getAvailablePeriods = () => {
     const periods = new Set<string>();
     
-    const extractFromDate = (dateStr: string) => {
+    const extractFromDate = (dateStr: string): string | undefined => {
       // Expect YYYY/MM/DD or YYYY-MM-DD
-      if (!dateStr) return;
+      if (!dateStr) return undefined;
       const parts = dateStr.includes('/') ? dateStr.split('/') : dateStr.split('-');
       if (parts.length >= 2) {
         // e.g. "1403/04" or "2026-07"
         return `${parts[0]}/${parts[1]}`;
       }
+      return undefined;
     };
 
     violations.forEach(v => {

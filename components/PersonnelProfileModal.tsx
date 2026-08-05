@@ -141,7 +141,7 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
                           src={v.evidence} 
                           alt="Evidence" 
                           className="w-9 h-9 object-cover rounded-lg cursor-pointer border border-red-200 hover:scale-105 transition-transform shrink-0" 
-                          onClick={() => setActiveImage(v.evidence)}
+                          onClick={() => setActiveImage(v.evidence || null)}
                           referrerPolicy="no-referrer"
                         />
                       )}
@@ -173,7 +173,7 @@ const PersonnelProfileModal: React.FC<PersonnelProfileModalProps> = ({
                           src={r.evidence} 
                           alt="Evidence" 
                           className="w-9 h-9 object-cover rounded-lg cursor-pointer border border-emerald-200 hover:scale-105 transition-transform shrink-0" 
-                          onClick={() => setActiveImage(r.evidence)}
+                          onClick={() => setActiveImage(r.evidence || null)}
                           referrerPolicy="no-referrer"
                         />
                       )}

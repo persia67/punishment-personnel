@@ -80,6 +80,48 @@ const DEPARTMENT_ALIASES: Array<{ keywords: string[]; canonical: string }> = [
 ];
 
 /**
+ * Computes Levenshtein Distance between two strings for fuzzy matching
+ */
+export const levenshteinDistance = (a: string, b: string): number => {
+  const matrix: number[][] = [];
+  const aLen = a.length;
+  const bLen = b.length;
+
+  if (aLen === 0) return bLen;
+  if (bLen === 0) return aLen;
+
+  for (let i = 0; i <= bLen; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= aLen; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= bLen; i++) {
+    for (let j = 1; j <= aLen; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+
+  return matrix[bLen][aLen];
+};
+
+export const similarityRatio = (s1: string, s2: string): number => {
+  const longer = s1.length >= s2.length ? s1 : s2;
+  if (longer.length === 0) return 1.0;
+  return (longer.length - levenshteinDistance(s1, s2)) / parseFloat(longer.length.toString());
+};
+
+/**
  * Intelligently matches a raw department string to the closest existing department in the menu.
  * If no match is found, marks it as a new department to be added to the department list.
  */
@@ -112,7 +154,6 @@ export const normalizeDepartmentName = (
   }
 
   // 3. Partial/Sub-string matching against existing departments
-  // e.g., if user uploaded "هیدرولیک", check if "فنی - هیدرولیک" contains "هیدرولیک"
   for (const dept of currentDepartments) {
     const cleanedDept = cleanString(dept);
     if (cleanedDept.includes(cleanedRaw) || (cleanedRaw.length > 3 && cleanedDept.endsWith(cleanedRaw))) {
@@ -120,17 +161,32 @@ export const normalizeDepartmentName = (
     }
   }
 
-  // 4. Reverse containment: if raw contains an existing department keyword (e.g. "واحد فنی بخش جوش" -> "فنی - جوشکاری")
+  // 4. Reverse containment: if raw contains an existing department keyword
   for (const dept of currentDepartments) {
     const cleanedDept = cleanString(dept);
     const parts = cleanedDept.split(' ');
-    const mainSubPart = parts[parts.length - 1]; // e.g., "هیدرولیک" from "فنی هیدرولیک"
+    const mainSubPart = parts[parts.length - 1];
     if (mainSubPart && mainSubPart.length >= 3 && cleanedRaw.includes(mainSubPart)) {
       return { normalized: dept, isNew: false };
     }
   }
 
-  // 5. Completely new department! Retain original formatted string and mark isNew
+  // 5. Fuzzy Match using Levenshtein distance similarity
+  let bestMatch: { dept: string; score: number } | null = null;
+  for (const dept of currentDepartments) {
+    const cleanedDept = cleanString(dept);
+    const score = similarityRatio(cleanedRaw, cleanedDept);
+    if (!bestMatch || score > bestMatch.score) {
+      bestMatch = { dept, score };
+    }
+  }
+
+  // Threshold for fuzzy match acceptance (0.60+)
+  if (bestMatch && bestMatch.score >= 0.60) {
+    return { normalized: bestMatch.dept, isNew: false };
+  }
+
+  // 6. Completely new department! Retain original formatted string and mark isNew
   const formattedNewDept = rawDept.trim();
   return { normalized: formattedNewDept, isNew: true };
 };

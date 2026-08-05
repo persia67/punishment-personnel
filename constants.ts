@@ -347,6 +347,8 @@ export const INITIAL_VIOLATION_CODES: CodeItem[] = [
   { id: 'v8', code: 60, label: "عدم اخذ پرمیت (Permit)", score: -15, department: 'HSE' },
   { id: 'v9', code: 70, label: "نداشتن مجوز تردد معتبر (پیمانکاران)", score: -10, department: 'HSE' },
   { id: 'v10', code: 13, label: "استفاده از لباس کار یا کفش نامناسب/فرسوده", score: -5, department: 'HSE' },
+  { id: 'v20', code: 1, label: "سوار شدن نفرات کنار راننده لیفتراک", score: -10, department: 'HSE' },
+  { id: 'v21', code: 9, label: "عدم استفاده از لباس و کفش های قدیمی", score: -5, department: 'HSE' },
 
   // SECURITY (200-299)
   { id: 'v11', code: 201, label: "خروج غیرمجاز اموال", score: -50, department: 'SECURITY' }, // Critical

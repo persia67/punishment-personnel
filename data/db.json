@@ -41,6 +41,187 @@
       "status": "Pending",
       "isApproved": true,
       "isArchived": false
+    },
+    {
+      "id": "V-4977",
+      "employeeName": "رامین بیدقی",
+      "personnelId": "22353",
+      "department": "تعمیرات",
+      "departmentSource": "HSE",
+      "reporterName": "مدیر سیستم",
+      "date": "۱۴۰۵/۴/۲۵",
+      "violationType": "کار در ارتفاع بدون کمربند ایمنی",
+      "violationCode": 20,
+      "score": -20,
+      "description": "کار به روی نردبان پشت آشپزخانه جهت تعویض طلق با شیشه",
+      "severity": "High",
+      "penaltyActions": [
+        "تذکر شفاهی",
+        "توبیخ کتبی"
+      ],
+      "violationStage": 1,
+      "status": "Pending",
+      "isApproved": true
+    },
+    {
+      "id": "V-2444",
+      "employeeName": "علی ولی افتری",
+      "personnelId": "22705",
+      "department": "تولید - اسیدشویی",
+      "departmentSource": "HSE",
+      "reporterName": "مدیر سیستم",
+      "date": "۱۴۰۵/۵/۱۰",
+      "violationType": "عدم استفاده از لباس و کفش های قدیمی",
+      "violationCode": 9,
+      "score": -5,
+      "description": "در مورخ1405/04/26",
+      "severity": "Medium",
+      "penaltyActions": [
+        "تذکر شفاهی",
+        "توبیخ کتبی"
+      ],
+      "violationStage": 1,
+      "status": "Pending",
+      "isApproved": true
+    },
+    {
+      "id": "V-2776",
+      "employeeName": "محمدرضا رستمی",
+      "personnelId": "22700",
+      "department": "تولید - نورد سرد",
+      "departmentSource": "HSE",
+      "reporterName": "مدیر سیستم",
+      "date": "۱۴۰۵/۵/۱۰",
+      "violationType": "عدم استفاده از لوازم حفاظت فردی متناسب با کار",
+      "violationCode": 12,
+      "score": -10,
+      "description": "1405/03/02",
+      "severity": "Medium",
+      "penaltyActions": [
+        "تذکر شفاهی"
+      ],
+      "violationStage": 1,
+      "status": "Pending",
+      "isApproved": true
+    },
+    {
+      "id": "V-3465",
+      "employeeName": "پوریا بدر",
+      "personnelId": "22749",
+      "department": "تولید - اسیدشویی",
+      "departmentSource": "HSE",
+      "reporterName": "مدیر سیستم",
+      "date": "۱۴۰۵/۵/۱۰",
+      "violationType": "عدم استفاده از لوازم حفاظت فردی متناسب با کار",
+      "violationCode": 12,
+      "score": -10,
+      "description": "1405/03/25",
+      "severity": "Medium",
+      "penaltyActions": [
+        "تذکر شفاهی"
+      ],
+      "violationStage": 2,
+      "status": "Pending",
+      "isApproved": true
+    },
+    {
+      "id": "V-4932",
+      "employeeName": "پوریا بدر",
+      "personnelId": "22749",
+      "department": "تولید - اسیدشویی",
+      "departmentSource": "HSE",
+      "reporterName": "مدیر سیستم",
+      "date": "۱۴۰۵/۵/۱۰",
+      "violationType": "استعمال دخانیات در محیط کار",
+      "violationCode": 30,
+      "score": -15,
+      "description": "مورخ 1405/03/25",
+      "severity": "Medium",
+      "penaltyActions": [
+        "توبیخ کتبی"
+      ],
+      "violationStage": 2,
+      "status": "Pending",
+      "isApproved": true
+    },
+    {
+      "id": "V-5022",
+      "employeeName": "پوریا بدر",
+      "personnelId": "22749",
+      "department": "تولید - اسیدشویی",
+      "departmentSource": "HSE",
+      "reporterName": "مدیر سیستم",
+      "date": "۱۴۰۵/۵/۱۰",
+      "violationType": "عدم استفاده از کلاه ایمنی",
+      "violationCode": 10,
+      "score": -5,
+      "description": "در مورخ 1405/03/25",
+      "severity": "Medium",
+      "penaltyActions": [
+        "توبیخ کتبی"
+      ],
+      "violationStage": 1,
+      "status": "Pending",
+      "isApproved": true
+    },
+    {
+      "id": "V-169",
+      "employeeName": "امیر رفیعی",
+      "personnelId": "22597",
+      "department": "فنی",
+      "departmentSource": "HSE",
+      "reporterName": "مدیر سیستم",
+      "date": "۱۴۰۵/۵/۱۰",
+      "violationType": "سوار شدن نفرات کنار راننده لیفتراک",
+      "violationCode": 1,
+      "score": -10,
+      "description": "1405/04/11 مرتکب این تخلف گردیده و به وی به صورت کتبی نیز ابلاغ گشته است",
+      "severity": "Medium",
+      "penaltyActions": [],
+      "violationStage": 1,
+      "status": "Pending",
+      "isApproved": true
+    },
+    {
+      "id": "V-2753",
+      "employeeName": "هادی ریاحی",
+      "personnelId": "22548",
+      "department": "لیفتراک",
+      "departmentSource": "HSE",
+      "reporterName": "مدیر سیستم",
+      "date": "۱۴۰۵/۵/۱۰",
+      "violationType": "سوار شدن نفرات کنار راننده لیفتراک",
+      "violationCode": 1,
+      "score": -10,
+      "description": "نامبرده راننده لیفتراک است و شخص دیگری را کنار دست خود سوار کرده در مورخ1405/04/11",
+      "severity": "Medium",
+      "penaltyActions": [
+        "تذکر شفاهی",
+        "توبیخ کتبی"
+      ],
+      "violationStage": 1,
+      "status": "Pending",
+      "isApproved": true
+    },
+    {
+      "id": "V-7479",
+      "employeeName": "بهروز خیرخواهان",
+      "personnelId": "22153",
+      "department": "برق",
+      "departmentSource": "HSE",
+      "reporterName": "مدیر سیستم",
+      "date": "۱۴۰۵/۵/۱۰",
+      "violationType": "عدم استفاده از کلاه ایمنی",
+      "violationCode": 10,
+      "score": -5,
+      "description": "مورخ 1405/04/21 مرتکب شده است",
+      "severity": "Medium",
+      "penaltyActions": [
+        "توبیخ کتبی"
+      ],
+      "violationStage": 1,
+      "status": "Pending",
+      "isApproved": true
     }
   ],
   "rewards": [
@@ -2761,6 +2942,20 @@
       "id": "v10",
       "code": 13,
       "label": "استفاده از لباس کار یا کفش نامناسب/فرسوده",
+      "score": -5,
+      "department": "HSE"
+    },
+    {
+      "id": "v20",
+      "code": 1,
+      "label": "سوار شدن نفرات کنار راننده لیفتراک",
+      "score": -10,
+      "department": "HSE"
+    },
+    {
+      "id": "v21",
+      "code": 9,
+      "label": "عدم استفاده از لباس و کفش های قدیمی",
       "score": -5,
       "department": "HSE"
     },

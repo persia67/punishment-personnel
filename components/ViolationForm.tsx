@@ -40,8 +40,11 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
 
   const [sourceDept, setSourceDept] = useSessionStorage<string>('violation_sourceDept', getInitialDept());
 
-  // Filter available codes based on the selected Department
-  const availableCodes = codes.filter(c => c.department === sourceDept);
+  // Filter available codes based on the selected Department with fallback
+  const availableCodes = React.useMemo(() => {
+    const filtered = codes.filter(c => c.department === sourceDept);
+    return filtered.length > 0 ? filtered : codes;
+  }, [codes, sourceDept]);
 
   // Get unique departments from codes for the dropdown (plus standard ones)
   const availableDepartments = Array.from(new Set([
@@ -138,7 +141,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
         return;
     }
 
-    const codeObj = codes.find(c => c.code === selectedCode);
+    const codeObj = codes.find(c => Number(c.code) === Number(selectedCode) || String(c.code).trim() === String(selectedCode).trim());
     if (!codeObj) return;
 
     const newViolation: Violation = {
