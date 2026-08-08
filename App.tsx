@@ -697,19 +697,39 @@ const App: React.FC = () => {
   const handleOfflineMergeSuccess = (
     mergedViolations: Violation[], 
     mergedRewards: Reward[], 
-    mergedEmployees: Employee[]
+    mergedEmployees: Employee[],
+    mergedUsers?: User[],
+    mergedViolationCodes?: CodeItem[],
+    mergedRewardCodes?: CodeItem[],
+    mergedSettings?: AppSettings
   ) => {
     setViolations(mergedViolations);
     setRewards(mergedRewards);
     setEmployees(mergedEmployees);
+    if (mergedUsers && mergedUsers.length > 0) {
+      setUsers(mergedUsers);
+      localStorage.setItem('sg_users', JSON.stringify(mergedUsers));
+    }
+    if (mergedViolationCodes && mergedViolationCodes.length > 0) {
+      setViolationCodes(mergedViolationCodes);
+      localStorage.setItem('sg_violationCodes', JSON.stringify(mergedViolationCodes));
+    }
+    if (mergedRewardCodes && mergedRewardCodes.length > 0) {
+      setRewardCodes(mergedRewardCodes);
+      localStorage.setItem('sg_rewardCodes', JSON.stringify(mergedRewardCodes));
+    }
+    if (mergedSettings) {
+      setSettings(mergedSettings);
+      localStorage.setItem('sg_settings', JSON.stringify(mergedSettings));
+    }
     pushDataToServerState(
       mergedViolations,
       mergedRewards,
-      users,
+      mergedUsers || users,
       mergedEmployees,
-      violationCodes,
-      rewardCodes,
-      settings
+      mergedViolationCodes || violationCodes,
+      mergedRewardCodes || rewardCodes,
+      mergedSettings || settings
     );
   };
 
@@ -3167,6 +3187,9 @@ const App: React.FC = () => {
         violations={violations}
         rewards={rewards}
         employees={employees}
+        users={users}
+        violationCodes={violationCodes}
+        rewardCodes={rewardCodes}
         onMergeSuccess={handleOfflineMergeSuccess}
       />
 

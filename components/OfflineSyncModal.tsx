@@ -37,7 +37,11 @@ interface OfflineSyncModalProps {
   onMergeSuccess: (
     mergedViolations: Violation[], 
     mergedRewards: Reward[], 
-    mergedEmployees: Employee[]
+    mergedEmployees: Employee[],
+    mergedUsers?: User[],
+    mergedViolationCodes?: CodeItem[],
+    mergedRewardCodes?: CodeItem[],
+    mergedSettings?: AppSettings
   ) => void;
 }
 
@@ -50,6 +54,10 @@ interface SyncFilePayload {
   violations: Violation[];
   rewards: Reward[];
   employees: Employee[];
+  users?: User[];
+  violationCodes?: CodeItem[];
+  rewardCodes?: CodeItem[];
+  settings?: AppSettings;
 }
 
 interface SyncLogEntry {
@@ -192,6 +200,9 @@ export default function OfflineSyncModal({
     updateRewards: Reward[];
     identicalRewardsCount: number;
     newEmployees: Employee[];
+    updatedEmployeesCount?: number;
+    newUsersCount?: number;
+    newCodesCount?: number;
   } | null>(null);
 
   // Sync Log History
@@ -336,13 +347,17 @@ export default function OfflineSyncModal({
     try {
       const payload: SyncFilePayload = {
         version: '3.2.0',
-        source: isFa ? 'واحد پایش محلی SafeWatch' : 'Local SafeWatch Node',
+        source: isFa ? 'پایگاه پرونده پرسنل و زونکن‌های SafeWatch' : 'SafeWatch Binders & Personnel Archive',
         exportDate: new Date().toISOString(),
         filterPeriod: exportMonth,
         filterDept: exportDept,
         violations: exportV,
         rewards: exportR,
-        employees: exportE
+        employees: exportE,
+        users: users || [],
+        violationCodes: violationCodes || [],
+        rewardCodes: rewardCodes || [],
+        settings: settings
       };
 
       const dateTag = new Date().toLocaleDateString(isFa ? 'fa-IR' : 'en-US')
@@ -371,7 +386,7 @@ export default function OfflineSyncModal({
       };
 
       saveLogs([newLog, ...syncLogs]);
-      showToast(isFa ? 'فایل همگام‌سازی با موفقیت آماده و دانلود شد.' : 'Sync file downloaded successfully!', 'success');
+      showToast(isFa ? 'فایل همگام‌سازی و پایگاه زونکن‌ها با موفقیت دانلود شد.' : 'Sync file downloaded successfully!', 'success');
     } catch (e) {
       showToast(isFa ? 'خطا در خروجی گرفتن اطلاعات.' : 'Error generating export file.', 'error');
     }
@@ -381,13 +396,17 @@ export default function OfflineSyncModal({
     try {
       const payload: SyncFilePayload = {
         version: '3.2.0',
-        source: isFa ? 'واحد پایش محلی SafeWatch' : 'Local SafeWatch Node',
+        source: isFa ? 'پایگاه پرونده پرسنل و زونکن‌های SafeWatch' : 'SafeWatch Binders & Personnel Archive',
         exportDate: new Date().toISOString(),
         filterPeriod: exportMonth,
         filterDept: exportDept,
         violations: exportV,
         rewards: exportR,
-        employees: exportE
+        employees: exportE,
+        users: users || [],
+        violationCodes: violationCodes || [],
+        rewardCodes: rewardCodes || [],
+        settings: settings
       };
 
       const dateTag = new Date().toLocaleDateString(isFa ? 'fa-IR' : 'en-US')
@@ -400,8 +419,8 @@ export default function OfflineSyncModal({
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: isFa ? 'فایل همگام‌سازی SafeWatch' : 'SafeWatch Sync File',
-            text: isFa ? 'فایل تبادل آفلاین اطلاعات جهت انتقال به سیستم مقصد' : 'Offline exchange file for system transfer'
+            title: isFa ? 'فایل همگام‌سازی و زونکن‌های SafeWatch' : 'SafeWatch Sync & Binders File',
+            text: isFa ? 'فایل تبادل آفلاین اطلاعات، زونکن‌ها و پرونده پرسنل' : 'Offline exchange file for system transfer'
           });
           showToast(isFa ? 'فایل تبادل با موفقیت به اشتراک گذاشته شد.' : 'Sync file shared successfully!', 'success');
         } else {
@@ -436,6 +455,46 @@ export default function OfflineSyncModal({
     }
   };
 
+  // Helper to normalize payload from any incoming sync file format
+  const extractPayload = (rawJson: any): SyncFilePayload => {
+    const parseArr = (val: any) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') {
+        try {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed)) return parsed;
+        } catch (e) {}
+      }
+      return [];
+    };
+
+    const parseObj = (val: any) => {
+      if (val && typeof val === 'object' && !Array.isArray(val)) return val;
+      if (typeof val === 'string') {
+        try {
+          const parsed = JSON.parse(val);
+          if (parsed && typeof parsed === 'object') return parsed;
+        } catch (e) {}
+      }
+      return undefined;
+    };
+
+    return {
+      version: rawJson.version || '3.2.0',
+      source: rawJson.source || (isFa ? 'فایل دریافت شده' : 'Received File'),
+      exportDate: rawJson.exportDate || new Date().toISOString(),
+      filterPeriod: rawJson.filterPeriod,
+      filterDept: rawJson.filterDept,
+      violations: parseArr(rawJson.violations || rawJson.sg_violations),
+      rewards: parseArr(rawJson.rewards || rawJson.sg_rewards),
+      employees: parseArr(rawJson.employees || rawJson.sg_employees),
+      users: parseArr(rawJson.users || rawJson.sg_users),
+      violationCodes: parseArr(rawJson.violationCodes || rawJson.sg_violationCodes),
+      rewardCodes: parseArr(rawJson.rewardCodes || rawJson.sg_rewardCodes),
+      settings: parseObj(rawJson.settings || rawJson.sg_settings)
+    };
+  };
+
   // Import File Parsing & Smart Merge Analysis
   const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -445,10 +504,11 @@ export default function OfflineSyncModal({
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const payload = JSON.parse(event.target?.result as string) as SyncFilePayload;
+        const rawJson = JSON.parse(event.target?.result as string);
+        const payload = extractPayload(rawJson);
         
         // Validation check
-        if (!payload.version || (!Array.isArray(payload.violations) && !Array.isArray(payload.rewards))) {
+        if (!payload.violations && !payload.rewards && !payload.employees) {
           throw new Error("Invalid format");
         }
 
@@ -474,6 +534,9 @@ export default function OfflineSyncModal({
     const localEmployeesMap = new Map<string, Employee>();
     employees.forEach(e => localEmployeesMap.set(e.personnelId, e));
 
+    const localUsersMap = new Map<string, User>();
+    (users || []).forEach(u => localUsersMap.set(u.id, u));
+
     const newViolations: Violation[] = [];
     const updateViolations: Violation[] = [];
     let identicalViolationsCount = 0;
@@ -483,6 +546,10 @@ export default function OfflineSyncModal({
     let identicalRewardsCount = 0;
 
     const newEmployees: Employee[] = [];
+    let updatedEmployeesCount = 0;
+
+    let newUsersCount = 0;
+    let newCodesCount = 0;
 
     // Analyze Violations
     (incoming.violations || []).forEach(incomingV => {
@@ -490,13 +557,11 @@ export default function OfflineSyncModal({
       if (!localV) {
         newViolations.push(incomingV);
       } else {
-        // Conflict / Status Change check
         const isApprovedChanged = localV.isApproved !== incomingV.isApproved;
         const isStatusChanged = localV.status !== incomingV.status;
         const isVStageChanged = localV.violationStage !== incomingV.violationStage;
         
         if (isApprovedChanged || isStatusChanged || isVStageChanged) {
-          // If incoming is approved or stage is different, we merge/overwrite this specific record
           updateViolations.push(incomingV);
         } else {
           identicalViolationsCount++;
@@ -519,11 +584,36 @@ export default function OfflineSyncModal({
       }
     });
 
-    // Analyze Employees (Personnel)
+    // Analyze Employees (Personnel Database)
     (incoming.employees || []).forEach(incomingE => {
       const localE = localEmployeesMap.get(incomingE.personnelId);
       if (!localE) {
         newEmployees.push(incomingE);
+      } else {
+        if (JSON.stringify(localE) !== JSON.stringify(incomingE)) {
+          updatedEmployeesCount++;
+        }
+      }
+    });
+
+    // Analyze System Users
+    (incoming.users || []).forEach(u => {
+      if (u && u.id && !localUsersMap.has(u.id)) {
+        newUsersCount++;
+      }
+    });
+
+    // Analyze Codes
+    const localVC = new Set((violationCodes || []).map(c => c.code));
+    (incoming.violationCodes || []).forEach(c => {
+      if (c && c.code !== undefined && !localVC.has(c.code)) {
+        newCodesCount++;
+      }
+    });
+    const localRC = new Set((rewardCodes || []).map(c => c.code));
+    (incoming.rewardCodes || []).forEach(c => {
+      if (c && c.code !== undefined && !localRC.has(c.code)) {
+        newCodesCount++;
       }
     });
 
@@ -534,7 +624,10 @@ export default function OfflineSyncModal({
       newRewards,
       updateRewards,
       identicalRewardsCount,
-      newEmployees
+      newEmployees,
+      updatedEmployeesCount,
+      newUsersCount,
+      newCodesCount
     });
   };
 
@@ -544,9 +637,7 @@ export default function OfflineSyncModal({
 
     try {
       const finalViolationsMap = new Map<string, Violation>();
-      // Load current local records
       violations.forEach(v => finalViolationsMap.set(v.id, v));
-      // Overwrite or append analyzed records
       mergeAnalysis.newViolations.forEach(v => finalViolationsMap.set(v.id, v));
       mergeAnalysis.updateViolations.forEach(v => finalViolationsMap.set(v.id, v));
 
@@ -557,17 +648,59 @@ export default function OfflineSyncModal({
 
       const finalEmployeesMap = new Map<string, Employee>();
       employees.forEach(e => finalEmployeesMap.set(e.personnelId, e));
-      mergeAnalysis.newEmployees.forEach(e => finalEmployeesMap.set(e.personnelId, e));
+      (importedFile.employees || []).forEach(e => {
+        if (e && e.personnelId) {
+          finalEmployeesMap.set(e.personnelId, e);
+        }
+      });
 
       const mergedV = Array.from(finalViolationsMap.values());
       const mergedR = Array.from(finalRewardsMap.values());
       const rawE = Array.from(finalEmployeesMap.values());
 
-      // Auto-normalize employee departments and collect any newly discovered departments
       const masterDepts = getMasterDepartments(settings.customDepartments);
       const { updatedEmployees: mergedE, updatedDepartments } = processEmployeeDepartments(rawE, masterDepts);
       if (updatedDepartments.length > masterDepts.length) {
         saveMasterDepartments(updatedDepartments);
+      }
+
+      // Merge Users
+      const finalUsersMap = new Map<string, User>();
+      (users || []).forEach(u => finalUsersMap.set(u.id, u));
+      (importedFile.users || []).forEach(u => {
+        if (u && u.id) finalUsersMap.set(u.id, u);
+      });
+      const mergedU = Array.from(finalUsersMap.values());
+
+      // Merge Violation Codes
+      const finalVCodesMap = new Map<number, CodeItem>();
+      (violationCodes || []).forEach(c => finalVCodesMap.set(c.code, c));
+      (importedFile.violationCodes || []).forEach(c => {
+        if (c && c.code !== undefined) finalVCodesMap.set(c.code, c);
+      });
+      const mergedVC = Array.from(finalVCodesMap.values());
+
+      // Merge Reward Codes
+      const finalRCodesMap = new Map<number, CodeItem>();
+      (rewardCodes || []).forEach(c => finalRCodesMap.set(c.code, c));
+      (importedFile.rewardCodes || []).forEach(c => {
+        if (c && c.code !== undefined) finalRCodesMap.set(c.code, c);
+      });
+      const mergedRC = Array.from(finalRCodesMap.values());
+
+      // Merge Settings & Custom Departments
+      let mergedSettings = { ...settings };
+      if (importedFile.settings) {
+        const customDepts = Array.from(new Set([
+          ...(settings.customDepartments || []),
+          ...(importedFile.settings.customDepartments || []),
+          ...updatedDepartments
+        ]));
+        mergedSettings = {
+          ...settings,
+          ...importedFile.settings,
+          customDepartments: customDepts
+        };
       }
 
       // Detect departments from imported data
@@ -583,7 +716,6 @@ export default function OfflineSyncModal({
         importedDepts.add(importedFile.filterDept);
       }
 
-      // If no specific dept was found, default to all of them
       if (importedDepts.size === 0) {
         importedDepts.add('HSE');
         importedDepts.add('SECURITY');
@@ -606,9 +738,13 @@ export default function OfflineSyncModal({
       localStorage.setItem('sg_violations', JSON.stringify(mergedV));
       localStorage.setItem('sg_rewards', JSON.stringify(mergedR));
       localStorage.setItem('sg_employees', JSON.stringify(mergedE));
+      if (mergedU.length > 0) localStorage.setItem('sg_users', JSON.stringify(mergedU));
+      if (mergedVC.length > 0) localStorage.setItem('sg_violationCodes', JSON.stringify(mergedVC));
+      if (mergedRC.length > 0) localStorage.setItem('sg_rewardCodes', JSON.stringify(mergedRC));
+      localStorage.setItem('sg_settings', JSON.stringify(mergedSettings));
 
       // Callback to root component to update memory state & Express server
-      onMergeSuccess(mergedV, mergedR, mergedE);
+      onMergeSuccess(mergedV, mergedR, mergedE, mergedU, mergedVC, mergedRC, mergedSettings);
 
       // Add Log entry
       const logId = 'log_' + Math.random().toString(36).substr(2, 9);
@@ -819,8 +955,14 @@ export default function OfflineSyncModal({
                     <span className="font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">{exportR.length} {t.itemCountUnit}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>{t.employeesCount}</span>
-                    <span className="font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md font-bold">{exportE.length} {isFa ? 'نفر' : 'persons'}</span>
+                    <span>{isFa ? 'پایگاه پرونده پرسنل و زونکن‌ها:' : 'Personnel Database & Binders:'}</span>
+                    <span className="font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md font-bold">{exportE.length} {isFa ? 'پرونده' : 'records'}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-dashed border-gray-200 pt-1.5 mt-1 text-[11px] text-gray-500">
+                    <span>{isFa ? 'حساب‌های کاربری و آیین‌نامه‌ها:' : 'User Accounts & Code System:'}</span>
+                    <span className="font-mono text-gray-700 font-bold">
+                      {(users?.length || 0)} {isFa ? 'کاربر' : 'users'} | {(violationCodes?.length || 0) + (rewardCodes?.length || 0)} {isFa ? 'کد' : 'codes'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -906,20 +1048,27 @@ export default function OfflineSyncModal({
                               <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                               {t.newRecordsToAdd}
                             </span>
-                            <span className="font-mono">
+                            <span className="font-mono text-left">
                               {mergeAnalysis.newViolations.length + mergeAnalysis.newRewards.length + mergeAnalysis.newEmployees.length} {t.itemCountUnit}
+                              {mergeAnalysis.newEmployees.length > 0 && (
+                                <span className="block text-[10px] text-emerald-700 font-normal">
+                                  ({mergeAnalysis.newEmployees.length} {isFa ? 'پرونده جدید پرسنل' : 'new personnel profiles'})
+                                </span>
+                              )}
                             </span>
                           </div>
 
-                          <div className="flex items-start justify-between bg-amber-50 text-amber-850 p-2.5 rounded-xl border border-amber-100">
-                            <span className="flex items-center gap-1.5">
-                              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                              {t.recordsToUpdate}
-                            </span>
-                            <span className="font-mono">
-                              {mergeAnalysis.updateViolations.length + mergeAnalysis.updateRewards.length} {t.itemCountUnit}
-                            </span>
-                          </div>
+                          {(mergeAnalysis.updateViolations.length + mergeAnalysis.updateRewards.length + (mergeAnalysis.updatedEmployeesCount || 0)) > 0 && (
+                            <div className="flex items-start justify-between bg-amber-50 text-amber-850 p-2.5 rounded-xl border border-amber-100">
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                                {t.recordsToUpdate}
+                              </span>
+                              <span className="font-mono text-left">
+                                {mergeAnalysis.updateViolations.length + mergeAnalysis.updateRewards.length + (mergeAnalysis.updatedEmployeesCount || 0)} {t.itemCountUnit}
+                              </span>
+                            </div>
+                          )}
 
                           <div className="flex items-start justify-between bg-slate-100 text-slate-700 p-2.5 rounded-xl border border-slate-200/50">
                             <span className="flex items-center gap-1.5">
@@ -930,6 +1079,18 @@ export default function OfflineSyncModal({
                               {mergeAnalysis.identicalViolationsCount + mergeAnalysis.identicalRewardsCount} {t.itemCountUnit}
                             </span>
                           </div>
+
+                          {((mergeAnalysis.newUsersCount || 0) > 0 || (mergeAnalysis.newCodesCount || 0) > 0) && (
+                            <div className="flex items-start justify-between bg-indigo-50 text-indigo-900 p-2.5 rounded-xl border border-indigo-100">
+                              <span className="flex items-center gap-1.5">
+                                <Database className="w-4 h-4 text-indigo-600 shrink-0" />
+                                {isFa ? 'کاربران و کدهای جدید:' : 'New Users & System Codes:'}
+                              </span>
+                              <span className="font-mono">
+                                {mergeAnalysis.newUsersCount || 0} {isFa ? 'کاربر' : 'users'}, {mergeAnalysis.newCodesCount || 0} {isFa ? 'کد' : 'codes'}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

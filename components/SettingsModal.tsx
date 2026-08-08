@@ -861,16 +861,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // --- Backup & Restore Logic ---
   const handleExportBackup = () => {
+    const parseLocalKey = (key: string) => {
+      try {
+        const val = localStorage.getItem(key);
+        return val ? JSON.parse(val) : undefined;
+      } catch (e) {
+        return undefined;
+      }
+    };
+
     const dataToExport = {
+      version: "3.2.0",
+      source: settings.language === 'fa' ? "پشتیبان کامل پایگاه پرونده پرسنل و زونکن‌های SafeWatch" : "SafeWatch Binders & Personnel Archive Backup",
+      exportDate: new Date().toISOString(),
+      violations: parseLocalKey('sg_violations') || [],
+      rewards: parseLocalKey('sg_rewards') || [],
+      employees: parseLocalKey('sg_employees') || [],
+      users: parseLocalKey('sg_users') || [],
+      violationCodes: parseLocalKey('sg_violationCodes') || [],
+      rewardCodes: parseLocalKey('sg_rewardCodes') || [],
+      settings: parseLocalKey('sg_settings') || settings,
       sg_users: localStorage.getItem('sg_users'),
       sg_settings: localStorage.getItem('sg_settings'),
       sg_violations: localStorage.getItem('sg_violations'),
       sg_rewards: localStorage.getItem('sg_rewards'),
       sg_employees: localStorage.getItem('sg_employees'),
       sg_violationCodes: localStorage.getItem('sg_violationCodes'),
-      sg_rewardCodes: localStorage.getItem('sg_rewardCodes'),
-      version: "3.2.0",
-      exportDate: new Date().toISOString()
+      sg_rewardCodes: localStorage.getItem('sg_rewardCodes')
     };
 
     const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
@@ -884,16 +901,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleShareBackup = async () => {
+    const parseLocalKey = (key: string) => {
+      try {
+        const val = localStorage.getItem(key);
+        return val ? JSON.parse(val) : undefined;
+      } catch (e) {
+        return undefined;
+      }
+    };
+
     const dataToExport = {
+      version: "3.2.0",
+      source: settings.language === 'fa' ? "پشتیبان کامل پایگاه پرونده پرسنل و زونکن‌های SafeWatch" : "SafeWatch Binders & Personnel Archive Backup",
+      exportDate: new Date().toISOString(),
+      violations: parseLocalKey('sg_violations') || [],
+      rewards: parseLocalKey('sg_rewards') || [],
+      employees: parseLocalKey('sg_employees') || [],
+      users: parseLocalKey('sg_users') || [],
+      violationCodes: parseLocalKey('sg_violationCodes') || [],
+      rewardCodes: parseLocalKey('sg_rewardCodes') || [],
+      settings: parseLocalKey('sg_settings') || settings,
       sg_users: localStorage.getItem('sg_users'),
       sg_settings: localStorage.getItem('sg_settings'),
       sg_violations: localStorage.getItem('sg_violations'),
       sg_rewards: localStorage.getItem('sg_rewards'),
       sg_employees: localStorage.getItem('sg_employees'),
       sg_violationCodes: localStorage.getItem('sg_violationCodes'),
-      sg_rewardCodes: localStorage.getItem('sg_rewardCodes'),
-      version: "3.2.0",
-      exportDate: new Date().toISOString()
+      sg_rewardCodes: localStorage.getItem('sg_rewardCodes')
     };
 
     const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -906,7 +940,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           await navigator.share({
             files: [file],
             title: 'SafeWatch Backup',
-            text: settings.language === 'fa' ? 'فایل پشتیبان کامل سامانه SafeWatch' : 'SafeWatch Complete Backup File'
+            text: settings.language === 'fa' ? 'فایل پشتیبان کامل پایگاه پرونده پرسنل و زونکن‌های SafeWatch' : 'SafeWatch Complete Backup File'
           });
         } else {
           await navigator.share({
