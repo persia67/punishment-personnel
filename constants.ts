@@ -2,7 +2,7 @@ import { Violation, Severity, User, AppSettings, Reward, CodeItem } from './type
 
 export const DEFAULT_COMPANY_LOGO = '/logo.png';
 
-export const APP_VERSION = "4.7.0";
+export const APP_VERSION = "4.8.0";
 
 export const TRANSLATIONS = {
   fa: {
