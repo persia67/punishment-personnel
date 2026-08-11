@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install Dependencies
@@ -57,7 +57,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Setup Java 17
@@ -73,7 +73,10 @@ jobs:
         run: npm run build
 
       - name: Add Android Platform (if missing)
-        run: npx cap add android || true
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
 
       - name: Sync Capacitor Android
         run: npm run android:sync
@@ -95,8 +98,8 @@ jobs:
               echo "Error: No APK found after Gradle build!" && exit 1
             fi
 
-            # Create release key for APK signing
-            keytool -genkeypair -v -keystore release.keystore -alias hsekey -keyalg RSA -keysize 2048 -validity 10000 -storepass hsepass123 -keypass hsepass123 -dname "CN=SafeWatch, OU=HSE, O=HSE, L=Tehran, ST=Tehran, C=IR"
+            # Create release key for APK signing in non-interactive mode (-noprompt)
+            keytool -genkeypair -v -keystore release.keystore -alias hsekey -keyalg RSA -keysize 2048 -validity 10000 -storepass hsepass123 -keypass hsepass123 -dname "CN=SafeWatch, OU=HSE, O=HSE, L=Tehran, ST=Tehran, C=IR" -noprompt || true
 
             # Locate apksigner tool in Android SDK build-tools
             BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -n 1)
@@ -127,7 +130,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Setup Rust Toolchain

@@ -14,7 +14,6 @@
     "preview": "vite preview",
     "generate:icons": "node scripts/generate-icons.js",
     "prebuild": "node scripts/generate-icons.js",
-    "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
     "android:sync": "npm run build && npx cap sync",
     "android:open": "npx cap open android",
     "tauri": "tauri"
@@ -25,8 +24,6 @@
     "@capacitor/ios": "^6.0.0",
     "@google/genai": "*",
     "cors": "^2.8.6",
-    "electron-log": "^5.4.4",
-    "electron-updater": "^6.8.9",
     "express": "^5.2.1",
     "firebase": "^12.16.0",
     "framer-motion": "^12.42.2",
