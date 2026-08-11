@@ -30,7 +30,7 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, settin
                 {isFa ? 'آخرین تغییرات و ویژگی‌های جدید' : 'Latest Features & Changelog'}
               </h3>
               <p className="text-[10px] text-indigo-200 font-mono mt-0.5">
-                {isFa ? 'نسخه فعلی: v4.7.0' : 'Current Version: v4.7.0'}
+                {isFa ? 'نسخه فعلی: v4.9.0' : 'Current Version: v4.9.0'}
               </p>
             </div>
           </div>
@@ -49,11 +49,11 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, settin
             <div className="text-xs text-amber-900 leading-relaxed font-medium">
               {isFa ? (
                 <p>
-                  در نسخه <strong>v4.7.0</strong>، کلیدهای میانبر کیبورد، آیکون و نشان تجاری جدید در تمامی پلتفرم‌ها به‌روزرسانی شده و فرآیند انتشار خودکار نسخه دسکتاپ، اندروید و وب اصلاح گردید.
+                  در نسخه <strong>v4.9.0</strong>، خط لوله ساخت آیکون‌های Tauri و Android اصلاح شد، نیازمندی‌های تکراری الکترون حذف گردید و اکشن‌های CI/CD گیت‌هاب به Node 22 ارتقا یافتند.
                 </p>
               ) : (
                 <p>
-                  In version <strong>v4.7.0</strong>, keyboard shortcuts modal, brand icons across all target builds, and automated multi-platform release CI/CD workflows have been updated and fixed.
+                  In version <strong>v4.9.0</strong>, the Tauri & Android icon generation pipeline was fully automated, redundant Electron dependencies were removed, and GitHub Actions CI/CD workflows were updated to Node 22.
                 </p>
               )}
             </div>
