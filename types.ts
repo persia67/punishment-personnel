@@ -126,6 +126,25 @@ export interface User {
   telegramUsername?: string;
 }
 
+export interface N8nConfig {
+  isEnabled: boolean;
+  baseUrl: string; // e.g. "http://192.168.1.100:5678" or "https://n8n.company.local"
+  webhookPath: string; // e.g. "/webhook/safewatch-events"
+  apiKey?: string; // Secret Authorization token / API Key
+  nodeId?: string; // Identification name for this software instance (e.g. "SafeWatch-Plant1")
+  
+  // Event Triggers
+  triggerOnViolation?: boolean;
+  triggerOnReward?: boolean;
+  triggerOnEmployee?: boolean;
+  triggerOnSync?: boolean;
+  
+  // Interconnectivity Engine Settings
+  interconnectEnabled?: boolean;
+  interconnectWebhookUrl?: string; // Direct relay webhook for inter-instance messaging
+  autoRelayToInterconnectNodes?: boolean;
+}
+
 export interface AppSettings {
   language: Language;
   themeColor: ThemeColor;
@@ -147,6 +166,8 @@ export interface AppSettings {
   cloudBucketName?: string;
   cloudSyncInterval?: number; // In seconds
   cloudRealtimeSync?: boolean;
+  // n8n Automation Engine & Interconnectivity
+  n8nConfig?: N8nConfig;
 }
 
 export interface CodeItem {

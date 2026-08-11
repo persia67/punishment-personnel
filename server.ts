@@ -519,6 +519,134 @@ app.post('/api/sms/send', async (req, res) => {
   }
 });
 
+// n8n Automation Engine Proxy & Interconnectivity Endpoints
+app.post('/api/n8n/trigger', async (req, res) => {
+  try {
+    const { n8nConfig, payload } = req.body || {};
+    if (!n8nConfig) {
+      return res.status(400).json({ success: false, message: 'تنظیمات n8n ارسال نشده است.' });
+    }
+
+    const baseUrl = (n8nConfig.baseUrl || '').trim().replace(/\/+$/, '');
+    let webhookPath = (n8nConfig.webhookPath || '/webhook/safewatch-events').trim();
+    
+    let targetUrl = '';
+    if (webhookPath.startsWith('http://') || webhookPath.startsWith('https://')) {
+      targetUrl = webhookPath;
+    } else {
+      if (!webhookPath.startsWith('/')) webhookPath = '/' + webhookPath;
+      targetUrl = baseUrl ? `${baseUrl}${webhookPath}` : '';
+    }
+
+    if (!targetUrl) {
+      return res.status(400).json({ success: false, message: 'آدرس وب‌هوک n8n مشخص نشده است.' });
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'SafeWatch-HSE-System/4.9.0'
+    };
+
+    if (n8nConfig.apiKey) {
+      headers['Authorization'] = `Bearer ${n8nConfig.apiKey}`;
+      headers['X-N8N-API-KEY'] = n8nConfig.apiKey;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    let response: Response;
+    try {
+      response = await fetch(targetUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload || {}),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    const responseData = await response.json().catch(() => null);
+
+    if (response.ok) {
+      return res.json({
+        success: true,
+        statusCode: response.status,
+        message: `وب‌هوک با موفقیت به اتوماسیون n8n (${targetUrl}) ارسال گردید. (کد: ${response.status})`,
+        responseData
+      });
+    } else {
+      return res.status(response.status).json({
+        success: false,
+        statusCode: response.status,
+        message: `سرور n8n پاسخ کد ${response.status} ارسال کرد.`,
+        responseData
+      });
+    }
+  } catch (err: any) {
+    const isTimeout = err.name === 'AbortError' || err.message?.includes('aborted');
+    return res.status(502).json({
+      success: false,
+      message: isTimeout 
+        ? 'پاسخ‌گویی سرور n8n بیش از 10 ثانیه طول کشید (مهلت زمان به پایان رسید).'
+        : `خطا در اتصال به سرور n8n: ${err.message || 'شبکه در دسترس نیست'}`
+    });
+  }
+});
+
+// Receiver endpoint for incoming n8n triggers or cross-system relays
+app.post('/api/n8n/webhook-receive', (req, res) => {
+  try {
+    const body = req.body || {};
+    const { action, payload, violations, rewards, employees, users } = body;
+
+    const currentDb = readDB();
+
+    if (action === 'SYNC' || action === 'IMPORT' || (payload && payload.violations)) {
+      const incoming = payload || body;
+      
+      const mergedViolationsMap = new Map();
+      currentDb.violations.forEach((v: any) => mergedViolationsMap.set(v.id, v));
+      (incoming.violations || []).forEach((v: any) => { if (v && v.id) mergedViolationsMap.set(v.id, v); });
+
+      const mergedRewardsMap = new Map();
+      currentDb.rewards.forEach((r: any) => mergedRewardsMap.set(r.id, r));
+      (incoming.rewards || []).forEach((r: any) => { if (r && r.id) mergedRewardsMap.set(r.id, r); });
+
+      const mergedEmpMap = new Map();
+      currentDb.employees.forEach((e: any) => mergedEmpMap.set(e.personnelId, e));
+      (incoming.employees || []).forEach((e: any) => { if (e && e.personnelId) mergedEmpMap.set(e.personnelId, e); });
+
+      const updatedState = {
+        ...currentDb,
+        violations: Array.from(mergedViolationsMap.values()),
+        rewards: Array.from(mergedRewardsMap.values()),
+        employees: Array.from(mergedEmpMap.values())
+      };
+
+      writeDB(updatedState);
+
+      return res.json({
+        success: true,
+        message: 'بسته همگام‌سازی n8n با موفقیت دریافت و در پایگاه پرونده‌ها ادغام شد.',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'رویداد n8n دریافت و ثبت گردید.',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: `خطا در پردازش وب‌هوک دریافتی n8n: ${err.message}`
+    });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', version: '2.0.0' });
 });

@@ -1,8 +1,8 @@
-import { Violation, Severity, User, AppSettings, Reward, CodeItem } from './types';
+import { Violation, Severity, User, AppSettings, Reward, CodeItem, N8nConfig } from './types';
 
 export const DEFAULT_COMPANY_LOGO = '/logo.png';
 
-export const APP_VERSION = "4.8.0";
+export const APP_VERSION = "4.9.0";
 
 export const TRANSLATIONS = {
   fa: {
@@ -397,6 +397,21 @@ export const DEFAULT_USERS: User[] = [
   { id: 'u6', username: 'Admin123', password: 'Pass123', fullName: 'کارشناس اداری', role: 'ADMIN_STAFF', avatar: '', phoneNumber: '09128888888', email: 'admin@safewatch.ir' },
 ];
 
+export const DEFAULT_N8N_CONFIG: N8nConfig = {
+  isEnabled: false,
+  baseUrl: 'http://localhost:5678',
+  webhookPath: '/webhook/safewatch-automation',
+  apiKey: '',
+  nodeId: 'SafeWatch-Node-Main',
+  triggerOnViolation: true,
+  triggerOnReward: true,
+  triggerOnEmployee: true,
+  triggerOnSync: true,
+  interconnectEnabled: true,
+  interconnectWebhookUrl: '',
+  autoRelayToInterconnectNodes: false
+};
+
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'fa',
   themeColor: 'blue',
@@ -415,7 +430,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   cloudSecretKey: 'LSjyQ18o2NUWsjsSnAVjUoqsNmZE6nMXz',
   cloudBucketName: 'safewatch-share',
   cloudSyncInterval: 5,
-  cloudRealtimeSync: true
+  cloudRealtimeSync: true,
+  n8nConfig: DEFAULT_N8N_CONFIG
 };
 
 // Initial Mock Data with Departments

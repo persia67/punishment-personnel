@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { AppSettings, User, ThemeColor, Language, Role, Employee, CodeItem, SmsConfig, SmsLog } from '../types';
-import { TRANSLATIONS, DEFAULT_COMPANY_LOGO } from '../constants';
-import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save, ShieldAlert, Share2, Edit, User as UserIcon, Camera, Cloud, CloudLightning, Radio, Zap, CheckCircle2, Copy } from 'lucide-react';
+import { AppSettings, User, ThemeColor, Language, Role, Employee, CodeItem, SmsConfig, SmsLog, N8nConfig } from '../types';
+import { TRANSLATIONS, DEFAULT_COMPANY_LOGO, DEFAULT_N8N_CONFIG } from '../constants';
+import { X, Upload, UserPlus, Trash2, Check, Palette, Globe, Building2, Users as UsersIcon, Database, Download, FileSpreadsheet, Key, RefreshCw, Layers, List, Plus, Bot, MessageSquare, Smartphone, Send, Save, ShieldAlert, Share2, Edit, User as UserIcon, Camera, Cloud, CloudLightning, Radio, Zap, CheckCircle2, Copy, Workflow, GitFork, Terminal, AlertCircle, Play } from 'lucide-react';
 // @ts-ignore
 import * as XLSX from 'xlsx';
 import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
 import { testCloudConnection } from '../services/cloudSyncService';
+import { sendN8nWebhook, testN8nConnection, sendInterconnectRelay } from '../services/n8nService';
 import { processEmployeeDepartments, getMasterDepartments, saveMasterDepartments } from '../services/departmentUtils';
 import { ManualEmployeeForm, DEPARTMENTS_LIST, JOB_TITLES_LIST } from './ManualEmployeeForm';
 import CompanyLogo from './CompanyLogo';
+import { N8nSettingsTab } from './N8nSettingsTab';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -26,14 +28,35 @@ interface SettingsModalProps {
   rewardCodes: CodeItem[];
   onUpdateRewardCodes: (codes: CodeItem[]) => void;
   onRestoreFullBackup?: (backup: any) => void;
-  defaultTab?: 'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'SMS' | 'PROFILE';
+  defaultTab?: 'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'SMS' | 'N8N' | 'PROFILE';
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ 
   isOpen, onClose, settings, onUpdateSettings, users, onUpdateUsers, employees, onUpdateEmployees, currentUser, onUpdateCurrentUser,
   violationCodes, onUpdateViolationCodes, rewardCodes, onUpdateRewardCodes, onRestoreFullBackup, defaultTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'SMS' | 'PROFILE'>('APPEARANCE');
+  const [activeTab, setActiveTab] = useState<'APPEARANCE' | 'USERS' | 'DATA' | 'CODES' | 'SMS' | 'N8N' | 'PROFILE'>('APPEARANCE');
+
+  // n8n State Management
+  const [n8nConfig, setN8nConfigState] = useState<N8nConfig>(() => {
+    return settings.n8nConfig || DEFAULT_N8N_CONFIG;
+  });
+  const [n8nTestLoading, setN8nTestLoading] = useState(false);
+  const [n8nTestResult, setN8nTestResult] = useState<{
+    success: boolean;
+    message: string;
+    statusCode?: number;
+    responseTimeMs?: number;
+    responseData?: any;
+  } | null>(null);
+  const [showSamplePayload, setShowSamplePayload] = useState(false);
+  const [copiedSample, setCopiedSample] = useState(false);
+
+  useEffect(() => {
+    if (settings.n8nConfig) {
+      setN8nConfigState(settings.n8nConfig);
+    }
+  }, [settings.n8nConfig]);
 
   useEffect(() => {
     if (isOpen && defaultTab) {
@@ -1016,6 +1039,39 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  const handleSaveN8nConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updatedSettings: AppSettings = {
+      ...settings,
+      n8nConfig
+    };
+    onUpdateSettings(updatedSettings);
+    localStorage.setItem('sg_settings', JSON.stringify(updatedSettings));
+    alert(settings.language === 'fa' ? 'تنظیمات اتوماسیون n8n با موفقیت ذخیره گردید.' : 'n8n Automation settings saved successfully.');
+  };
+
+  const handleTestN8n = async () => {
+    setN8nTestLoading(true);
+    setN8nTestResult(null);
+    const result = await testN8nConnection(n8nConfig, settings.companyName);
+    setN8nTestLoading(false);
+    setN8nTestResult(result);
+  };
+
+  const handleTestInterconnectRelay = async () => {
+    setN8nTestLoading(true);
+    setN8nTestResult(null);
+    const testPacket = {
+      nodeId: n8nConfig.nodeId || 'SafeWatch-Node-1',
+      message: 'Node Interconnectivity Ping',
+      employeeCount: employees?.length || 0,
+      timestamp: new Date().toISOString()
+    };
+    const result = await sendInterconnectRelay(testPacket, n8nConfig, settings);
+    setN8nTestLoading(false);
+    setN8nTestResult(result);
+  };
+
   const colors: {id: ThemeColor, color: string}[] = [
       {id: 'red', color: 'bg-red-600'},
       {id: 'blue', color: 'bg-blue-600'},
@@ -1080,6 +1136,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
             )}
 
+            {(isDeveloper || currentUser.role === 'HSE_MANAGER' || currentUser.role === 'PLANT_MANAGER' || currentUser.role === 'HR_MANAGER') && (
+                <button 
+                    onClick={() => setActiveTab('N8N')}
+                    className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl transition-all whitespace-nowrap ${activeTab === 'N8N' ? 'bg-white shadow-md text-amber-600 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                    <Workflow className="w-4 h-4 md:w-5 md:h-5 text-amber-500" />
+                    <span className="text-xs md:text-sm">{settings.language === 'fa' ? 'اتوماسیون n8n' : 'n8n Automation'}</span>
+                </button>
+            )}
+
             <button 
                 onClick={() => setActiveTab('PROFILE')}
                 className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl transition-all whitespace-nowrap ${activeTab === 'PROFILE' ? 'bg-white shadow-md text-indigo-600 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}
@@ -1098,6 +1164,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     {activeTab === 'DATA' && t.dataManagement}
                     {activeTab === 'CODES' && t.codingSystem}
                     {activeTab === 'SMS' && (settings.language === 'fa' ? 'تنظیمات اتصال پیامک و لاگ‌ها' : 'SMS Gateway & Notification Logs')}
+                    {activeTab === 'N8N' && (settings.language === 'fa' ? 'اتوماسیون n8n و ارتباط بین سیستم‌ها' : 'n8n Automation & Interconnectivity')}
                     {activeTab === 'PROFILE' && (settings.language === 'fa' ? 'تنظیمات پروفایل کاربری' : 'User Profile Settings')}
                 </h3>
                 <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -2516,7 +2583,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
              )}
 
  
-              {activeTab === 'PROFILE' && (
+                            {activeTab === 'N8N' && (
+                  <N8nSettingsTab
+                      settings={settings}
+                      n8nConfig={n8nConfig}
+                      setN8nConfigState={setN8nConfigState}
+                      handleSaveN8nConfig={handleSaveN8nConfig}
+                      handleTestN8n={handleTestN8n}
+                      handleTestInterconnectRelay={handleTestInterconnectRelay}
+                      n8nTestLoading={n8nTestLoading}
+                      n8nTestResult={n8nTestResult}
+                  />
+              )}
+
+{activeTab === 'PROFILE' && (
                   <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 text-right" dir="rtl">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 font-sans">
                           {/* Personal Information & Avatar */}
