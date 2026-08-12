@@ -1,6 +1,40 @@
 const fs = require('fs');
 const path = require('path');
 const { PNG } = require('pngjs');
+const jpeg = require('jpeg-js');
+
+// Helper to load or generate a clean 1024x1024 PNG master icon buffer
+function getMasterPngBuffer() {
+  const masterPngPath = path.join(__dirname, '../assets/icon-master.png');
+  if (fs.existsSync(masterPngPath)) {
+    const buf = fs.readFileSync(masterPngPath);
+    if (buf.length > 8 && buf.subarray(0, 4).toString('hex') === '89504e47') {
+      return buf;
+    }
+  }
+
+  // Fallback to source JPEG image if PNG is missing or corrupted
+  const jpgCandidates = [
+    path.join(__dirname, '../src/assets/images/app_icon_master_1785575009595.jpg'),
+    path.join(__dirname, '../src/assets/images/app_icon_main_1785151968177.jpg')
+  ];
+
+  let jpgPath = jpgCandidates.find(p => fs.existsSync(p));
+  if (!jpgPath) {
+    throw new Error('No master image found to generate application icons!');
+  }
+
+  const jpegData = fs.readFileSync(jpgPath);
+  const rawData = jpeg.decode(jpegData, { useTolerant: true });
+  const png = new PNG({ width: rawData.width, height: rawData.height });
+  png.data = rawData.data;
+  const cleanPngBuf = PNG.sync.write(png);
+
+  fs.mkdirSync(path.dirname(masterPngPath), { recursive: true });
+  fs.writeFileSync(masterPngPath, cleanPngBuf);
+  console.log(`[Icon Pipeline] Regenerated clean master PNG at ${masterPngPath}`);
+  return cleanPngBuf;
+}
 
 // Helper to create uncompressed 32bpp DIB header and data from PNG
 function createDIBFromPNG(pngBuffer) {
@@ -113,14 +147,7 @@ function generateIco(masterPngBuf, outputIcoPath) {
 }
 
 function runIconPipeline() {
-  const masterPath = path.join(__dirname, '../assets/icon-master.png');
-  
-  if (!fs.existsSync(masterPath)) {
-    console.error(`Master icon missing at ${masterPath}`);
-    process.exit(1);
-  }
-
-  const masterPngBuf = fs.readFileSync(masterPath);
+  const masterPngBuf = getMasterPngBuffer();
   const tauriIconsDir = path.join(__dirname, '../src-tauri/icons');
   fs.mkdirSync(tauriIconsDir, { recursive: true });
 
