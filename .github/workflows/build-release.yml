@@ -1,4 +1,21 @@
-      - name: Build with Tauri
-        uses: tauri-apps/tauri-action@v1
+name: Build Tauri App
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          # ... existing inputs
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v1
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
