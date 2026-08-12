@@ -1,5 +1,19 @@
-- name: Setup Node.js
-  uses: actions/setup-node@v4
-  with:
-    node-version: '22'
-    cache: 'npm'
+{
+  "build": {
+    "win": {
+      "icon": "build/icons/app_icon.ico" 
+    },
+    "nsis": {
+      "artifactName": "${productName}Setup-${version}.${ext}",
+      "shortcutName": "${productName}",
+      "uninstallerDisplayName": "${productName} Uninstaller",
+      "deleteAppDataOnUninstall": true
+    },
+    "files": [
+      "**/*",
+      "!node_modules/*/{README.md,README,ChangeLog,changelog,LICENSE.md,LICENSE,HISTORY.md,HISTORY}",
+      "!node_modules/*/{.*,Makefile,gulpfile,.eslintrc.json,.prettierrc.js,.editorconfig}",
+      "!node_modules/*/{test,__tests__}"
+    ]
+  }
+}
