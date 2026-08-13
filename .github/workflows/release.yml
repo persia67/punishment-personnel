@@ -222,9 +222,13 @@ jobs:
           echo "- 💻 **Windows Desktop Installer (MSI)**: \`Intelligent-monitoring-system-v${VERSION}-Windows-Setup.msi\`" >> release-notes.md
           echo "- 🌐 **Web / PWA Application**: \`Intelligent-monitoring-system-v${VERSION}-Web-PWA.zip\`" >> release-notes.md
 
-          gh release create "$TAG" \
-            --title "Intelligent Monitoring System v${VERSION}" \
-            --notes-file release-notes.md \
-            --prerelease=false || true
-
-          gh release upload "$TAG" final-assets/* --clobber
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Uploading updated assets..."
+            gh release upload "$TAG" final-assets/* --clobber
+          else
+            echo "Creating new release $TAG at target $GITHUB_SHA..."
+            gh release create "$TAG" final-assets/* \
+              --title "Intelligent Monitoring System v${VERSION}" \
+              --notes-file release-notes.md \
+              --target "$GITHUB_SHA"
+          fi
