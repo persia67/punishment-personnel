@@ -74,8 +74,8 @@ jobs:
 
       - name: Add Android Platform (if missing or incomplete)
         run: |
-          if [ ! -f "android/gradlew" ]; then
-            echo "Android platform or gradlew missing. Re-adding Capacitor Android platform..."
+          if [ ! -f "android/gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Android platform or gradle-wrapper.jar missing. Re-adding Capacitor Android platform..."
             rm -rf android
             npx cap add android
           fi
@@ -85,6 +85,12 @@ jobs:
 
       - name: Make Gradle Executable, Build & Sign Android APK
         run: |
+          if [ ! -f "android/gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Warning: gradle-wrapper.jar is missing. Regenerating Gradle wrapper..."
+            cd android && (gradle wrapper || (cd .. && rm -rf android && npx cap add android && cd android))
+            cd ..
+          fi
+
           if [ -f "android/gradlew" ]; then
             chmod +x android/gradlew
             cd android
