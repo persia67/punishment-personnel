@@ -16,7 +16,13 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
+    entries: ['index.html'],
     include: ['react', 'react-dom', 'lucide-react', 'framer-motion', 'recharts']
+  },
+  server: {
+    watch: {
+      ignored: ['**/android/**', '**/release/**', '**/src-tauri/**', '**/dist/**']
+    }
   },
   // CRITICAL for Electron and Android:
   // Using relative path './' ensures assets are loaded correctly

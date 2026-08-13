@@ -72,9 +72,11 @@ jobs:
       - name: Build Web Assets
         run: npm run build
 
-      - name: Add Android Platform (if missing)
+      - name: Add Android Platform (if missing or incomplete)
         run: |
-          if [ ! -d "android" ]; then
+          if [ ! -f "android/gradlew" ]; then
+            echo "Android platform or gradlew missing. Re-adding Capacitor Android platform..."
+            rm -rf android
             npx cap add android
           fi
 
