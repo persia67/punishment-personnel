@@ -267,3 +267,39 @@ export const saveMasterDepartments = (departments: string[]): void => {
     // Ignore storage errors
   }
 };
+
+/**
+ * Ensures a department name is saved to custom departments if it's a new unit.
+ */
+export const ensureDepartmentExists = (
+  deptName: string,
+  currentCustomDepts: string[] = []
+): { updatedCustomDepts: string[]; isNew: boolean } => {
+  if (!deptName || !deptName.trim() || deptName === 'ثبت نشده' || deptName === 'سایر (ورود دستی)') {
+    return { updatedCustomDepts: currentCustomDepts, isNew: false };
+  }
+
+  const trimmed = deptName.trim();
+  const master = getMasterDepartments(currentCustomDepts);
+
+  // Check if already present in master list
+  const exists = master.some(d => cleanString(d) === cleanString(trimmed));
+  if (exists) {
+    return { updatedCustomDepts: currentCustomDepts, isNew: false };
+  }
+
+  // Brand new department! Add to custom list
+  const newCustomList = Array.from(new Set([...currentCustomDepts, trimmed]));
+  saveMasterDepartments(newCustomList);
+
+  return { updatedCustomDepts: newCustomList, isNew: true };
+};
+
+/**
+ * Gets department list including custom departments and the 'Other (Manual Entry)' option for select inputs
+ */
+export const getAllDepartmentsList = (customDepartments?: string[]): string[] => {
+  const master = getMasterDepartments(customDepartments);
+  return [...master, 'سایر (ورود دستی)'];
+};
+

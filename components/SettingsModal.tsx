@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 import { getSmsConfig, saveSmsConfig, getSmsLogs, saveSmsLogs } from '../services/smsService';
 import { testCloudConnection } from '../services/cloudSyncService';
 import { sendN8nWebhook, testN8nConnection, sendInterconnectRelay } from '../services/n8nService';
-import { processEmployeeDepartments, getMasterDepartments, saveMasterDepartments } from '../services/departmentUtils';
+import { processEmployeeDepartments, getMasterDepartments, saveMasterDepartments, getAllDepartmentsList, ensureDepartmentExists } from '../services/departmentUtils';
 import { ManualEmployeeForm, DEPARTMENTS_LIST, JOB_TITLES_LIST } from './ManualEmployeeForm';
 import CompanyLogo from './CompanyLogo';
 import { N8nSettingsTab } from './N8nSettingsTab';
@@ -864,20 +864,36 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSaveEditingEmployee = () => {
     if (!editingPersonnelId) return;
+    let newCustomDepts = settings.customDepartments || [];
+    let customDeptsChanged = false;
+
     const updated = employees.map(emp => {
       if (emp.personnelId === editingPersonnelId) {
+        const finalDept = editingEmpData.department?.trim() || emp.department;
+        if (finalDept) {
+          const { updatedCustomDepts, isNew } = ensureDepartmentExists(finalDept, newCustomDepts);
+          if (isNew) {
+            newCustomDepts = updatedCustomDepts;
+            customDeptsChanged = true;
+          }
+        }
         return {
           ...emp,
           fullName: editingEmpData.fullName?.trim() || emp.fullName,
           nationalId: editingEmpData.nationalId?.trim() || '',
           phoneNumber: editingEmpData.phoneNumber?.trim() || '',
-          department: editingEmpData.department || emp.department,
+          department: finalDept,
           jobTitle: editingEmpData.jobTitle?.trim() || '',
           hireDate: editingEmpData.hireDate?.trim() || ''
         };
       }
       return emp;
     });
+
+    if (customDeptsChanged) {
+      onUpdateSettings({ ...settings, customDepartments: newCustomDepts });
+    }
+
     onUpdateEmployees(updated);
     setEditingPersonnelId(null);
   };
@@ -2222,7 +2238,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                               <td className="px-3 py-2.5 text-center">
                                                                   <div className="flex flex-col gap-1 items-center">
                                                                       <select
-                                                                          value={DEPARTMENTS_LIST.includes(editingEmpData.department || '') ? (editingEmpData.department || '') : 'سایر (ورود دستی)'}
+                                                                          value={getAllDepartmentsList(settings.customDepartments).includes(editingEmpData.department || '') ? (editingEmpData.department || '') : 'سایر (ورود دستی)'}
                                                                           onChange={e => {
                                                                               const val = e.target.value;
                                                                               if (val === 'سایر (ورود دستی)') {
@@ -2233,11 +2249,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                                           }}
                                                                           className="bg-white border border-gray-300 rounded px-1.5 py-1 focus:border-indigo-500 focus:outline-none text-xs font-bold text-gray-700 cursor-pointer"
                                                                       >
-                                                                          {DEPARTMENTS_LIST.map(d => (
+                                                                          {getAllDepartmentsList(settings.customDepartments).map(d => (
                                                                               <option key={d} value={d}>{d}</option>
                                                                           ))}
                                                                       </select>
-                                                                      {!DEPARTMENTS_LIST.includes(editingEmpData.department || '') && (
+                                                                      {!getAllDepartmentsList(settings.customDepartments).includes(editingEmpData.department || '') && (
                                                                           <input
                                                                               type="text"
                                                                               value={editingEmpData.department || ''}

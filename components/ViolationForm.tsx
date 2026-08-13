@@ -3,6 +3,7 @@ import { Violation, Severity, User, Department, Employee, CodeItem } from '../ty
 import { X, Camera, AlertOctagon, CheckSquare, Square, UserCheck, Search, Filter, Calendar } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { DEPARTMENTS_LIST } from './ManualEmployeeForm';
+import { getAllDepartmentsList } from '../services/departmentUtils';
 import { useSessionStorage, clearSessionStorageKeys } from '../hooks/useSessionStorage';
 
 interface ViolationFormProps {
@@ -357,7 +358,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
                 className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all bg-white"
               >
                 <option value="">{lang === 'fa' ? 'انتخاب واحد کاری...' : 'Select Department...'}</option>
-                {DEPARTMENTS_LIST.map(dept => (
+                {getAllDepartmentsList().map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>

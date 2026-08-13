@@ -30,7 +30,7 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, settin
                 {isFa ? 'آخرین تغییرات و ویژگی‌های جدید' : 'Latest Features & Changelog'}
               </h3>
               <p className="text-[10px] text-indigo-200 font-mono mt-0.5">
-                {isFa ? 'نسخه فعلی: v4.9.0' : 'Current Version: v4.9.0'}
+                {isFa ? 'نسخه فعلی: v4.10.0' : 'Current Version: v4.10.0'}
               </p>
             </div>
           </div>
@@ -49,11 +49,11 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, settin
             <div className="text-xs text-amber-900 leading-relaxed font-medium">
               {isFa ? (
                 <p>
-                  در نسخه <strong>v4.9.0</strong>، خط لوله ساخت آیکون‌های Tauri و Android اصلاح شد، نیازمندی‌های تکراری الکترون حذف گردید و اکشن‌های CI/CD گیت‌هاب به Node 22 ارتقا یافتند.
+                  در نسخه <strong>v4.10.0</strong>، سیستم مدیریت و انتقال گروهی پرسنل بین زونکن‌ها اضافه شد، ثبت خودکار واحدهای جدید در سیستم پیاده‌سازی گردید و عنوان شغلی «کارشناس واحد» به گزینه‌های پیش‌فرض اضافه شد.
                 </p>
               ) : (
                 <p>
-                  In version <strong>v4.9.0</strong>, the Tauri & Android icon generation pipeline was fully automated, redundant Electron dependencies were removed, and GitHub Actions CI/CD workflows were updated to Node 22.
+                  In version <strong>v4.10.0</strong>, binder personnel management & transfer capabilities were introduced, automatic creation of new department records was integrated, and "Unit Specialist" was added to organizational job titles.
                 </p>
               )}
             </div>

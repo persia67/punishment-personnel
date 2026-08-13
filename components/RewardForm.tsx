@@ -3,6 +3,7 @@ import { Reward, User, RewardType, Department, Employee, CodeItem } from '../typ
 import { X, Camera, UserCheck, Medal, Star, ShieldCheck, HardHat, Zap, Briefcase, Search, Calendar } from 'lucide-react';
 import { TRANSLATIONS } from '../constants';
 import { DEPARTMENTS_LIST } from './ManualEmployeeForm';
+import { getAllDepartmentsList } from '../services/departmentUtils';
 import { useSessionStorage, clearSessionStorageKeys } from '../hooks/useSessionStorage';
 
 interface RewardFormProps {
@@ -337,7 +338,7 @@ const RewardForm: React.FC<RewardFormProps> = ({ onClose, onSubmit, currentUser,
                 className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
               >
                 <option value="">{lang === 'fa' ? 'انتخاب واحد کاری...' : 'Select Department...'}</option>
-                {DEPARTMENTS_LIST.map(dept => (
+                {getAllDepartmentsList().map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>

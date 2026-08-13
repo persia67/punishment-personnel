@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, UserCheck, Edit } from 'lucide-react';
 import { Employee, AppSettings } from '../types';
-import { normalizeDepartmentName, getMasterDepartments } from '../services/departmentUtils';
+import { normalizeDepartmentName, getMasterDepartments, getAllDepartmentsList, ensureDepartmentExists } from '../services/departmentUtils';
 import { DEPARTMENTS_LIST, JOB_TITLES_LIST } from './ManualEmployeeForm';
 
 interface EditEmployeeModalProps {
@@ -21,6 +21,10 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   settings,
   onUpdateEmployee,
 }) => {
+  const availableDepartments = useMemo(() => {
+    return getAllDepartmentsList(settings?.customDepartments);
+  }, [settings?.customDepartments]);
+
   const [empFormData, setEmpFormData] = useState({
     personnelId: '',
     fullName: '',
@@ -38,7 +42,7 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
 
   useEffect(() => {
     if (employee) {
-      const isPreset = DEPARTMENTS_LIST.includes(employee.department);
+      const isPreset = availableDepartments.includes(employee.department);
       const isPresetJob = JOB_TITLES_LIST.includes(employee.jobTitle || '');
       setEmpFormData({
         personnelId: employee.personnelId || '',
@@ -64,7 +68,7 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
         setIsCustomJobTitleActive(false);
       }
     }
-  }, [employee, isOpen]);
+  }, [employee, isOpen, availableDepartments]);
 
   if (!isOpen || !employee) return null;
 
@@ -121,6 +125,7 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
     if (finalDept) {
       const { normalized } = normalizeDepartmentName(finalDept, getMasterDepartments(settings.customDepartments));
       finalDept = normalized;
+      ensureDepartmentExists(finalDept, settings.customDepartments);
     }
 
     const finalJobTitle = empFormData.jobTitle === 'سایر (ورود دستی)'
@@ -227,7 +232,7 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-200 bg-gray-50 hover:bg-white focus:bg-white rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition-colors cursor-pointer"
               >
                 <option value="">{settings.language === 'fa' ? 'انتخاب واحد...' : 'Select Department...'}</option>
-                {DEPARTMENTS_LIST.map(dept => (
+                {availableDepartments.map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>

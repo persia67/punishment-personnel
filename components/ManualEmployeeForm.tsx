@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UserPlus } from 'lucide-react';
 import { Employee, AppSettings } from '../types';
-import { DEFAULT_DEPARTMENTS_LIST, getMasterDepartments, normalizeDepartmentName } from '../services/departmentUtils';
+import { DEFAULT_DEPARTMENTS_LIST, getMasterDepartments, normalizeDepartmentName, getAllDepartmentsList } from '../services/departmentUtils';
 
 export const DEPARTMENTS_LIST = [
   ...DEFAULT_DEPARTMENTS_LIST,
@@ -15,6 +15,7 @@ export const JOB_TITLES_LIST = [
   'مدیر واحد',
   'مسئول واحد',
   'سرپرست',
+  'کارشناس واحد',
   'افسر ایمنی',
   'کارگر',
   'سایر (ورود دستی)'
@@ -31,7 +32,12 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
   employees,
   onAddEmployee
 }) => {
+  const availableDepartments = useMemo(() => {
+    return getAllDepartmentsList(settings?.customDepartments);
+  }, [settings?.customDepartments]);
+
   const [empFormData, setEmpFormData] = useState({
+
     personnelId: '',
     fullName: '',
     nationalId: '',
@@ -191,7 +197,7 @@ export const ManualEmployeeForm: React.FC<ManualEmployeeFormProps> = ({
             className="w-full px-3 py-2 border border-gray-250 bg-white rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           >
             <option value="">{settings.language === 'fa' ? 'انتخاب واحد کاری...' : 'Select Department...'}</option>
-            {DEPARTMENTS_LIST.map(dept => (
+            {availableDepartments.map(dept => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
           </select>

@@ -12,6 +12,7 @@ import CodeLegendModal from './components/CodeLegendModal';
 import PrintReportModal from './components/PrintReportModal';
 import PersonnelProfileModal from './components/PersonnelProfileModal';
 import { EditEmployeeModal } from './components/EditEmployeeModal';
+import { TransferToBinderModal } from './components/TransferToBinderModal';
 import { ManualEmployeeForm, DEPARTMENTS_LIST } from './components/ManualEmployeeForm';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import OfflineSyncModal from './components/OfflineSyncModal';
@@ -23,9 +24,9 @@ import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 import HseTrendDashboard from './components/HseTrendDashboard';
 import { getServerUrl, fetchCentralData, syncCentralData } from './services/syncService';
 import { pushToCloudStorage, pullFromCloudStorage, getCloudConfig } from './services/cloudSyncService';
-import { processEmployeeDepartments, getMasterDepartments, saveMasterDepartments } from './services/departmentUtils';
+import { processEmployeeDepartments, getMasterDepartments, saveMasterDepartments, ensureDepartmentExists } from './services/departmentUtils';
 import { sendNotificationSms } from './services/smsService';
-import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudLightning, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit, ShieldAlert, Briefcase, Keyboard, Command } from 'lucide-react';
+import { Shield, Plus, Search, Trophy, Trash2, AlertCircle, FileSpreadsheet, Archive, Gavel, Check, XCircle, LogOut, Settings, Award, Medal, Sparkles, Loader2, Cloud, CloudLightning, CloudOff, RefreshCw, Wifi, WifiOff, Check as CheckIcon, BookOpen, User as UserIcon, ArrowUpDown, ChevronUp, ChevronDown, X, Layers, Key, Printer, ArrowLeftRight, Camera, Share2, Inbox, Users, Edit, ShieldAlert, Briefcase, Keyboard, Command, UserPlus } from 'lucide-react';
 import { getTheme } from './theme';
 
 type Tab = 'VIOLATIONS' | 'APPROVALS' | 'ARCHIVE';
@@ -238,6 +239,7 @@ const App: React.FC = () => {
   const [workerOfMonth, setWorkerOfMonth] = useState<WorkerOfMonthResult | null>(null);
   const [selectingWorker, setSelectingWorker] = useState(false);
   const [isWorkerOfMonthOpen, setIsWorkerOfMonthOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   
   // Electron auto-updater states
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'>('idle');
@@ -870,6 +872,93 @@ const App: React.FC = () => {
         );
       }
     }
+  };
+
+  const handleTransferPersonnel = (employeeIds: string[], targetBinderKey: string) => {
+    if (!employeeIds || employeeIds.length === 0) return;
+
+    let customDeptsChanged = false;
+    let newCustomDepts = settings.customDepartments || [];
+
+    if (personnelGroupCriteria === 'DEPARTMENT' || personnelGroupCriteria === 'SAFETY_STATUS') {
+      const { updatedCustomDepts, isNew } = ensureDepartmentExists(targetBinderKey, newCustomDepts);
+      if (isNew) {
+        newCustomDepts = updatedCustomDepts;
+        customDeptsChanged = true;
+      }
+    }
+
+    const updatedEmployeesList = employees.map(emp => {
+      if (employeeIds.includes(emp.id)) {
+        if (personnelGroupCriteria === 'DEPARTMENT') {
+          return { ...emp, department: targetBinderKey };
+        } else if (personnelGroupCriteria === 'JOB_TITLE') {
+          return { ...emp, jobTitle: targetBinderKey };
+        } else {
+          return { ...emp, department: targetBinderKey };
+        }
+      }
+      return emp;
+    });
+
+    let currentSettings = settings;
+    if (customDeptsChanged) {
+      currentSettings = { ...settings, customDepartments: newCustomDepts };
+      setSettings(currentSettings);
+      localStorage.setItem('sg_app_settings', JSON.stringify(currentSettings));
+    }
+
+    updateEmployees(updatedEmployeesList);
+
+    const affectedPersonnelIds = updatedEmployeesList
+      .filter(emp => employeeIds.includes(emp.id))
+      .map(emp => emp.personnelId);
+
+    let violationsChanged = false;
+    let rewardsChanged = false;
+
+    const updatedViolations = violations.map(v => {
+      if (affectedPersonnelIds.includes(v.personnelId)) {
+        violationsChanged = true;
+        return { ...v, department: targetBinderKey };
+      }
+      return v;
+    });
+
+    const updatedRewards = rewards.map(r => {
+      if (affectedPersonnelIds.includes(r.personnelId)) {
+        rewardsChanged = true;
+        return { ...r, department: targetBinderKey };
+      }
+      return r;
+    });
+
+    if (violationsChanged) {
+      setViolations(updatedViolations);
+      localStorage.setItem('sg_violations', JSON.stringify(updatedViolations));
+    }
+    if (rewardsChanged) {
+      setRewards(updatedRewards);
+      localStorage.setItem('sg_rewards', JSON.stringify(updatedRewards));
+    }
+
+    if (violationsChanged || rewardsChanged) {
+      pushDataToServerState(
+        updatedViolations,
+        updatedRewards,
+        users,
+        updatedEmployeesList,
+        violationCodes,
+        rewardCodes,
+        currentSettings
+      );
+    }
+
+    alert(
+      settings.language === 'fa'
+        ? `تعداد ${employeeIds.length} نفر با موفقیت به زونکن «${targetBinderKey}» منتقل شدند.`
+        : `${employeeIds.length} personnel successfully transferred to binder "${targetBinderKey}".`
+    );
   };
 
   const handleUpdateSettings = (s: AppSettings) => {
@@ -2684,8 +2773,15 @@ const App: React.FC = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="text-[10px] md:text-xs text-gray-400 font-bold">
-                          {settings.language === 'fa' ? 'جهت تغییر دسته‌بندی ابتدا دکمه بازگشت را بزنید.' : 'To change category, click Back first.'}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsTransferModalOpen(true)}
+                            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                            <span>{settings.language === 'fa' ? 'افزودن / انتقال نفرات به این زونکن' : 'Add/Move Personnel to Binder'}</span>
+                          </button>
                         </div>
                       </div>
 
@@ -3150,6 +3246,16 @@ const App: React.FC = () => {
         employees={employees}
         settings={settings}
         onUpdateEmployee={handleUpdateEmployee}
+      />
+
+      <TransferToBinderModal
+        isOpen={isTransferModalOpen && !!selectedBinderKey}
+        onClose={() => setIsTransferModalOpen(false)}
+        binderKey={selectedBinderKey || ''}
+        groupCriteria={personnelGroupCriteria}
+        employees={employees}
+        settings={settings}
+        onTransferPersonnel={handleTransferPersonnel}
       />
       
       <DeleteModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, id: null, type: 'VIOLATION' })} onConfirm={handleDelete} />
