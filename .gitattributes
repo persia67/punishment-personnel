@@ -1,0 +1,6 @@
+# Ensure binary files are not modified by Git line-ending conversions
+*.jar binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.keystore binary
