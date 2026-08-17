@@ -32,7 +32,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
 
   // Determine initial Source Dept
   const getInitialDept = (): string => {
-      if (currentUser.role === 'SECURITY_MANAGER') return 'SECURITY';
+      if (currentUser.role === 'SECURITY_MANAGER' || currentUser.role === 'SECURITY_GUARD') return 'SECURITY';
       if (currentUser.role === 'TRAINING_MANAGER') return 'TRAINING';
       if (currentUser.role === 'ADMIN_STAFF') return 'ADMIN';
       if (currentUser.role === 'DEPARTMENT_MANAGER' && currentUser.managedDepartment) return currentUser.managedDepartment;
@@ -145,6 +145,8 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
     const codeObj = codes.find(c => Number(c.code) === Number(selectedCode) || String(c.code).trim() === String(selectedCode).trim());
     if (!codeObj) return;
 
+    const isAutoApproved = currentUser.role === 'TRAINING_MANAGER' || formData.isApproved === true;
+
     const newViolation: Violation = {
       id: `V-${Math.floor(Math.random() * 10000)}`,
       employeeName: formData.employeeName!.trim(),
@@ -162,7 +164,7 @@ const ViolationForm: React.FC<ViolationFormProps> = ({ existingViolations, emplo
       violationStage: formData.violationStage || 1,
       evidence: formData.evidence,
       status: 'Pending',
-      isApproved: false 
+      isApproved: isAutoApproved 
     };
 
     onSubmit(newViolation);

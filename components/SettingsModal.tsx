@@ -446,7 +446,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     currentUser.role === 'HR_MANAGER' || 
     currentUser.role === 'ADMIN_STAFF' || 
     currentUser.role === 'PLANT_MANAGER' || 
-    currentUser.role === 'TRAINING_MANAGER';
+    currentUser.role === 'TRAINING_MANAGER' ||
+    currentUser.role === 'SECURITY_MANAGER' ||
+    currentUser.role === 'HSE_MANAGER';
   const isUnitManager = isDeveloper || 
     currentUser.role === 'HSE_MANAGER' || 
     currentUser.role === 'SECURITY_MANAGER' || 
@@ -1096,7 +1098,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       {id: 'slate', color: 'bg-slate-600'},
   ];
 
-  const roleOptions: Role[] = ['DEVELOPER', 'PLANT_MANAGER', 'HR_MANAGER', 'HSE_MANAGER', 'HSE_OFFICER', 'SECURITY_MANAGER', 'TRAINING_MANAGER', 'ADMIN_STAFF', 'DEPARTMENT_MANAGER'];
+  const roleOptions: Role[] = ['DEVELOPER', 'PLANT_MANAGER', 'HR_MANAGER', 'HSE_MANAGER', 'HSE_OFFICER', 'SECURITY_MANAGER', 'SECURITY_GUARD', 'TRAINING_MANAGER', 'ADMIN_STAFF', 'DEPARTMENT_MANAGER'];
 
   return (
     <div className="fixed inset-0 bg-white md:bg-black/60 md:backdrop-blur-sm flex items-center justify-center z-50 md:p-4" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
@@ -1302,6 +1304,36 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Default Login Department Setting */}
+                    <div className="bg-white border border-gray-100 p-4 md:p-5 rounded-2xl shadow-sm">
+                        <div className="flex items-center gap-2 mb-3 md:mb-4 text-gray-700 font-medium text-sm md:text-base">
+                            <Key className="w-4 h-4 md:w-5 md:h-5 text-indigo-500" />
+                            {settings.language === 'fa' ? 'راهنمای حساب‌ها در صفحه ورود (پس از نصب)' : 'Login Page Account Guide (Post-Install)'}
+                        </div>
+                        <div>
+                            <label className="block text-xs md:text-sm font-semibold text-gray-700 mb-2">
+                                {settings.language === 'fa' ? 'واحد سازمانی پیش‌فرض جهت نمایش حساب‌های کاربری در پایین صفحه ورود:' : 'Default Unit for displaying credentials at login bottom:'}
+                            </label>
+                            <select
+                                value={settings.defaultLoginDepartment || 'ALL'}
+                                onChange={(e) => onUpdateSettings({ ...settings, defaultLoginDepartment: e.target.value })}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm font-semibold bg-white"
+                            >
+                                <option value="ALL">🌐 {settings.language === 'fa' ? 'همه واحدها و سمت‌ها (پیش‌فرض سیستم)' : 'All Units & Roles (System Default)'}</option>
+                                <option value="SECURITY">🛡️ {settings.language === 'fa' ? 'واحد انتظامات و حراست (مسئول انتظامات و نگهبان)' : 'Security Department (Manager & Guard)'}</option>
+                                <option value="TRAINING">🎓 {settings.language === 'fa' ? 'واحد آموزش (مسئول واحد آموزش)' : 'Training Department (Manager)'}</option>
+                                <option value="HSE">🦺 {settings.language === 'fa' ? 'واحد ایمنی و بهداشت HSE (مدیر و افسر ایمنی)' : 'HSE Department (Manager & Officer)'}</option>
+                                <option value="ADMIN">📋 {settings.language === 'fa' ? 'واحد اداری و منابع انسانی (کارشناس اداری و مدیر منابع انسانی)' : 'Admin & HR Department'}</option>
+                                <option value="MANAGEMENT">🏢 {settings.language === 'fa' ? 'مدیریت ارشد کارخانه' : 'Plant Management'}</option>
+                            </select>
+                            <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+                                {settings.language === 'fa' 
+                                    ? 'با انتخاب هر واحد، در کلاینت‌ها یا سیستم‌های مستقر در آن بخش (مثلاً کیوسک یا سیستم انتظامات یا آموزش)، حساب‌های کاربری، نام کاربری و رمزهای همان بخش در پایین صفحه ورود نمایش داده می‌شوند.' 
+                                    : 'When selected, the login page will prioritize displaying the credentials and quick-login cards for the specified department.'}
+                            </p>
                         </div>
                     </div>
                 </div>

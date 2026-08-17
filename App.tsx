@@ -985,7 +985,7 @@ const App: React.FC = () => {
     if (!user) return 'HSE'; // Default fallback
     if (['PLANT_MANAGER', 'HR_MANAGER', 'DEVELOPER'].includes(user.role)) return 'ALL';
     if (user.role === 'HSE_MANAGER' || user.role === 'HSE_OFFICER') return 'HSE';
-    if (user.role === 'SECURITY_MANAGER') return 'SECURITY';
+    if (user.role === 'SECURITY_MANAGER' || user.role === 'SECURITY_GUARD') return 'SECURITY';
     if (user.role === 'TRAINING_MANAGER') return 'TRAINING';
     if (user.role === 'ADMIN_STAFF') return 'ADMIN';
     if (user.role === 'DEPARTMENT_MANAGER' && user.managedDepartment) return user.managedDepartment;
@@ -994,7 +994,15 @@ const App: React.FC = () => {
 
   const userDept = getUserDepartment();
   const canViewAll = userDept === 'ALL';
-  const canApprove = ['HSE_MANAGER', 'PLANT_MANAGER', 'HR_MANAGER', 'DEVELOPER', 'ADMIN_STAFF'].includes(user?.role || '');
+  const canApprove = [
+    'HSE_MANAGER', 
+    'PLANT_MANAGER', 
+    'HR_MANAGER', 
+    'DEVELOPER', 
+    'ADMIN_STAFF', 
+    'SECURITY_MANAGER', 
+    'TRAINING_MANAGER'
+  ].includes(user?.role || '');
 
   // Global Keyboard Shortcuts Event Handler
   useEffect(() => {

@@ -23,7 +23,14 @@ const LoginPage: React.FC<LoginPageProps> = ({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showGuide, setShowGuide] = useState(false);
+  const [selectedDeptTab, setSelectedDeptTab] = useState<string>(settings.defaultLoginDepartment || 'ALL');
   const t = TRANSLATIONS[settings.language];
+
+  useEffect(() => {
+    if (settings.defaultLoginDepartment) {
+      setSelectedDeptTab(settings.defaultLoginDepartment);
+    }
+  }, [settings.defaultLoginDepartment]);
 
   // Password Recovery States
   const [isRecoverOpen, setIsRecoverOpen] = useState(false);
@@ -424,49 +431,124 @@ const LoginPage: React.FC<LoginPageProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowGuide(!showGuide)}
-                    className="w-full flex items-center justify-between text-xs text-white/40 hover:text-white/75 transition-colors focus:outline-none"
+                    className="w-full flex items-center justify-between text-xs text-white/50 hover:text-white transition-colors focus:outline-none"
                   >
-                    <span>
-                      {settings.language === 'fa' 
-                        ? '🔑 راهنمای حساب‌های کاربری پیش‌فرض سیستم' 
-                        : '🔑 Default System Accounts Guide'}
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <span>🔑</span>
+                      <span>
+                        {settings.language === 'fa' 
+                          ? 'راهنمای حساب‌ها و ورود سریع به سیستم' 
+                          : 'System Accounts & Quick Login'}
+                      </span>
                     </span>
-                    <span className="text-[10px] bg-white/5 px-1.5 py-0.5 rounded-md border border-white/10">
+                    <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-md border border-white/15 text-white/80 font-medium">
                       {showGuide 
-                        ? (settings.language === 'fa' ? 'بستن' : 'Close') 
-                        : (settings.language === 'fa' ? 'مشاهده' : 'View')}
+                        ? (settings.language === 'fa' ? 'بستن راهنما' : 'Hide Guide') 
+                        : (settings.language === 'fa' ? 'مشاهده سمت‌ها و رمزها' : 'View Roles & Credentials')}
                     </span>
                   </button>
                   
                   {showGuide && (
-                    <div className="mt-3 bg-black/35 rounded-xl p-3 border border-white/10 space-y-2 animate-in fade-in duration-200" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
-                      <p className="text-[11px] text-white/50 leading-relaxed text-right">
-                        {settings.language === 'fa' 
-                          ? 'جهت ورود به سیستم می‌توانید از نام‌های کاربری زیر استفاده کنید (رمز عبور تمام حساب‌ها Pass123 می‌باشد):' 
-                          : 'To access the system, you can use the following default usernames (password for all is Pass123):'}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="mt-3 bg-black/40 rounded-2xl p-3.5 border border-white/10 space-y-3 animate-in fade-in duration-200" dir={settings.language === 'fa' ? 'rtl' : 'ltr'}>
+                      
+                      {/* Department Filter Tabs */}
+                      <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar text-[11px]">
                         {[
-                          { username: 'Dev123', label: settings.language === 'fa' ? 'مدیر سیستم' : 'SysAdmin', role: 'DEVELOPER' },
-                          { username: 'Manager123', label: settings.language === 'fa' ? 'مدیر کارخانه' : 'Factory Mgr', role: 'PLANT_MANAGER' },
-                          { username: 'HseManager123', label: settings.language === 'fa' ? 'مدیر ایمنی' : 'HSE Mgr', role: 'HSE_MANAGER' },
-                          { username: 'HrManager123', label: settings.language === 'fa' ? 'مدیر منابع انسانی' : 'HR Mgr', role: 'HR_MANAGER' },
-                          { username: 'Security123', label: settings.language === 'fa' ? 'سرپرست انتظامات' : 'Security Mgr', role: 'SECURITY_MANAGER' },
-                          { username: 'Admin123', label: settings.language === 'fa' ? 'کارشناس اداری' : 'Admin Staff', role: 'ADMIN_STAFF' },
-                        ].map((acc) => (
+                          { id: 'ALL', label: settings.language === 'fa' ? 'همه' : 'All' },
+                          { id: 'SECURITY', label: settings.language === 'fa' ? '🛡️ انتظامات' : '🛡️ Security' },
+                          { id: 'TRAINING', label: settings.language === 'fa' ? '🎓 آموزش' : '🎓 Training' },
+                          { id: 'HSE', label: settings.language === 'fa' ? '🦺 ایمنی HSE' : '🦺 HSE' },
+                          { id: 'ADMIN', label: settings.language === 'fa' ? '📋 اداری / منابع انسانی' : '📋 Admin / HR' },
+                          { id: 'MANAGEMENT', label: settings.language === 'fa' ? '🏢 مدیریت' : '🏢 Mgmt' },
+                        ].map(tab => (
                           <button
-                            key={acc.username}
+                            key={tab.id}
                             type="button"
-                            onClick={() => {
-                              setUsername(acc.username);
-                              setPassword('Pass123');
-                            }}
-                            className={`flex flex-col items-start p-2 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 rounded-lg transition-all duration-150 active:scale-95 group text-white/80 ${settings.language === 'fa' ? 'text-right' : 'text-left'}`}
+                            onClick={() => setSelectedDeptTab(tab.id)}
+                            className={`px-2.5 py-1 rounded-lg font-bold transition-all whitespace-nowrap ${
+                              selectedDeptTab === tab.id
+                                ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-white/30'
+                                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                            }`}
                           >
-                            <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">{acc.username}</span>
-                            <span className="text-[10px] text-white/40">{acc.label}</span>
+                            {tab.label}
                           </button>
                         ))}
+                      </div>
+
+                      <p className="text-[11px] text-white/60 leading-relaxed">
+                        {settings.language === 'fa' 
+                          ? 'جهت ورود، روی کارت هر سمت کلیک کنید (رمز عبور پیش‌فرض تمام حساب‌ها Pass123 است):' 
+                          : 'Click any role card to auto-fill credentials (default password for all is Pass123):'}
+                      </p>
+
+                      {/* Filtered Account Cards */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] max-h-56 overflow-y-auto pr-1">
+                        {(() => {
+                          const baseAccounts = [
+                            { username: 'Dev123', label: settings.language === 'fa' ? 'مدیر سیستم (توسعه‌دهنده)' : 'System Developer', role: 'DEVELOPER', dept: 'MANAGEMENT', pass: 'Pass123' },
+                            { username: 'Manager123', label: settings.language === 'fa' ? 'مدیر کارخانه' : 'Plant Manager', role: 'PLANT_MANAGER', dept: 'MANAGEMENT', pass: 'Pass123' },
+                            { username: 'HrManager123', label: settings.language === 'fa' ? 'مدیر منابع انسانی' : 'HR Manager', role: 'HR_MANAGER', dept: 'ADMIN', pass: 'Pass123' },
+                            { username: 'Admin123', label: settings.language === 'fa' ? 'کارشناس / مسئول اداری' : 'Admin Staff', role: 'ADMIN_STAFF', dept: 'ADMIN', pass: 'Pass123' },
+                            { username: 'HseManager123', label: settings.language === 'fa' ? 'مدیر ایمنی و بهداشت HSE' : 'HSE Manager', role: 'HSE_MANAGER', dept: 'HSE', pass: 'Pass123' },
+                            { username: 'HseOfficer123', label: settings.language === 'fa' ? 'افسر ایمنی' : 'HSE Officer', role: 'HSE_OFFICER', dept: 'HSE', pass: 'Pass123' },
+                            { username: 'Security123', label: settings.language === 'fa' ? 'مسئول واحد انتظامات' : 'Security Unit Manager', role: 'SECURITY_MANAGER', dept: 'SECURITY', pass: 'Pass123' },
+                            { username: 'Guard123', label: settings.language === 'fa' ? 'نگهبان یا نیروی انتظامات' : 'Security Guard', role: 'SECURITY_GUARD', dept: 'SECURITY', pass: 'Pass123' },
+                            { username: 'Training123', label: settings.language === 'fa' ? 'مسئول واحد آموزش' : 'Training Unit Manager', role: 'TRAINING_MANAGER', dept: 'TRAINING', pass: 'Pass123' },
+                          ];
+
+                          // Include any custom created users
+                          const customUsersMapped = users
+                            .filter(u => !baseAccounts.some(b => b.username.toLowerCase() === u.username.toLowerCase()))
+                            .map(u => {
+                              let dept = 'ADMIN';
+                              if (u.role === 'SECURITY_MANAGER' || u.role === 'SECURITY_GUARD') dept = 'SECURITY';
+                              else if (u.role === 'TRAINING_MANAGER') dept = 'TRAINING';
+                              else if (u.role === 'HSE_MANAGER' || u.role === 'HSE_OFFICER') dept = 'HSE';
+                              else if (u.role === 'PLANT_MANAGER' || u.role === 'DEVELOPER') dept = 'MANAGEMENT';
+                              else if (u.managedDepartment) dept = u.managedDepartment;
+                              
+                              const roleLabel = (TRANSLATIONS as any)[settings.language][`role_${u.role.toLowerCase()}`] || u.fullName || u.role;
+                              return {
+                                username: u.username,
+                                label: `${u.fullName} (${roleLabel})`,
+                                role: u.role,
+                                dept,
+                                pass: u.password || 'Pass123'
+                              };
+                            });
+
+                          const allAccounts = [...baseAccounts, ...customUsersMapped];
+                          const filtered = selectedDeptTab === 'ALL'
+                            ? allAccounts
+                            : allAccounts.filter(a => a.dept === selectedDeptTab);
+
+                          if (filtered.length === 0) {
+                            return (
+                              <div className="col-span-2 py-4 text-center text-white/40 text-xs">
+                                {settings.language === 'fa' ? 'حسابی در این واحد یافت نشد.' : 'No accounts found for this unit.'}
+                              </div>
+                            );
+                          }
+
+                          return filtered.map((acc) => (
+                            <button
+                              key={acc.username}
+                              type="button"
+                              onClick={() => {
+                                setUsername(acc.username);
+                                setPassword(acc.pass || 'Pass123');
+                              }}
+                              className={`flex flex-col items-start p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-400/50 rounded-xl transition-all duration-150 active:scale-95 group text-white/90 ${settings.language === 'fa' ? 'text-right' : 'text-left'}`}
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className="font-mono font-bold text-white group-hover:text-indigo-300 transition-colors text-xs">{acc.username}</span>
+                                <span className="text-[9px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded font-mono">Pass123</span>
+                              </div>
+                              <span className="text-[10px] text-white/50 mt-1 line-clamp-1">{acc.label}</span>
+                            </button>
+                          ));
+                        })()}
                       </div>
                     </div>
                   )}

@@ -1,48 +1,6 @@
 {
   "violations": [
     {
-      "id": "V-1001",
-      "employeeName": "علی محمدی",
-      "personnelId": "980123",
-      "department": "تاسیسات",
-      "departmentSource": "HSE",
-      "reporterName": "مدیر ایمنی",
-      "date": "1403/02/10",
-      "violationType": "عدم استفاده از کلاه ایمنی",
-      "violationCode": 10,
-      "description": "در سایت بدون کلاه دیده شد.",
-      "severity": "Medium",
-      "score": -5,
-      "penaltyActions": [
-        "تذکر شفاهی"
-      ],
-      "violationStage": 1,
-      "status": "Pending",
-      "isApproved": true,
-      "isArchived": false
-    },
-    {
-      "id": "V-2001",
-      "employeeName": "رضا کریمی",
-      "personnelId": "990222",
-      "department": "انبار",
-      "departmentSource": "SECURITY",
-      "reporterName": "سرپرست انتظامات",
-      "date": "1403/02/12",
-      "violationType": "خوابیدن در شیفت کاری",
-      "violationCode": 202,
-      "description": "در گشت زنی ساعت 2 بامداد مشاهده شد.",
-      "severity": "High",
-      "score": -30,
-      "penaltyActions": [
-        "توبیخ کتبی"
-      ],
-      "violationStage": 1,
-      "status": "Pending",
-      "isApproved": true,
-      "isArchived": false
-    },
-    {
       "id": "V-4977",
       "employeeName": "رامین بیدقی",
       "personnelId": "22353",
@@ -301,17 +259,27 @@
       "id": "u4",
       "username": "Security123",
       "password": "Pass123",
-      "fullName": "سرپرست انتظامات",
+      "fullName": "مسئول واحد انتظامات",
       "role": "SECURITY_MANAGER",
       "avatar": "",
       "phoneNumber": "09126666666",
       "email": "security@safewatch.ir"
     },
     {
+      "id": "u7",
+      "username": "Guard123",
+      "password": "Pass123",
+      "fullName": "نگهبان انتظامات",
+      "role": "SECURITY_GUARD",
+      "avatar": "",
+      "phoneNumber": "09129999999",
+      "email": "guard@safewatch.ir"
+    },
+    {
       "id": "u5",
       "username": "Training123",
       "password": "Pass123",
-      "fullName": "مسئول آموزش",
+      "fullName": "مسئول واحد آموزش",
       "role": "TRAINING_MANAGER",
       "avatar": "",
       "phoneNumber": "09127777777",
@@ -3021,6 +2989,20 @@
       "label": "نمره مردودی در آزمون",
       "score": -10,
       "department": "TRAINING"
+    },
+    {
+      "id": "1786951495230",
+      "code": 205,
+      "label": "سستی در انجام امور محوله",
+      "score": -5,
+      "department": "SECURITY"
+    },
+    {
+      "id": "1786951518279",
+      "code": 206,
+      "label": "عدم توجه به دستورات",
+      "score": -5,
+      "department": "SECURITY"
     }
   ],
   "rewardCodes": [
@@ -3099,6 +3081,20 @@
     "cloudSecretKey": "LSjyQ18o2NUWsjsSnAVjUoqsNmZE6nMXz",
     "cloudBucketName": "safewatch-share",
     "cloudSyncInterval": 5,
-    "cloudRealtimeSync": true
+    "cloudRealtimeSync": true,
+    "n8nConfig": {
+      "isEnabled": false,
+      "baseUrl": "http://localhost:5678",
+      "webhookPath": "/webhook/safewatch-automation",
+      "apiKey": "",
+      "nodeId": "SafeWatch-Node-Main",
+      "triggerOnViolation": true,
+      "triggerOnReward": true,
+      "triggerOnEmployee": true,
+      "triggerOnSync": true,
+      "interconnectEnabled": true,
+      "interconnectWebhookUrl": "",
+      "autoRelayToInterconnectNodes": false
+    }
   }
 }

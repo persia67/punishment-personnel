@@ -105,8 +105,9 @@ export type Role =
   | 'HR_MANAGER'      // Sees ALL
   | 'HSE_MANAGER'     // Sees HSE
   | 'HSE_OFFICER'     // Sees HSE
-  | 'SECURITY_MANAGER'// Sees SECURITY (Entezamat)
-  | 'TRAINING_MANAGER'// Sees TRAINING (Amozesh)
+  | 'SECURITY_MANAGER'// Sees SECURITY (Entezamat) - مسئول واحد انتظامات
+  | 'SECURITY_GUARD'  // Sees SECURITY (Entezamat) - نگهبان یا نیروی انتظامات
+  | 'TRAINING_MANAGER'// Sees TRAINING (Amozesh) - مسئول واحد آموزش
   | 'ADMIN_STAFF'     // Sees ADMIN (Edari)
   | 'DEPARTMENT_MANAGER'; // Custom Department (e.g. Facilities)
 
@@ -166,6 +167,8 @@ export interface AppSettings {
   cloudBucketName?: string;
   cloudSyncInterval?: number; // In seconds
   cloudRealtimeSync?: boolean;
+  // Login Page Customization
+  defaultLoginDepartment?: 'ALL' | 'HSE' | 'SECURITY' | 'TRAINING' | 'ADMIN' | 'MANAGEMENT' | string;
   // n8n Automation Engine & Interconnectivity
   n8nConfig?: N8nConfig;
 }

@@ -143,12 +143,13 @@ export const TRANSLATIONS = {
     status_Appealed: "اعتراض شده",
     status_Approved: "تایید شده",
     // Roles
-    role_developer: "توسعه‌دهنده سیستم",
-    role_hse_manager: "مدیر HSE",
-    role_hse_officer: "افسر HSE",
-    role_security_manager: "سرپرست انتظامات",
-    role_training_manager: "مسئول آموزش",
-    role_admin_staff: "کارشناس اداری",
+    role_developer: "مدیر سیستم (توسعه‌دهنده)",
+    role_hse_manager: "مدیر ایمنی و بهداشت HSE",
+    role_hse_officer: "افسر ایمنی",
+    role_security_manager: "مسئول واحد انتظامات",
+    role_security_guard: "نگهبان یا نیروی انتظامات",
+    role_training_manager: "مسئول واحد آموزش",
+    role_admin_staff: "کارشناس / مسئول اداری",
     role_hr_manager: "مدیر منابع انسانی",
     role_plant_manager: "مدیر کارخانه",
     role_department_manager: "مدیر واحد (سفارشی)",
@@ -312,9 +313,10 @@ export const TRANSLATIONS = {
     role_developer: "System Developer",
     role_hse_manager: "HSE Manager",
     role_hse_officer: "HSE Officer",
-    role_security_manager: "Security Manager",
-    role_training_manager: "Training Manager",
-    role_admin_staff: "Admin Staff",
+    role_security_manager: "Security Unit Manager",
+    role_security_guard: "Security Guard",
+    role_training_manager: "Training Unit Manager",
+    role_admin_staff: "Administrative Staff",
     role_hr_manager: "HR Manager",
     role_plant_manager: "Plant Manager",
     role_department_manager: "Unit Manager (Custom)",
@@ -388,12 +390,13 @@ export const DEFAULT_USERS: User[] = [
   { id: 'u1', username: 'HrManager123', password: 'Pass123', fullName: 'مدیر منابع انسانی', role: 'HR_MANAGER', avatar: '', phoneNumber: '09123333333', email: 'hr@safewatch.ir' },
   
   // HSE VIEW
-  { id: 'u2', username: 'HseManager123', password: 'Pass123', fullName: 'مدیر ایمنی', role: 'HSE_MANAGER', avatar: '', phoneNumber: '09124444444', email: 'hse@safewatch.ir' },
+  { id: 'u2', username: 'HseManager123', password: 'Pass123', fullName: 'مدیر ایمنی و بهداشت', role: 'HSE_MANAGER', avatar: '', phoneNumber: '09124444444', email: 'hse@safewatch.ir' },
   { id: 'u3', username: 'HseOfficer123', password: 'Pass123', fullName: 'افسر ایمنی', role: 'HSE_OFFICER', avatar: '', phoneNumber: '09125555555', email: 'officer@safewatch.ir' },
   
   // DEPARTMENT SPECIFIC VIEW
-  { id: 'u4', username: 'Security123', password: 'Pass123', fullName: 'سرپرست انتظامات', role: 'SECURITY_MANAGER', avatar: '', phoneNumber: '09126666666', email: 'security@safewatch.ir' },
-  { id: 'u5', username: 'Training123', password: 'Pass123', fullName: 'مسئول آموزش', role: 'TRAINING_MANAGER', avatar: '', phoneNumber: '09127777777', email: 'training@safewatch.ir' },
+  { id: 'u4', username: 'Security123', password: 'Pass123', fullName: 'مسئول واحد انتظامات', role: 'SECURITY_MANAGER', avatar: '', phoneNumber: '09126666666', email: 'security@safewatch.ir' },
+  { id: 'u7', username: 'Guard123', password: 'Pass123', fullName: 'نگهبان انتظامات', role: 'SECURITY_GUARD', avatar: '', phoneNumber: '09129999999', email: 'guard@safewatch.ir' },
+  { id: 'u5', username: 'Training123', password: 'Pass123', fullName: 'مسئول واحد آموزش', role: 'TRAINING_MANAGER', avatar: '', phoneNumber: '09127777777', email: 'training@safewatch.ir' },
   { id: 'u6', username: 'Admin123', password: 'Pass123', fullName: 'کارشناس اداری', role: 'ADMIN_STAFF', avatar: '', phoneNumber: '09128888888', email: 'admin@safewatch.ir' },
 ];
 
@@ -424,6 +427,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   localHfUrl: 'http://localhost:8000',
   localHfModel: 'Qwen/Qwen2.5-Copilot-3B',
   autoOfflineFailover: true,
+  defaultLoginDepartment: 'ALL',
   cloudSyncEnabled: true,
   cloudEndpoint: 'https://c776876.parspack.net',
   cloudAccessKey: 'qMHLfvgXakpoWNrY',
