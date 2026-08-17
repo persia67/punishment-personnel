@@ -30,7 +30,7 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, settin
                 {isFa ? 'آخرین تغییرات و ویژگی‌های جدید' : 'Latest Features & Changelog'}
               </h3>
               <p className="text-[10px] text-indigo-200 font-mono mt-0.5">
-                {isFa ? 'نسخه فعلی: v4.10.0' : 'Current Version: v4.10.0'}
+                {isFa ? 'نسخه فعلی: v4.11.0' : 'Current Version: v4.11.0'}
               </p>
             </div>
           </div>
@@ -49,80 +49,80 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, settin
             <div className="text-xs text-amber-900 leading-relaxed font-medium">
               {isFa ? (
                 <p>
-                  در نسخه <strong>v4.10.0</strong>، سیستم مدیریت و انتقال گروهی پرسنل بین زونکن‌ها اضافه شد، ثبت خودکار واحدهای جدید در سیستم پیاده‌سازی گردید و عنوان شغلی «کارشناس واحد» به گزینه‌های پیش‌فرض اضافه شد.
+                  در نسخه <strong>v4.11.0</strong>، نقش‌های جدید سازمانی تفکیک شدند (مسئول و نگهبان انتظامات، مسئول واحد آموزش)، کارتابل اختصاصی انتظامات و تأیید مستقیم آموزش فعال شد، و سیستم ورود سریع با انتخاب واحد پیش‌فرض به صفحه ورود افزوده شد.
                 </p>
               ) : (
                 <p>
-                  In version <strong>v4.10.0</strong>, binder personnel management & transfer capabilities were introduced, automatic creation of new department records was integrated, and "Unit Specialist" was added to organizational job titles.
+                  In version <strong>v4.11.0</strong>, dedicated organizational roles were introduced (Security Manager, Security Guard, Training Manager), dedicated approval routing was added, and unit-filtered quick login customization was integrated.
                 </p>
               )}
             </div>
           </div>
 
           <div className="space-y-4">
-            {/* Feature 1: Sub-departments */}
+            {/* Feature 1: Roles & Permissions */}
             <div className="flex gap-4 items-start p-3 hover:bg-gray-50/80 rounded-2xl transition-colors">
               <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
                 <Layers className="w-4.5 h-4.5" />
               </div>
               <div className="space-y-1">
                 <h4 className="text-xs font-black text-gray-900">
-                  {isFa ? '۱. تلفیق و توسعه همه‌جانبه واحدها (دپارتمان‌ها)' : '1. Comprehensive Redesign & Expansion of Departments'}
+                  {isFa ? '۱. تفکیک دقیق نقش‌های سازمانی در انتظامات و آموزش' : '1. Granular Role Separation for Security & Training'}
                 </h4>
                 <p className="text-[11px] text-gray-600 leading-relaxed">
                   {isFa ? (
                     <>
-                      اضافه شدن واحد‌های جدید شامل <strong>انتظامات</strong>، زیرمجموعه‌های واحد <strong>فنی</strong> (جوشکاری، نقاشی، ماشین‌سازی، CNC، هیدرولیک) و زیرمجموعه‌های واحد <strong>تولید</strong> (اسیدشویی، نورد سرد، گالوانیزه، شیت‌کن، خط رنگی) جهت دسته‌بندی و گزارش‌گیری دقیق‌تر پرسنل.
+                      افزوده شدن نقش‌های <strong>مسئول واحد انتظامات</strong>، <strong>نگهبان یا نیروی انتظامات</strong> و <strong>مسئول واحد آموزش</strong> به همراه دسترسی‌های مدیریتی و فرم‌های ثبت پرسنل.
                     </>
                   ) : (
                     <>
-                      Added new departments including <strong>Security (انتظامات)</strong>, and sub-departments for <strong>Technical</strong> (Welding, Painting, Machine Building, CNC, Hydraulics) and <strong>Production</strong> (Pickling, Cold Rolling, Galvanizing, Sheet Shearing, Color Line) for precise categorizations.
+                      Added dedicated roles for <strong>Security Unit Manager</strong>, <strong>Security Guard</strong>, and <strong>Training Unit Manager</strong> across user administration and employee records.
                     </>
                   )}
                 </p>
               </div>
             </div>
 
-            {/* Feature 2: Excel Mobile Number */}
-            <div className="flex gap-4 items-start p-3 hover:bg-gray-50/80 rounded-2xl transition-colors">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                <Phone className="w-4.5 h-4.5" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-xs font-black text-gray-900">
-                  {isFa ? '۲. اضافه شدن فیلد شماره همراه به الگوی اکسل' : '2. Dedicated Phone Number in Excel Template'}
-                </h4>
-                <p className="text-[11px] text-gray-600 leading-relaxed">
-                  {isFa ? (
-                    <>
-                      قالب دانلودی فایل الگو اکسل پرسنل و ماژول ورود گروهی اطلاعات اصلاح گردید و ستون اختصاصی <strong>شماره همراه (PhoneNumber)</strong> به آن افزوده شد تا از وارد کردن یا کپی دستی شماره‌ها بی‌نیاز شوید.
-                    </>
-                  ) : (
-                    <>
-                      The downloadable personnel Excel template and bulk-import parser have been upgraded with a dedicated <strong>Phone Number (PhoneNumber)</strong> column to eliminate manual entry steps.
-                    </>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 3: Smart Syncing */}
+            {/* Feature 2: Approvals & Workflow */}
             <div className="flex gap-4 items-start p-3 hover:bg-gray-50/80 rounded-2xl transition-colors">
               <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
                 <RefreshCw className="w-4.5 h-4.5" />
               </div>
               <div className="space-y-1">
                 <h4 className="text-xs font-black text-gray-900">
-                  {isFa ? '۳. همگام‌سازی و یکپارچه‌سازی هوشمند داده‌ها' : '3. Advanced Local & Server State Synchronization'}
+                  {isFa ? '۲. گردش‌کار کارتابل انتظامات و تایید خودکار آموزش' : '2. Security Approval Inbox & Training Direct Approval'}
                 </h4>
                 <p className="text-[11px] text-gray-600 leading-relaxed">
                   {isFa ? (
                     <>
-                      موتور سنکرونایزاسیون نرم‌افزار ارتقاء یافت تا داده‌های پرسنل، ویرایش‌ها، تخلفات و تشویقات ذخیره شده محلی شما، به‌صورت کاملا هوشمند و دوطرفه با پایگاه داده مرکزی همگام‌سازی شوند و از تداخل اطلاعات جلوگیری شود.
+                      گزارش‌های ثبت‌شده توسط نگهبان به کارتابل مسئول انتظامات ارسال شده و با تایید وی نهایی می‌شوند. همچنین برای مسئول آموزش فرآیند ثبت و تایید یکپارچه و مستقیم اعمال می‌گردد.
                     </>
                   ) : (
                     <>
-                      The synchronization system has been optimized to merge local storage edits seamlessly with the database server upon container restart, preventing data overrides or loss.
+                      Guard submissions are routed to the Security Manager inbox for review and approval, while Training entries support direct, auto-approved execution.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 3: Login Customization */}
+            <div className="flex gap-4 items-start p-3 hover:bg-gray-50/80 rounded-2xl transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                <Phone className="w-4.5 h-4.5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-black text-gray-900">
+                  {isFa ? '۳. ورود سریع و تنظیم واحد پیش‌فرض در صفحه لاگین' : '3. Quick Login & Default Department Customization'}
+                </h4>
+                <p className="text-[11px] text-gray-600 leading-relaxed">
+                  {isFa ? (
+                    <>
+                      امکان تعیین واحد پیش‌فرض در تنظیمات برای سیستم‌های مستقر در هر بخش و نمایش کارت‌های ورود سریع با دسته‌بندی و فیلتر واحدها در پایین صفحه ورود.
+                    </>
+                  ) : (
+                    <>
+                      Configurable default department for kiosk/unit devices and interactive unit-filtered quick login cards on the login screen.
                     </>
                   )}
                 </p>
